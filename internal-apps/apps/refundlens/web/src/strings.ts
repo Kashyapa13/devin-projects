@@ -1,0 +1,30 @@
+/** Externalized strings — i18next hard gate (AGENTS.md §1). */
+export const resources = {
+  en: {
+    translation: {
+      "app.title": "RefundLens",
+      "app.caption": "Ask anything about refunds — answers with receipts",
+      "ask.placeholder": "e.g. how many refunds by channel last 30 days",
+      "ask.submit": "Ask",
+      "ask.examples": "try:",
+      "ask.example.1": "how many refunds by channel last 30 days",
+      "ask.example.2": "refund amount by reason last week",
+      "ask.example.3": "delete all refunds",
+      "answer.sql": "show the query",
+      "answer.rows": "{{count}} rows",
+      "answer.watermark": "data as of",
+      "answer.took": "answered in",
+      "answer.ms": "ms",
+      "answer.cached": "cached",
+      "answer.live": "live",
+      "answer.stale": "stale data",
+      "fenced.title": "Blocked by the query fence",
+      "fenced.reason": "reason",
+      "fenced.guidance": "what to try instead",
+      "error.title": "Could not answer",
+      "keys.hint": "Enter ask · Esc clear · / focus",
+      "loading": "Asking…",
+      "empty": "Ask a question — every answer shows its SQL and data age.",
+    },
+  },
+} as const;

@@ -1,16 +1,17 @@
 name: deploy
 
-# Per-app matrix stub: one OCI image, one version stream, one pipeline, one
-# rollback per app. prod = manual approval (protected environment).
-# platform/** changes → security wave: FastLane canary 30–60 min first,
-# then all apps, each gated on its own smoke suite.
+# INTENTIONALLY STILL STUBBED — the real pipeline lands with the first
+# deployable app release. Shape per deployment law: per-app matrix, one
+# OCI image / version stream / pipeline / rollback per app; platform/**
+# changes → security wave: FastLane canary 30–60 min first, then all apps,
+# each gated on its own smoke suite. prod = protected environment.
 
 on:
   push:
     branches: [main]
     paths:
-      - "apps/**"
-      - "platform/**"
+      - "internal-apps/apps/**"
+      - "internal-apps/platform/**"
   workflow_dispatch:
 
 jobs:
@@ -21,12 +22,13 @@ jobs:
       wave: ${{ steps.matrix.outputs.wave }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - id: matrix
         run: |
-          # Stub: derive affected apps from changed paths.
-          # platform/** → wave=true (FastLane canary first, then all apps).
-          echo "apps=[\"fastlane\",\"refundlens\"]" >> "$GITHUB_OUTPUT"
-          echo "wave=false" >> "$GITHUB_OUTPUT"
+          cd internal-apps
+          echo "apps=$(pnpm -s affected-apps --base "${{ github.event.before }}" --head "${{ github.event.after }}" 2>/dev/null | jq -c '.apps' || echo '["fastlane"]')" >> "$GITHUB_OUTPUT"
+          echo "wave=$(git diff --name-only "${{ github.event.before }}..${{ github.event.after }}" | grep -c '^internal-apps/platform/' | sed 's/.*/true/;s/^$//')" >> "$GITHUB_OUTPUT"
 
   build-image:
     needs: plan
@@ -38,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: build + push ${{ matrix.app }} image (stub)
-        run: echo "stub — build apps/${{ matrix.app }}/Dockerfile, tag, push"
+        run: echo "stub — build internal-apps/apps/${{ matrix.app }}/Dockerfile, tag, push"
       - name: smoke ${{ matrix.app }} (stub)
         run: echo "stub — per-app smoke suite gates promotion"
 

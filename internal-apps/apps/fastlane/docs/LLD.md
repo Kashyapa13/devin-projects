@@ -37,6 +37,7 @@ CREATE TABLE audit_events (
   actor_id uuid NOT NULL, action text NOT NULL, diff jsonb, req_id text,
   created_at timestamptz NOT NULL DEFAULT now()
 );  REVOKE UPDATE, DELETE ON audit_events FROM PUBLIC;  -- append-only, enforced
+CREATE INDEX audit_entity ON audit_events (entity, entity_id);
 ```
 
 ## API registry

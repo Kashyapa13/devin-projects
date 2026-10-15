@@ -30,16 +30,22 @@ CREATE TABLE refund_events_raw (   -- hourly full+delta, idempotent on (id, upda
   state text, latency_ms int, updated_at timestamptz NOT NULL,
   ingested_at timestamptz DEFAULT now()
 );
+CREATE INDEX raw_by_updated ON refund_events_raw (updated_at);   -- sync watermark cursor
+CREATE INDEX raw_by_day_channel ON refund_events_raw
+  (occurred_at, channel, merchant_segment, reason_code);
 CREATE TABLE agg_daily (           -- rebuilt in ONE tx after each sync; views hit this
   day date, channel text, merchant_segment text, reason_code text,
   cnt bigint, amount bigint, p50_ms int, p95_ms int,
   PRIMARY KEY (day, channel, merchant_segment, reason_code)
 );
-CREATE TABLE sync_runs (id bigserial, watermark timestamptz, rows int,
-  status text, finished_at timestamptz);   -- one row per run, success or failure
+CREATE TABLE sync_runs (id bigserial, watermark timestamptz,
+  watermark_id bigint,                  -- (updated_at, id) cursor tiebreak
+  rows int, status text, finished_at timestamptz);   -- one row per run, success or failure
 CREATE TABLE ask_log (            -- the fork's evidence + shows-its-work history
-  id uuid PRIMARY KEY, user_id uuid, question text, rendered_sql text,
-  ms int, rows int, success bool, created_at timestamptz DEFAULT now()
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id text NOT NULL,
+  surface text NOT NULL DEFAULT 'ask', question text NOT NULL,
+  rendered_sql text, ms int, rows int, success bool NOT NULL,
+  fence_reason text, req_id text, created_at timestamptz DEFAULT now()
 );
 -- roles: app = SELECT only on refund_events_raw, agg_daily, sync_runs.
 -- etl = separate role, INSERT/UPDATE only, no login path.

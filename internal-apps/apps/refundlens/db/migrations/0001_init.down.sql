@@ -1,0 +1,13 @@
+REVOKE ALL ON ALL TABLES IN SCHEMA refundlens FROM refundlens_app;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA refundlens FROM refundlens_app;
+REVOKE ALL ON ALL TABLES IN SCHEMA refundlens FROM refundlens_etl;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA refundlens FROM refundlens_etl;
+REVOKE USAGE ON SCHEMA refundlens FROM refundlens_app;
+REVOKE USAGE ON SCHEMA refundlens FROM refundlens_etl;
+DROP TABLE IF EXISTS refundlens.ask_log;
+DROP TABLE IF EXISTS refundlens.sync_runs;
+DROP TABLE IF EXISTS refundlens.agg_daily;
+DROP TABLE IF EXISTS refundlens.refund_events_raw;
+DROP SCHEMA IF EXISTS refundlens;
+DROP ROLE IF EXISTS refundlens_app;
+DROP ROLE IF EXISTS refundlens_etl;
