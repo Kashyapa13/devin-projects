@@ -100,17 +100,21 @@ const glideTops = new Map<string, number>();
 
 export function FocusGlide({ glideId }: { glideId: string }): ReactElement {
   const key = `focus-glide-${glideId}`;
+  const frozen = useFreeze() || useReducedMotion();
   const ref = useCallback((el: HTMLSpanElement | null) => {
-    if (!el) return;
+    if (!el) {
+      glideTops.delete(key); // no stale position when it remounts elsewhere
+      return;
+    }
     const top = el.getBoundingClientRect().top;
     const prev = glideTops.get(key);
     glideTops.set(key, top);
-    if (prev !== undefined && prev !== top) {
+    if (!frozen && prev !== undefined && prev !== top) {
       // FLIP: start translated by the delta, spring back to 0 — input
       // already rendered at the destination; animation never delays it.
       animate(el, { y: [prev - top, 0] }, springs.snappy);
     }
-  }, [key]);
+  }, [key, frozen]);
   return <motion.span ref={ref} className="focus-glide" aria-hidden="true" />;
 }
 
@@ -136,7 +140,7 @@ export function Pulse({
       animate={{ scale: up ? 1.18 : 1 }}
       transition={springs.hero}
       onAnimationComplete={() => up && setUp(false)}
-      style={{ display: "inline-block" }}
+      style={{ display: "inline-block", borderRadius: "999px" }}
     >
       {children}
     </motion.span>
@@ -156,7 +160,7 @@ export function ColorSpring({
       initial={false}
       animate={{ backgroundColor: color }}
       transition={springs.snappy}
-      style={{ display: "inline-block" }}
+      style={{ display: "inline-block", borderRadius: "999px" }}
     >
       {children}
     </motion.span>
@@ -180,7 +184,7 @@ export function BlurMorph({
         opacity: revealed ? 1 : 0.85,
       }}
       transition={reduced ? { duration: 0.15 } : springs.gentle}
-      style={{ display: "inline-block" }}
+      style={{ display: "inline-block", borderRadius: "999px" }}
     >
       {children}
     </motion.span>
