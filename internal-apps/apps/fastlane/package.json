@@ -20,7 +20,6 @@
     "@company/crypto": "workspace:*",
     "@company/db": "workspace:*",
     "@company/http": "workspace:*",
-    "@company/testing": "workspace:*",
     "@company/ui": "workspace:*",
     "@fastify/type-provider-typebox": "^4.1.0",
     "@sinclair/typebox": "^0.33.7",
@@ -45,6 +44,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vite": "^6.0.0",
-    "vitest": "^4.0.0"
+    "vitest": "^4.0.0",
+    "@company/testing": "workspace:*"
   }
 }

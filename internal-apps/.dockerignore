@@ -1,0 +1,14 @@
+# Images build from a clean checkout — never ship host artifacts.
+**/node_modules
+**/dist
+**/dist-web
+**/test-results
+**/playwright-report
+**/blob-report
+**/e2e/.auth
+**/.turbo
+**/coverage
+.git
+**/.env
+**/.env.*
+!.env.example

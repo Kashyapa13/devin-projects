@@ -36,5 +36,12 @@
     "turbo": "^2.0.0",
     "typescript": "^5.6.3",
     "vitest": "^4.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "pacote": ">=21.5.1",
+      "picomatch": ">=4.0.4",
+      "sigstore": ">=4.1.1"
+    }
   }
 }

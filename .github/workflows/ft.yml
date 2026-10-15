@@ -157,7 +157,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - run: |
+      # No checkout: must not inherit the workflow-level internal-apps cwd.
+      - working-directory: ${{ github.workspace }}
+        run: |
           echo "changes=${{ needs.changes.result }} ft-unit=${{ needs.ft-unit.result }} ft-app=${{ needs.ft-app.result }}"
           for r in ${{ needs.changes.result }} ${{ needs.ft-unit.result }} ${{ needs.ft-app.result }}; do
             case "$r" in success|skipped) ;; *) exit 1;; esac
