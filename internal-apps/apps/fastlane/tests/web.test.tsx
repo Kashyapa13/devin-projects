@@ -23,7 +23,7 @@ const rows: Row[] = [
  * the status/SLA primitives. Gesture physics are covered by
  * platform-ui's motion tests; these pin the app-side wiring.
  */
-describe("queue table — gestures + morph wiring (ADR-0014)", () => {
+describe("queue table — selection + motion wiring (ADR-0014)", () => {
   const table = (
     <QueueTable<Row>
       caption="KYC review queue"
@@ -32,20 +32,17 @@ describe("queue table — gestures + morph wiring (ADR-0014)", () => {
         { key: "status", header: "Status", render: (r) => <StatusPill status={r.status} /> },
       ]}
       rows={rows}
-      morphIdPrefix="case"
-      morphKey="ref"
-      gestures={{
-        onSwipeRight: () => {},
-        onReassign: () => {},
-        reassignHint: "drop here to claim",
-      }}
+      selectedId="2"
+      rowMotion={() => ({ initial: { opacity: 0 }, animate: { opacity: 1 } })}
+      glideId="queue-cursor"
     />
   );
   const html = renderToStaticMarkup(table);
 
-  it("renders the drop-strip for drag-to-claim", () => {
-    expect(html).toContain('data-testid="reassign-drop"');
-    expect(html).toContain("drop here to claim");
+  it("marks the keyboard cursor row (data-selected + aria-current)", () => {
+    expect(html).toContain('data-selected="true"');
+    expect(html).toContain('aria-current="true"');
+    expect(html.match(/data-selected/g)?.length).toBe(1);
   });
 
   it("renders rows with stable ids for keyboard + morph targets", () => {
