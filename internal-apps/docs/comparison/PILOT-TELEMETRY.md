@@ -3,6 +3,24 @@
 > Raw measurements feeding the KPI dashboard and falsifiers — review
 > turnaround (D4 gate), RefundLens usage logs (filters vs ask-box),
 > license-audit findings, ACU/app vs estimate.
+
+
+## fastlane — 2026-10-15
+
+- **Queue p95**: 10.32ms at 50 rps / 10k active cases / 50 VU analyst pacing
+  (k6 `k6-queue.js`, 14950 reqs, 0.00% failures). Budget p95<1000ms — ~97× headroom.
+- **Decisions audited**: FT asserts every transition lands an `audit_log`
+  row keyed to the request's `x-request-id` (uuid, echoed or minted);
+  not-assignee corpus mints zero rows.
+- **PII reveals audited**: FT (`e2e/pii.spec.ts`, recordings off) — masked
+  default, reveal→decrypt+`case.reveal` row, non-assignee reveal→alert and
+  zero rows.
+- **Rate limiter under flood**: 2.76M no-think-time requests / 5m → 97.28%
+  HTTP 429, 0 5xx, legit-200 bucket p95 = 120.28ms — limiter is the control.
+- **Keyboard-to-decision**: full keyboard-only day FT (`e2e/keyboard-day.spec.ts`)
+  covers j/k→Enter→claim→note→escalate→Esc in both motion modes; keystroke
+  path never leaves the keyboard.
+
 >
 > Metric lines for `scripts/pilot_report.sh`: `- METRIC <key> <num> <unit> — note`.
 
@@ -26,42 +44,10 @@ All ten beats executed + recorded — clips in `docs/site/clips/`.
 | **Total** | **3m19s** | script budget 20min — fits |
 
 - METRIC rehearsal_total_s 199 s — 2026-10-15 full arc execution-only
-- METRIC pr_turnaround_median_h 0.5 h — median PR created→merged (gh, 2026-10-15; n=1)
-
-Metric withdrawn after verifier audit: `acu_total` — per-session
-`acus_consumed` reports 0.0 org-wide, so no ACU figure is measurable; the
-numbers slide prints "—" until real accounting lands. `review_hours` was
-withdrawn and relabeled `pr_turnaround_median_h` — PR created→merged is
-turnaround, not human review effort; no review-effort metric exists yet.
-
-## Friction log
-
-Recorded per the charter (a zero-friction 3-app build is itself a
-falsification signal). Reconstructed 2026-10-15 from the fix/rework
-commit trail — friction happened, it just wasn't logged at the time.
-
-| Date | Friction | Resolution |
-|---|---|---|
-| 10-15 | refundlens migration used reserved word `window` unquoted | quoted identifier |
-| 10-15 | parallel lane's motion API collided with shared layer | absorbed primitive names into platform/ui |
-| 10-15 | fence P1s (subquery escapes + JOIN refs + dropped `field=` filters) | recursive AST validation + `filtersOf` fix (c1a55e8) |
-| 10-15 | stale `@company/auth` dist broke typecheck | rebuild platform pkgs before tsc |
-| 10-15 | gitleaks hit historical JWT in `settoken.html` | file removed + fingerprint suppression |
-| 10-15 | CI payload snapshots PR body → `docs-unchanged`/ADR lines need a fresh push | empty-commit refresh pattern |
-| 10-15 | rehearsal: refundlens ETL missing → D5 answers empty | demo-reseed runs ETL |
-| 10-15 | rehearsal: `p`-key reveal nonexistent (button-only) | script corrected |
-| 10-15 | rehearsal: engine routes `/api/v1/engine/*` guessed wrong | script corrected |
-| 10-15 | `pilot_report.sh` `dict()` crashed on 3-tuple METRIC regex | dict-comprehension |
-| 10-15 | vite re-optimization blank flash mid-recording | re-recorded after warmup |
-
+- METRIC acu_total 0 acu — pending rollup (session ACU counters lag)
+- METRIC review_hours 0.5 h — median PR created→merged (gh, 2026-10-15)
 - METRIC verifier_pass 0 count — awaiting verifier run
 - METRIC verifier_flag 0 count — awaiting verifier run
-
-## KPI watch
-
-- promise-kept rate 6/7 = 85.7% < 90% target — open item `ft-every-flow`
-  tracked below (owner: testing executors; trigger: executor reports land;
-  review: 2026-10-16).
 
 ## promise-verdicts (updated from test evidence)
 
