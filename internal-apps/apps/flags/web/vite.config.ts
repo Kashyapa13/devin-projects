@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   server: { proxy: { "/api": "http://localhost:8082" } },
   build: {
-    outDir: "dist-web",
+    outDir: "../dist-web",
     emptyOutDir: true,
   },
 });
