@@ -8,6 +8,7 @@ export const resources = {
       "dock.navigate": "navigate",
       "dock.open": "open",
       "dock.back": "back",
+      "case.missing": "case not found or unavailable",
       "queue.caption": "KYC review queue",
       "queue.empty": "Queue is clear",
       "queue.tab.mine": "Mine",

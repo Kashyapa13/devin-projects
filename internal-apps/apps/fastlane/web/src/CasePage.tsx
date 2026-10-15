@@ -69,9 +69,10 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     setError(null);
   }, [id]);
 
-  const { data: kase, isLoading } = useQuery({
+  const { data: kase, isLoading, error: caseError } = useQuery({
     queryKey: ["case", id],
     queryFn: () => api(`/api/v1/cases/${id}`) as Promise<CaseRow>,
+    retry: 1,
   });
   const { data: audit } = useQuery({
     queryKey: ["audit", id],
@@ -199,13 +200,19 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
           ]}
         />
       </AppHeader>
-      {isLoading || !kase ? (
+      {isLoading ? (
         <main className="shell" aria-busy="true">
           <div className="skel-rows">
             {["45%", "80%", "66%", "72%", "38%", "55%"].map((w, i) => (
               <Skeleton key={i} width={w} />
             ))}
           </div>
+        </main>
+      ) : !kase ? (
+        <main className="shell">
+          <p role="alert" className="error">
+            {t("error.title")}: {caseError?.message ?? t("case.missing")}
+          </p>
         </main>
       ) : (
       <main className="shell">
