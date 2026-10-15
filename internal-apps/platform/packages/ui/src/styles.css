@@ -442,6 +442,15 @@ label {
   overflow: hidden;
 }
 
+/* ---------- action rows (decision panels) ---------- */
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 /* ---------- badges, pills, chips — soft tint + micro-border + dot ---------- */
 
 .pill,
@@ -693,6 +702,18 @@ dl.case-fields dd {
   border-radius: 50%;
   background: var(--accent-soft-2);
   border: 1.5px solid var(--accent);
+}
+.timeline .action {
+  color: var(--ink);
+  font-weight: 550;
+}
+.timeline .at {
+  font-family: var(--mono);
+  font-size: 0.78em;
+  color: var(--ink-3);
+}
+.timeline .actor {
+  color: var(--ink-3);
 }
 
 /* ---------- toasts ---------- */

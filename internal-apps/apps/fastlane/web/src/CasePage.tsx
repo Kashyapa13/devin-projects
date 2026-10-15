@@ -44,7 +44,9 @@ function DocPanel({ docUrl, onExpire }: { docUrl: { url: string; expires_at: str
   return (
     <p>
       <a href={docUrl.url} target="_blank" rel="noreferrer">{t("action.doc")}</a>{" "}
-      <span className="keys">{t("doc.expires")} {mmss} · {t("doc.audited")}</span>
+      <span className="keys">
+        {t("doc.expires")} <span className="mono">{mmss}</span> · {t("doc.audited")}
+      </span>
     </p>
   );
 }
@@ -215,7 +217,9 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <dl className="case-fields">
         <dt>{t("case.fields.customer")}</dt>
-        <dd>{kase.customer_ref}</dd>
+        <dd>
+          <span className="mono">{kase.customer_ref}</span>
+        </dd>
         <dt>{t("case.fields.status")}</dt>
         <dd>
           <StatusPill status={kase.status} />
@@ -233,9 +237,13 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <dt>{t("case.fields.doctype")}</dt>
         <dd>{kase.doc_type}</dd>
         <dt>{t("case.fields.assignee")}</dt>
-        <dd>{kase.assignee_id ?? "—"}</dd>
+        <dd>
+          <span className="mono">{kase.assignee_id ?? "—"}</span>
+        </dd>
         <dt>{t("case.fields.priority")}</dt>
-        <dd>{kase.priority}</dd>
+        <dd>
+          <span className="mono">{kase.priority}</span>
+        </dd>
       </dl>
 
       <section className="panel" aria-labelledby="pii-h">
@@ -245,7 +253,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             <BlurMorph revealed={false}>
               <span className="masked">{t("case.pii.masked")}</span>
             </BlurMorph>{" "}
-            <button type="button" onClick={() => void doReveal()}>
+            <button type="button" className="btn-ghost" onClick={() => void doReveal()}>
               {t("case.pii.reveal")}
             </button>
           </p>
@@ -261,25 +269,27 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <section className="panel" aria-labelledby="dec-h">
         <h2 id="dec-h">Decision</h2>
-        <button type="button" onClick={() => void act("claim")}>
-          {t("action.claim")} (c)
-        </button>{" "}
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={() => void act("approve")}
-        >
-          {t("action.approve")} (a)
-        </button>{" "}
-        <button type="button" onClick={() => setRejecting(true)}>
-          {t("action.reject")} (r)
-        </button>{" "}
-        <button type="button" onClick={() => setNoting(true)}>
-          {t("action.note")} (n)
-        </button>{" "}
-        <button type="button" onClick={() => void act("escalate")}>
-          {t("action.escalate")} (e)
-        </button>
+        <div className="actions">
+          <button type="button" className="btn-ghost" onClick={() => void act("claim")}>
+            {t("action.claim")} <kbd>c</kbd>
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => void act("approve")}
+          >
+            {t("action.approve")} <kbd>a</kbd>
+          </button>
+          <button type="button" className="btn-danger" onClick={() => setRejecting(true)}>
+            {t("action.reject")} <kbd>r</kbd>
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => setNoting(true)}>
+            {t("action.note")} <kbd>n</kbd>
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => void act("escalate")}>
+            {t("action.escalate")} <kbd>e</kbd>
+          </button>
+        </div>
       </section>
 
       {rejecting && (
@@ -326,8 +336,8 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <h2 id="doc-h">{t("doc.title")}</h2>
         {docUrl === null || docUrl.caseId !== id ? (
           <p>
-            <button type="button" onClick={() => void doDocUrl()}>
-              {t("doc.issue")} (d)
+            <button type="button" className="btn-ghost" onClick={() => void doDocUrl()}>
+              {t("doc.issue")} <kbd>d</kbd>
             </button>
           </p>
         ) : (
@@ -340,7 +350,9 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <ul className="timeline">
           {(audit ?? []).map((r, i) => (
             <li key={i}>
-              {String(r.at)} · {r.actor} · {r.action}
+              <span className="action">{r.action}</span>{" "}
+              <span className="at">{String(r.at)}</span>{" "}
+              <span className="actor">{r.actor}</span>
             </li>
           ))}
         </ul>
