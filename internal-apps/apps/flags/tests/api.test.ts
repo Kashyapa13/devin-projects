@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { newDb, DataType } from "pg-mem";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -142,6 +142,28 @@ describe("static panel serving (setNotFoundHandler) — deployed unit serves dis
       if (r.statusCode === 200) expect(r.body).toContain("<html"); // never file contents
     },
   );
+  it("sibling-directory escape /../dist-web-backup/* → never serves its files", async () => {
+    // Review regression: the prefix check must be WEB_ROOT+sep, so a sibling
+    // dir sharing the "dist-web" name-prefix can't be reached through "..".
+    mkdirSync("dist-web-backup", { recursive: true });
+    writeFileSync("dist-web-backup/secrets.txt", "TOP-SECRET");
+    try {
+      for (const url of [
+        "/../dist-web-backup/secrets.txt",
+        "/%2e%2e%2fdist-web-backup%2fsecrets.txt",
+      ]) {
+        const r = await call({ method: "GET", url });
+        expect(r.body).not.toContain("TOP-SECRET");
+      }
+    } finally { rmSync("dist-web-backup", { recursive: true, force: true }); }
+  });
+  it("malformed percent escape /%ZZ → controlled 400, never a 500", async () => {
+    // Fastify's router rejects malformed escapes pre-handler; the handler's own
+    // decodeURIComponent catch is belt-and-suspenders for paths that get through.
+    const r = await call({ method: "GET", url: "/%ZZ" });
+    expect(r.statusCode).toBe(400);
+    expect(r.statusCode).not.toBe(500);
+  });
 });
 
 describe("GET /api/flags — list (F-01)", () => {
