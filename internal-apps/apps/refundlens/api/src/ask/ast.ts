@@ -177,22 +177,39 @@ class Parser {
     return { schema: null, table: first };
   }
 
-  /** Skip a balanced expression until one of the boundary keywords/commas at depth 0. */
-  skipExpr(stopWords: Set<string>, stopComma: boolean): string[] {
-    const verbs: string[] = [];
+  /** Skip a balanced expression until one of the boundary keywords/commas at
+   * depth 0, collecting words and recursively validating any parenthesized
+   * SELECT (its tables + verbs merge into the caller's AST — OPEN-2). */
+  skipExpr(ast: SelectAst, stopWords: Set<string>, stopComma: boolean): void {
     let depth = 0;
     for (;;) {
       const t = this.peek();
-      if (t.kind === "eof") return verbs;
-      if (t.kind === "semi") return verbs;
-      if (depth === 0 && stopComma && t.kind === "comma") return verbs;
-      if (depth === 0 && t.kind === "word" && stopWords.has(t.text)) return verbs;
-      if (t.kind === "lparen") depth++;
+      if (t.kind === "eof") return;
+      if (t.kind === "semi") return;
+      if (depth === 0 && stopComma && t.kind === "comma") return;
+      if (depth === 0 && t.kind === "word" && stopWords.has(t.text)) return;
+      if (t.kind === "lparen") {
+        this.next();
+        const inner = this.peek();
+        if (inner.kind === "word" && inner.text === "select") {
+          // a parenthesized SELECT is a nested query — parse it so its
+          // tables and verbs face the same fences as the outer statement
+          this.next();
+          const sub: SelectAst = { kind: "select", tables: [], limit: null, verbs: [] };
+          this.parseSelect(sub);
+          ast.tables.push(...sub.tables);
+          ast.verbs.push(...sub.verbs);
+          if (this.isKind("rparen")) this.next(); // consume the subquery's close
+          continue;
+        }
+        depth++;
+        continue;
+      }
       if (t.kind === "rparen") {
-        if (depth === 0) return verbs;
+        if (depth === 0) return; // our own boundary inside a subquery
         depth--;
       }
-      if (t.kind === "word" || t.kind === "string") verbs.push(t.text);
+      if (t.kind === "word" || t.kind === "string") ast.verbs.push(t.text);
       this.next();
     }
   }
@@ -201,23 +218,12 @@ class Parser {
     // SELECT <exprs> — boundary FROM at depth 0; commas separate items,
     // they are not clause boundaries. Collected as verbs so write-capable
     // words in the SELECT list (INTO, set_config, ...) reach the fence.
-    ast.verbs.push(...this.skipExpr(new Set(["from"]), false));
+    this.skipExpr(ast, new Set(["from"]), false);
     if (!this.is("from")) throw new Error("SELECT without FROM");
     this.expect("from");
     for (;;) {
-      const ref = this.tableRef();
-      if (ref) {
-        ast.tables.push(ref);
-        // optional alias
-        if (this.is("as")) { this.next(); this.next(); }
-        else if (this.peek().kind === "word" && !KEYWORDS.has(this.peek().text)) this.next();
-      } else if (this.isKind("lparen")) {
-        throw new Error("subqueries are not allowed by the fence");
-      } else {
-        break;
-      }
-      if (this.isKind("comma")) { this.next(); continue; }
-      // JOIN chain
+      // JOIN chain — checked first each iteration so a second+ JOIN is
+      // recorded, not dropped into the straggler tail (OPEN-2)
       if (["join", "inner", "left", "right", "full", "cross"].includes(this.peek().text)) {
         this.next();
         if (this.is("join") || this.is("outer")) this.next();
@@ -229,34 +235,46 @@ class Parser {
         else if (this.peek().kind === "word" && !KEYWORDS.has(this.peek().text)) this.next();
         if (this.is("on")) {
           this.next();
-          this.skipExpr(new Set(["join", "inner", "left", "right", "full", "cross", "where", "group", "order", "having", "limit", "offset"]), true);
+          this.skipExpr(ast, new Set(["join", "inner", "left", "right", "full", "cross", "where", "group", "order", "having", "limit", "offset"]), true);
         }
         continue;
       }
-      break;
+      const ref = this.tableRef();
+      if (!ref) {
+        if (this.isKind("lparen")) throw new Error("subqueries are not allowed by the fence");
+        break;
+      }
+      ast.tables.push(ref);
+      // optional alias
+      if (this.is("as")) { this.next(); this.next(); }
+      else if (this.peek().kind === "word" && !KEYWORDS.has(this.peek().text)) this.next();
+      if (this.isKind("comma")) { this.next(); continue; }
+      // loop top re-checks for a JOIN chain
     }
     // tail clauses
     for (;;) {
       const t = this.peek();
       if (t.kind === "eof" || t.kind === "semi") return;
+      // rparen means we are inside a subquery — leave it for the caller
+      if (t.kind === "rparen") return;
       if (this.is("where")) {
         this.next();
-        ast.verbs.push(...this.skipExpr(new Set(["group", "order", "having", "limit", "offset"]), false));
+        this.skipExpr(ast, new Set(["group", "order", "having", "limit", "offset"]), false);
         continue;
       }
       if (this.is("group")) {
         this.next(); this.expect("by");
-        ast.verbs.push(...this.skipExpr(new Set(["having", "order", "limit", "offset"]), false));
+        this.skipExpr(ast, new Set(["having", "order", "limit", "offset"]), false);
         continue;
       }
       if (this.is("having")) {
         this.next();
-        ast.verbs.push(...this.skipExpr(new Set(["order", "limit", "offset"]), false));
+        this.skipExpr(ast, new Set(["order", "limit", "offset"]), false);
         continue;
       }
       if (this.is("order")) {
         this.next(); this.expect("by");
-        ast.verbs.push(...this.skipExpr(new Set(["limit", "offset"]), false));
+        this.skipExpr(ast, new Set(["limit", "offset"]), false);
         continue;
       }
       if (this.is("limit")) {

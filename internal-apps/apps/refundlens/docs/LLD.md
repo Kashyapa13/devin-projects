@@ -71,6 +71,8 @@ CREATE TABLE monitor_events (   -- firing history — the monitoring audit trail
   id bigserial PRIMARY KEY, monitor_id uuid REFERENCES monitors(id),
   fired_at timestamptz DEFAULT now(), value jsonb, state text
 );
+CREATE INDEX monitor_events_by_monitor  -- latest-event lookups (monitors_panel)
+  ON monitor_events (monitor_id, fired_at DESC);
 -- roles: app = SELECT only on refund_events_raw, agg_daily, agg_hourly, sync_runs.
 -- etl = separate role, INSERT/UPDATE only, no login path.
 -- monitors/monitor_events: app = SELECT; evaluator role writes events.
@@ -83,26 +85,37 @@ POST `/ask` {question} → `{answer, sql, rows, watermark, took_ms}`
 (typed params → shareable state) · GET `/ask/:id` · GET `/ask/me/history`
 · GET `/export.csv` (exact counts, watermark in header comment, bypasses
 cache) · GET `/health/sync` (watermark + lag + last run status) ·
-GET `/api/stream/heartbeat` (SSE — heartbeat events; ADR-0016) ·
-GET/POST `/monitors` (admin — monitors-as-code definitions) ·
+GET `/api/stream/heartbeat` (SSE — heartbeat events; ADR-0016; bearer or
+`?token=` JWT — ADR-0018) · POST `/api/internal/beat` (service — the
+heartbeat posts each beat here; records + fans out, degraded never
+silent) · GET `/api/monitors` + PATCH `/api/monitors/:id` (admin —
+monitors-as-code defs; patch bumps `version`) ·
 GET `/api/widgets/:name` (typed params → server-computed series via the
 SAME fenced template layer — the WIDGET LAW; §4.2) ·
-platform `/healthz` `/readyz`.
+GET `/api/v1/health/sync` (analyst+ops+service — watermark + lag +
+heartbeat age) · GET `/api/v1/sync` (admin — sync_runs history +
+heartbeat age) · platform `/healthz` `/readyz` `/metrics`.
 
 Error envelope per platform-http: `{error:{code,message,detail?,req_id}}`.
 Fence rejections carry `code:"fenced_query_rejected"` + actionable
 guidance. New endpoint = a row here + contract test first (AGENTS §5
 equivalent — the registry is the drift gate's source).
 
-| Endpoint | analyst | etl | service |
-|---|---|---|---|
-| POST /ask | ✓ | — | — |
-| GET /view | ✓ | — | — |
-| GET /ask/:id · /ask/me/history | own history | — | — |
-| GET /export.csv | ✓ | — | — |
-| GET /health/sync | ✓ | ✓ | ✓ |
-| ETL sync (DB only, no HTTP) | — | ✓ | — |
-| fork_report (DB only, no HTTP) | — | — | ✓ |
+| Endpoint | analyst | ops | admin | service | etl |
+|---|---|---|---|---|---|
+| POST /ask | ✓ | — | — | — | — |
+| GET /view | ✓ | — | — | — | — |
+| GET /ask/:id · /ask/me/history | own history | — | — | — | — |
+| GET /export.csv | ✓ | — | — | — | — |
+| GET /api/widgets/:name | ✓ | ✓ | — | — | — |
+| GET /api/stream/heartbeat | ✓ | ✓ | — | — | — |
+| POST /api/internal/beat | — | — | — | ✓ | — |
+| GET /api/monitors · PATCH /api/monitors/:id | — | — | ✓ | — | — |
+| GET /api/v1/health/sync | ✓ | ✓ | — | ✓ | ✓ |
+| GET /api/v1/sync | — | — | ✓ | — | — |
+| ETL sync (DB only, no HTTP) | — | — | — | — | ✓ |
+| heartbeat (job — runSync + evaluate + beat POST) | — | — | — | ✓ | — |
+| fork_report (DB only, no HTTP) | — | — | — | ✓ | — |
 
 ## The fence — spec (all six mandatory + AST)
 
@@ -117,12 +130,18 @@ Enforcement order inside `api/ask/`: generate → parse AST → check fences
 | 3 | Mandatory LIMIT | statement must carry LIMIT ≤ 5000; default 500 injected by templates | missing or over-cap LIMIT → `fenced_query_rejected` |
 | 4 | statement_timeout 5s | set on the read-only role's session, not per-query client config | timeout → error envelope, counts as `error` not `fenced` |
 | 5 | EXPLAIN cost cap | EXPLAIN before execute; total cost >5000 rejected | `fenced_query_rejected` + guidance to narrow dim/window/filters |
-| 6 | Banned tables | `ask_log`, `sync_runs`, anything outside `refundlens` | `fenced_query_rejected` — evidence tables are not queryable by the ask path |
+| 6 | Banned tables | `ask_log` (every scope); `sync_runs` on the ASK scope only | `fenced_query_rejected` — see ADR-0018 for per-path scopes |
 
 AST validation, not regex: generated SQL is parsed; DDL/DML tokens
 (INSERT/UPDATE/DELETE/DDL/multiple statements) post-generation fail at
 the AST stage regardless of how they are spelled. Regex would miss
 spelling; the AST cannot.
+
+The parser validates recursively: every JOIN reference (not just the
+first) is collected, and a parenthesized SELECT inside any expression is
+parsed as a nested query whose tables and verbs face the identical
+fences — a subquery is never an escape hatch. Server-rendered widget SQL
+may legitimately emit subqueries; they are validated, not banned.
 
 ## Template renderer contract (views — typed params only)
 
@@ -144,6 +163,14 @@ Alerts: sync_lag_s >5400 = ticket · >10800 = page · ask fenced-rejection
 rate >25% over 1h = ticket (product signal — users ask what the fence
 can't serve). Log fields: ts, level, req_id, user_id,
 surface(ask|view|export), ms, rows, cached. Banned: raw query results.
+
+Transport (ADR-0017): platform `otelRegistry("refundlens")` dual-writes
+every instrument — same names/labels — to OTel OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`;
+local → `infra/otel` collector → Grafana LGTM :4318, prod → client OTLP
+backend) AND the in-process `/metrics` exposition. `sync_lag_s` is a
+DB-probed observable gauge (was: registered-and-never-set). Logs: pino →
+OTLP with injected trace_id/span_id; stdout unchanged. Sampler:
+`OTEL_TRACES_SAMPLER_RATIO` controls ParentBased-ratio; AlwaysOn default.
 
 ## Test matrix (§7 gates)
 
@@ -167,7 +194,10 @@ revisit at 5x.
 Single-AZ app + Multi-AZ DB; ETL as a scheduled job with failure alert;
 blue/green; auto-rollback on error rate >2% (10m). Vault: REPLICA_DSN,
 DATABASE_URL, SSO_ISSUER, SLACK_ETL_ALERTS. Tier-2: 99.5% SLO, RTO 4h,
-business-hours support.
+business-hours support. Env per environment (ADR-0017):
+`OTEL_EXPORTER_OTLP_ENDPOINT` — local → `http://localhost:4318`
+(`infra/otel` compose → collector → Grafana LGTM), prod → client's
+existing OTLP backend; unset → emitter no-ops.
 
 ## Usage KPIs (= the PR promises)
 

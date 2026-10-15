@@ -48,9 +48,9 @@ paths:
           description: unauthenticated
         "403":
           description: forbidden
-  /api/v1/health/sync:
+  /api/v1/export.csv:
     get:
-      summary: Watermark + lag + last run status — the freshness claim on every surface
+      summary: Exact-count CSV export — watermark header, bypasses cache
       x-roles:
         - analyst
       responses:
@@ -62,11 +62,102 @@ paths:
           description: unauthenticated
         "403":
           description: forbidden
-  /api/v1/export.csv:
+  /api/widgets/:name:
     get:
-      summary: Exact-count CSV export — watermark header, bypasses cache
+      summary: Dashboard widget — typed params → server-rendered → fenced exec (WIDGET
+        LAW)
       x-roles:
         - analyst
+        - ops
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
+  /api/stream/heartbeat:
+    get:
+      summary: SSE — heartbeat beats {watermark,last_event_at,beat_at,rows,lag_s}
+        (ADR-0016)
+      x-roles:
+        - analyst
+        - ops
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
+  /api/internal/beat:
+    post:
+      summary: Heartbeat script posts each beat — records + fans out to SSE (never
+        silent)
+      x-roles:
+        - service
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
+  /api/monitors:
+    get:
+      summary: Monitors-as-code definitions + latest state (admin)
+      x-roles:
+        - admin
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
+  /api/monitors/:id:
+    patch:
+      summary: Enable/disable/update a monitor — bumps version
+      x-roles:
+        - admin
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
+  /api/v1/health/sync:
+    get:
+      summary: Watermark + lag + last run status + heartbeat age (F-06)
+      x-roles:
+        - analyst
+        - ops
+        - service
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
+  /api/v1/sync:
+    get:
+      summary: Sync admin surface — sync_runs history + heartbeat age (F-17)
+      x-roles:
+        - admin
       responses:
         "200":
           description: ok

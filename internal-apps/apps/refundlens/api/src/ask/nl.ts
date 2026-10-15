@@ -66,7 +66,7 @@ function windowOf(q: string, now: Date): { from: string; to: string } {
 function filtersOf(q: string): ViewParams["filters"] {
   const out: NonNullable<ViewParams["filters"]> = [];
   for (const [re, field] of FIELD_WORDS) {
-    const m = new RegExp(`${re.source.slice(1, -1)}\\s*[=:]\\s*([\\w-]+)`).exec(q);
+    const m = new RegExp(`${re.source}\\s*[=:]\\s*([\\w-]+)`).exec(q);
     if (m?.[1]) out.push({ field, op: "eq", value: m[1].toUpperCase() });
   }
   return out;

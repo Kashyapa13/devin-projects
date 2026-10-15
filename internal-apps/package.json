@@ -24,11 +24,14 @@
     "drift": "scripts/ci/schema-drift.sh && scripts/ci/api-drift.sh && scripts/ci/docs-lint.sh && scripts/ci/adr-check.sh",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "publish-packages": "changeset publish"
+    "publish-packages": "changeset publish",
+    "otel:seed": "tsx scripts/otel-seeder.ts",
+    "otel:monitors": "tsx scripts/otel-monitors.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
     "@changesets/cli": "^2.27.9",
+    "@company/otel": "workspace:*",
     "@playwright/test": "^1.48.2",
     "@types/node": "^22.9.0",
     "playwright-core": "1.64.1",

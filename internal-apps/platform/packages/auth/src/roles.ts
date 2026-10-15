@@ -4,7 +4,11 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 export const rolesMatrix = {
   admin: ["*"],
   operator: ["case:read", "case:claim", "case:decide", "queue:read"],
-  analyst: ["case:read", "queue:read", "report:read"],
+  analyst: ["case:read", "queue:read", "report:read", "dashboard:read"],
+  /** RefundLens (LLD role table, ADR-0018): dashboard read-only viewer. */
+  ops: ["dashboard:read", "sync:read"],
+  /** Machine callers — health checks, heartbeat beat posts (ADR-0018). */
+  service: ["health:read", "beat:write"],
   viewer: ["case:read", "queue:read"],
   reviewer: [
     "case:read",

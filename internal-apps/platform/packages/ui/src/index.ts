@@ -48,4 +48,6 @@ export {
   useReducedMotion,
   useToasts,
 } from "./motion.js";
+export * from "./motion/index.js";
+export * from "./charts/index.js";
 // styles.css is a file export ("@company/ui/styles.css") — see exports map.
