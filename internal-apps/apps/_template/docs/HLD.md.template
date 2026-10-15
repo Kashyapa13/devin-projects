@@ -1,0 +1,14 @@
+# <APP_NAME> — HLD
+
+TODO(one-liner): what it is and who it's for (link the press release).
+
+## Architecture
+
+TODO: actor → ingress → API → datastore → external systems; call out
+read/write paths and anything deliberately NOT built.
+
+## Tradeoff table (chosen + rejected with cost)
+
+| Decision | Chosen | Rejected (and its cost) |
+|---|---|---|
+| TODO | TODO | TODO — the rejected alternative's cost is MANDATORY |

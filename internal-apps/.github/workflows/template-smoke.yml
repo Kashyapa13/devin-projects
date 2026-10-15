@@ -1,44 +1,29 @@
 name: template-smoke
 
-# Copies apps/_template, builds it — proves the fleet seed stays green
-# with zero edits.
-#
-# Design annotations:
-#   Monorepo = source home only. Deployment units are per-app: one image,
-#   one version stream, one pipeline, one rollback per app.
-#   Path-filtered pipelines: apps/<app>/** → that app only; platform/** →
-#   ALL apps (security-wave: FastLane canary 30–60 min → rest, each gated
-#   on its own smoke suite). security.yml never path-filtered.
-#   platform/ = build-time workspace packages; never a runtime service.
-#   Publishing requires own tests + CHANGELOG + stable-API ADR.
-#   Dependency direction one-way: apps → platform; platform → nothing
-#   app-specific; apps ↛ apps. import-lint enforces; violations fail CI.
-#   Per-app databases, never shared; no cross-app calls without ADR; any
-#   app may graduate to its own repo via ADR.
-#   DB map: two dev Postgres containers on different ports make cross-app
-#   access physically awkward; ETL role separate from app role.
-#   Security map: auth/audit/crypto/http live in platform — one review
-#   covers all apps; secrets vault-only, .env.example = names; scans on
-#   all paths.
-#   Publish mechanism: workspace:* internally; changesets → private
-#   registry for other repos, gated by ADR.
-#   Devin budget: root ≤4 KiB + app ~10 KiB, inside the 16 KiB injection
-#   limit.
-#   Fleet protocol: the _template is how "app #1 expensive, apps #2+
-#   cheap" becomes mechanically true.
+# The fleet gate: `cp -r apps/_template apps/x && pipeline green with no
+# edits` — that sentence is the acceptance test. Copies _template →
+# apps/_smoke_run, runs lint/typecheck/test + builds the image, always
+# deletes _smoke_run after (trap in scripts/ci/template-smoke.sh).
 
 on:
   pull_request:
     paths:
       - "apps/_template/**"
       - "platform/**"
+      - "scripts/ci/template-smoke.sh"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   push:
     branches: [main]
     paths:
       - "apps/_template/**"
       - "platform/**"
+      - "scripts/ci/template-smoke.sh"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   schedule:
     - cron: "0 7 * * *"
+  workflow_dispatch:
 
 jobs:
   smoke:
@@ -50,7 +35,6 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - name: instantiate template (stub)
-        run: |
-          cp -r apps/_template /tmp/template-smoke-app
-          echo "stub — once _template lands: pnpm install && pnpm build in /tmp/template-smoke-app"
+      - run: pnpm install --frozen-lockfile
+      - name: cp → lint/typecheck/test + image build (always cleans up)
+        run: bash scripts/ci/template-smoke.sh

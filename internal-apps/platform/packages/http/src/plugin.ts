@@ -74,6 +74,11 @@ export const httpPlugin = fp(
 
   await app.register(rateLimit, { global: false });
 
+  // 404s take the envelope too — the error contract has no exceptions.
+  app.setNotFoundHandler((req: FastifyRequest, reply: FastifyReply) =>
+    reply.status(404).send(envelope("NOT_FOUND", "route not found", req.reqId)),
+  );
+
   // healthz: process liveness, no dependencies.
   app.get("/healthz", () => ({ status: "ok" }));
 

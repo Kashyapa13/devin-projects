@@ -1,0 +1,25 @@
+# <APP_NAME> — LLD
+
+## Core DDL (commentary — schema truth lives in db/migrations)
+
+TODO(sql): tables, indexes, constraints verbatim from migrations.
+
+## API registry
+
+TODO: every endpoint row — method+path, role, idempotency, rate preset.
+
+## RBAC
+
+TODO: role → permissions via platform-auth rolesMatrix/requireRole.
+
+## Observability names
+
+TODO: exact metric/log names (dashboards/alerts are wired to these).
+
+## Deployment
+
+TODO: envs, blue/green thresholds, migration-job usage, SLO numbers.
+
+## Test matrix / capacity envelope
+
+TODO: gates list + [EST] volumes; revisit-at multiplier.

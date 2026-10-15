@@ -1,0 +1,54 @@
+# <APP_NAME> — AGENTS.md (app constitution)
+
+TODO(tier): Tier-<1|2|3> · data class C<4|3|2|1> · SLO <xx.x>% ·
+RTO <xh> · RPO <xmin> · own logical DB.
+TODO(owner): owning pair + on-call.
+Docs truth: docs/HLD.md, docs/LLD.md, docs/RUNBOOK.md.
+Schema truth: db/migrations ONLY. LLD schema section is commentary.
+
+## 1. Stack (fixed — changes require ADR)
+TODO(confirm): Node 22 LTS, TypeScript strict ESM, Fastify + TypeBox,
+raw-SQL migrations via platform-db, Postgres 16, React 19 + Vite PWA +
+platform/ui + i18next (ALL strings externalized — hard gate),
+Vitest/Testcontainers/Playwright/k6/axe-core.
+
+## 2. Directory law
+apps/<app>/{api/{routes,services,db}, web/src, db/migrations, docs, scripts}
+TODO: adjust shape; keep routes ≤150 lines, logic in services.
+
+## 3. Data classification
+TODO(fields): field-level table — C4 → platform-crypto envelope +
+audited reveal, never in logs/non-prod; C3 → plaintext sparingly,
+cardholder-looking = STOP; C2 → default. Fixtures: named deterministic
+seed "<app>-seed-v1", synthetic only.
+
+## 4. State machine
+TODO(edges): list the ONLY legal transitions + guard + roles; or delete
+this section if the app is read-only.
+
+## 5. API law
+- Prefix /api/v1 · cursor pagination ONLY (platform-db paginate).
+- Error envelope {error:{code,message,detail?,req_id}} via platform-http.
+- Mutations: Idempotency-Key required · X-Request-ID in→out on every
+  log line and audit row · rate limits via platform-http presets.
+- TODO(endpoints): registry — each row = LLD entry + contract test first.
+
+## 6. Observability
+TODO(metrics): <app>_<noun>_<unit> via platform-observability
+(namespaced); alert thresholds (page vs ticket); log fields + banned
+fields (never C3/C4 payloads).
+
+## 7. Testing gates
+TODO(gates): unit / integration (ephemeral PG) / contract / e2e
+(keyboard-mode) / axe / k6 budgets; coverage floors.
+
+## 8. Deploy & rollback
+TODO(env): env matrix, vault-scoped env var NAMES (never values),
+blue/green + auto-rollback thresholds via platform-deploy, capacity
+envelope [EST], restore-drill cadence for Tier-1.
+
+## 9. Devin session protocol
+START: root AGENTS.md → this file → docs/HLD.md → docs/LLD.md →
+docs/OPEN-QUESTIONS.md. STOP-CONDITIONS: PII in non-prod · new state
+transition/endpoint/schema without ADR · doc/code conflict · anything
+under platform/. EVERY PR: code+tests+docs+ADR-if-architectural.

@@ -1,0 +1,16 @@
+# <APP_NAME> — RUNBOOK
+
+## Deploy
+TODO: pipeline, migration-job step, verification commands.
+
+## Rollback
+TODO: blue/green switch + auto-rollback thresholds; how to force it.
+
+## Rotate secrets
+TODO: vault scopes, what must restart, blast radius.
+
+## Restore from backup / PITR
+TODO: drill steps + last-verified date (Tier-1: monthly via KEEPER).
+
+## Common incidents
+TODO: top plays — symptom → check → fix → escalate.
