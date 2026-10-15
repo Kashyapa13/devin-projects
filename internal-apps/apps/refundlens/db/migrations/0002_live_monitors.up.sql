@@ -17,7 +17,7 @@ CREATE TABLE refundlens.monitors (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL UNIQUE,
   metric text NOT NULL,              -- series key the evaluator resolves
-  window text NOT NULL,              -- e.g. '5m', '1h', '24h'
+  "window" text NOT NULL,              -- e.g. '5m', '1h', '24h'
   condition text NOT NULL,           -- 'gt' | 'lt' | 'zscore_gt' | 'age_gt'
   threshold jsonb NOT NULL,
   severity text NOT NULL DEFAULT 'ticket'
@@ -41,7 +41,7 @@ CREATE TABLE refundlens.monitor_events (
 -- Seed monitors (ADR-0016 §monitors): the heartbeat watching itself,
 -- plus the three business monitors the spec names.
 INSERT INTO refundlens.monitors
-  (name, metric, window, condition, threshold, severity, owner) VALUES
+  (name, metric, "window", condition, threshold, severity, owner) VALUES
   ('heartbeat-age',   'heartbeat_age_s',    '1m',  'age_gt',    '{"seconds":300}', 'page',   'refundlens-ops'),
   ('refund-rate-z',   'refund_rate_zscore', '24h', 'zscore_gt', '{"z":3}',         'ticket', 'refundlens-ops'),
   ('volume-anomaly',  'refund_volume',      '24h', 'zscore_gt', '{"z":3}',         'ticket', 'refundlens-ops'),
