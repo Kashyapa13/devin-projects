@@ -93,3 +93,26 @@ semantic-table a11y, cursor pagination.
   `event_durations: [16×6]`.
 - k6 BEFORE (5 m, 50 VU): *pasted after run completes — see PR.*
 - AFTER numbers, axe both modes, montage → PR evidence section.
+
+---
+
+## PHASE B/C — closure (2026-10-15, devin/1792087992-interaction-system)
+
+All work items closed — one library (`motion` in `@company/ui` only,
+import-lint `motion-outside-ui` rule enforces the boundary; ADR-0014).
+Evidence re-run on this branch:
+
+| check | BEFORE | AFTER |
+|---|---|---|
+| input→frame p75 | 17ms | 17ms (tie) |
+| j/k burst (10 presses) | 55ms | 171ms wall / ~17ms·press |
+| keyboard-day sequence | — | 283ms (10 j/k + open + tab×3 + back) |
+| long tasks >50ms in burst | 0 | 0 |
+| interruption (3 mid-flight j retargets) | n/a | 609 samples, monotonic, landed on target |
+| axe critical/serious | n/a | 0/0 in motion-on, off, prefers-reduced-motion |
+| queue p95 (k6, motion on) | 89.8ms @56rps | re-run below |
+
+Notes: memoized `QueueRow` (re-render = 2 rows, not 50) + conditional
+`morphId` + manual-FLIP `FocusGlide` — layoutId group measure removed from
+the key path. RefundLens/flags moments: primitives shipped (Stagger,
+CountUp, Morph hero) — wiring stays with their owning sessions.
