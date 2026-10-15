@@ -221,14 +221,20 @@ export function SwipeRow({
 }
 
 /** Count-up on a springy curve (RefundLens numbers). */
-export function CountUp({ value }: { value: number }): ReactElement {
+export function CountUp({
+  value,
+  format = (n: number) => Math.round(n).toLocaleString("en-US"),
+}: {
+  value: number;
+  format?: (n: number) => string;
+}): ReactElement {
   const spring = useSpring(value, springs.gentle);
-  const [shown, setShown] = useState(value);
+  const [shown, setShown] = useState(() => format(value));
   useEffect(() => {
     spring.set(value);
-    return spring.on("change", (v) => setShown(Math.round(v)));
-  }, [value, spring]);
-  return <>{shown.toLocaleString()}</>;
+    return spring.on("change", (v) => setShown(format(v)));
+  }, [value, spring, format]);
+  return <>{shown}</>;
 }
 
 /** Stagger container — children mount staggered (chart draw-in). */
@@ -247,10 +253,78 @@ export function Stagger({ children }: { children: ReactNode }): ReactElement {
   );
 }
 
-export const staggerChild = {
-  off: { opacity: 0, y: 12 },
-  on: { opacity: 1, y: 0, transition: springs.gentle },
+export const staggerParent = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.045 } },
 } as const;
+
+export const staggerChild = (reduced: boolean) => ({
+  hidden: reduced ? { opacity: 0 } : { opacity: 0, y: 8 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: reduced ? ({ type: "tween", duration: 0.15 } as const) : springs.gentle,
+  },
+});
+
+/** Table-element staggers — tbody/tr cannot be wrapped in a div. */
+export const StaggerList = motion.div;
+export const StaggerItem = motion.div;
+export const StaggerTbody = motion.tbody;
+export const StaggerTr = motion.tr;
+
+/** Continuity: element enters FROM somewhere, not from nothing. */
+export function Reveal({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}): ReactElement {
+  const reduced = useFreeze() || useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.99 }}
+      transition={{ ...springs.gentle, delay }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** Fenced-rejection shake — remounts per `trigger` so keyframes replay. */
+export function Shake({
+  children,
+  trigger,
+  className,
+}: {
+  children: ReactNode;
+  trigger: unknown;
+  className?: string;
+}): ReactElement {
+  const reduced = useFreeze() || useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      key={typeof trigger === "object" && trigger !== null ? JSON.stringify(trigger) : String(trigger)}
+      initial={{ x: 0 }}
+      animate={reduced ? { x: 0 } : { x: [-8, 8, -5, 5, -2, 0] }}
+      transition={{ type: "spring", stiffness: 600, damping: 22 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** Focus glide scroll-nudge — follows focus, never delays it. */
+export function focusGlide(el: Element | null | undefined, reduced: boolean): void {
+  el?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
+}
 
 /** Skeleton — no spinners, ever (feel law). */
 export function Skeleton({ width = "100%" }: { width?: string }): ReactElement {
