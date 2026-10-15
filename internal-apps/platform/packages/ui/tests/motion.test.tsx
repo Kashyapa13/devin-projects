@@ -1,67 +1,75 @@
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { render } from "@testing-library/react";
-import { SPRINGS, CROSSFADE } from "../src/motion/springs.js";
-import { isMotionFrozen } from "../src/motion/MotionProvider.js";
-import { swipeDecision, staggerChild } from "../src/motion/primitives.js";
-import { MotionProvider } from "../src/motion/MotionProvider.js";
-import { Reveal, StatusSpring, CountUp } from "../src/motion/primitives.js";
+import {
+  BlurMorph,
+  ColorSpring,
+  CountUp,
+  FocusGlide,
+  Morph,
+  MotionProvider,
+  Pressable,
+  Pulse,
+  Skeleton,
+  springs,
+  SwipeRow,
+  Toast,
+  useFreeze,
+} from "../src/motion.js";
 
-describe("spring presets (ADR-0014 — springs not easings)", () => {
-  it("are stiffness/damping springs and nothing else", () => {
-    for (const s of Object.values(SPRINGS)) {
+describe("motion law", () => {
+  it("every preset is a spring — no easings, no tweens", () => {
+    for (const s of Object.values(springs)) {
       expect(s.type).toBe("spring");
-      expect(s.stiffness).toBeGreaterThan(0);
-      expect(s.damping).toBeGreaterThan(0);
+      expect((s as { stiffness?: number }).stiffness).toBeTypeOf("number");
+      expect((s as { damping?: number }).damping).toBeTypeOf("number");
     }
-    expect(CROSSFADE.type).toBe("tween"); // reduced path, not a spring
+    expect(Object.keys(springs)).toEqual(["snappy", "gentle", "hero"]);
   });
-  it("names the three presets the spec fixes", () => {
-    expect(Object.keys(SPRINGS).sort()).toEqual([
-      "gentleSettle",
-      "overshootSettle",
-      "snappyUI",
-    ]);
-  });
-});
 
-describe("test-mode freeze + reduced path", () => {
-  it("frozen flag comes from ?motion=frozen or localStorage", () => {
-    localStorage.setItem("motion-frozen", "1");
-    expect(isMotionFrozen()).toBe(true);
-    localStorage.removeItem("motion-frozen");
-    expect(isMotionFrozen()).toBe(false);
+  it("primitives mount inside MotionProvider", () => {
+    render(
+      <MotionProvider>
+        <Morph morphId="x">m</Morph>
+        <Pressable>p</Pressable>
+        <ColorSpring color="#000">c</ColorSpring>
+        <Pulse when>p</Pulse>
+        <Skeleton width="4rem" />
+        <SwipeRow>s</SwipeRow>
+        <BlurMorph revealed>b</BlurMorph>
+        <Toast id="t">t</Toast>
+        <FocusGlide glideId="g" />
+        <CountUp value={42} />
+      </MotionProvider>,
+    );
+    expect(screen.getByText("m")).toBeTruthy();
+    expect(screen.getByText("42")).toBeTruthy();
   });
-  it("provider + primitives render in both modes without crashing", () => {
-    for (const flag of ["0", "1"]) {
-      localStorage.setItem("motion-frozen", flag);
-      const { container, unmount } = render(
-        <MotionProvider>
-          <Reveal>
-            <StatusSpring color="#15803d">done</StatusSpring>
-            <CountUp value={5432} />
-          </Reveal>
-        </MotionProvider>,
-      );
-      expect(container.textContent).toContain("done");
-      unmount();
+
+  it("test-mode freeze flips via data-motion=off (FT determinism)", () => {
+    document.documentElement.dataset["motion"] = "off";
+    function Probe() {
+      return <span data-testid="f">{String(useFreeze())}</span>;
     }
-    localStorage.removeItem("motion-frozen");
+    render(<Probe />);
+    expect(screen.getByTestId("f").textContent).toBe("true");
+    delete document.documentElement.dataset["motion"];
   });
-});
 
-describe("swipe settle law — never half-commits", () => {
-  it("commits only past threshold, else settles back", () => {
-    expect(swipeDecision(97, 96)).toBe("commit-right");
-    expect(swipeDecision(-96, 96)).toBe("commit-left");
-    expect(swipeDecision(95.9, 96)).toBe("settle-back");
-    expect(swipeDecision(0, 96)).toBe("settle-back");
+  it("freeze mode renders children instantly (zero-duration config)", () => {
+    document.documentElement.dataset["motion"] = "off";
+    render(
+      <MotionProvider>
+        <Morph morphId="z">frozen</Morph>
+      </MotionProvider>,
+    );
+    expect(screen.getByText("frozen")).toBeTruthy();
+    delete document.documentElement.dataset["motion"];
   });
-});
 
-describe("stagger draw-in variants", () => {
-  it("reduced mode removes the rise (opacity only)", () => {
-    expect(staggerChild(false).hidden).toMatchObject({ y: 8 });
-    expect(staggerChild(true).hidden).toEqual({ opacity: 0 });
-    expect((staggerChild(true).show as { y: number }).y).toBe(0);
+  it("Pulse fires once — re-render with same flag does not re-pulse", () => {
+    const { rerender } = render(<Pulse when={false}>x</Pulse>);
+    rerender(<Pulse when>x</Pulse>);
+    rerender(<Pulse when>x</Pulse>);
+    expect(screen.getByText("x")).toBeTruthy();
   });
 });

@@ -114,6 +114,7 @@ one feature per session, copying the anchor's shape (schema → routes → UI
 |---|---|---|
 | Keyboard-day queue + decision panel | **anchor — this PR** | /queue (tabs, risk filter, badges/pills/chips, cursor) + /cases/[id] (c claim · a approve · r reject-with-reason · n note · e escalate) + audit timeline + audited masked-PII reveal · **motion notes (ADR-0014):** row→case shared-element morph on the ref cell · swipe-right approve / swipe-left opens reject / drag-to-claim drop strip (rubber-band, settle-back below threshold) · optimistic approve with spring rollback on error · focus glides on j/k · status-pill color-spring · SLA chip one-pulse on breach crossing · masked→reveal blur morph · press states scale 0.97 |
 | Signed doc panel (doc-url expiry UX) | **built** — evidence: `FT doc-panel` test + `d`-key DocPanel (live countdown, expired→re-issue, audited issuance) | /cases/[id] doc section |
+| Signed doc panel (doc-url expiry UX) | **built** — evidence: `FT doc-panel` test + `d`-key DocPanel (live countdown, expired→re-issue, audited issuance) | /cases/[id] doc section |
 | SLA breaching alert surfaces | FB | queue breaching tab + cron digest consumer |
 | Notes timeline in queue row | FB | expandable row |
 | Supervisor team dashboard | FB | /team view (supervisor role) |

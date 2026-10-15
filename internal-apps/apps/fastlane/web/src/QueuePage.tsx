@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import {
-  focusGlide,
+  Morph,
   QueueTable,
+  Toast,
+  springs,
   useKeyboardNav,
-  useReducedMotion,
+  useToasts,
   useTranslation,
   type KeyMap,
 } from "@company/ui";
@@ -35,17 +37,9 @@ export function QueuePage() {
   const [risk, setRisk] = useState<"all" | "high" | "med" | "low">("all");
   const [sel, setSel] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const reduced = useReducedMotion();
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { toasts, push } = useToasts();
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 4000);
-  }, []);
-
-  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: ["queue", tab],
       queryFn: ({ pageParam }) =>
@@ -54,9 +48,7 @@ export function QueuePage() {
         ) as Promise<{ rows: CaseRow[]; next_cursor?: string }>,
       initialPageParam: "",
       getNextPageParam: (last) => last.next_cursor,
-      // stop polling once errored — otherwise the alert flaps against
-      // react-query's pending reset every cycle (verifier residual)
-      refetchInterval: (q) => (q.state.status === "error" ? false : 5000),
+      refetchInterval: 5000,
     });
   const allRows = useMemo(
     () => data?.pages.flatMap((p) => p.rows) ?? [],
@@ -69,62 +61,98 @@ export function QueuePage() {
   }, [allRows, risk]);
   const current = rows[Math.min(sel, Math.max(rows.length - 1, 0))];
 
-  /**
-   * Optimistic decisions (ADR-0014 §4): decide first, confirm after — the
-   * row springs out instantly and focus lands on the next case already in
-   * motion (auto-advance). On error the row springs BACK (rollback) and a
-   * toast carries the reason. No transition can be undone, so the toast
-   * shows outcome only — a fake 'undo' would lie about the audit trail.
-   */
+  /** Optimistic decide: the row springs away instantly and focus lands
+   *  on the next case; on error the row rolls back with a spring. */
   const act = useCallback(
     async (action: string, row?: CaseRow, body?: object) => {
       if (!row) return;
       setError(null);
-      const optimistic = action === "approve" || action === "reject";
-      if (optimistic) {
-        qc.setQueryData<{ pages: { rows: CaseRow[] }[] }>(
-          ["queue", tab],
-          (old) =>
-            old
-              ? {
-                  ...old,
-                  pages: old.pages.map((p) => ({
-                    ...p,
-                    rows: p.rows.filter((r) => r.id !== row.id),
-                  })),
-                }
-              : old,
+      const key = ["queue", tab];
+      type Page = { rows: CaseRow[]; next_cursor?: string };
+      const deciding = action === "approve" || action === "reject";
+      if (!deciding) {
+        try {
+          await api(`/api/v1/cases/${row.id}/${action}`, {
+            method: "POST",
+            body: body ?? {},
+            idem: `${row.id}:${action}:${uuid()}`,
+          });
+        } catch (e) {
+          setError((e as Error).message);
+        } finally {
+          void qc.invalidateQueries({ queryKey: ["queue"] });
+        }
+        return;
+      }
+      // Optimistic decide with a REAL undo window: the row springs away now;
+      // the POST is deferred ~5s so Undo cancels the commit entirely (there
+      // is no approved→in_review transition — cache-only "undo" would be a
+      // lie). Rollback is per-row (page+index), never a whole-snapshot swap,
+      // so overlapping decisions can't resurrect each other's rows.
+      const restore = () =>
+        qc.setQueryData(key, (d: { pages: Page[] } | undefined) =>
+          d
+            ? {
+                ...d,
+                pages: d.pages.map((p) => {
+                  const i = p.rows.findIndex(
+                    (r) => String(r.id) > String(row.id),
+                  );
+                  const at = i === -1 ? p.rows.length : i;
+                  return p.rows.some((r) => r.id === row.id)
+                    ? p
+                    : {
+                        ...p,
+                        rows: [
+                          ...p.rows.slice(0, at),
+                          row,
+                          ...p.rows.slice(at),
+                        ],
+                      };
+                }),
+              }
+            : d,
         );
-      }
-      try {
-        await api(`/api/v1/cases/${row.id}/${action}`, {
-          method: "POST",
-          body: body ?? {},
-          idem: `${row.id}:${action}:${uuid()}`,
-        });
-        showToast(`${row.customer_ref}: ${action}`);
-        void qc.invalidateQueries({ queryKey: ["queue"] });
-      } catch (e) {
-        // rollback: real data returns, the row springs back into place
-        void qc.invalidateQueries({ queryKey: ["queue"] });
-        setError((e as Error).message);
-      }
+      qc.setQueryData(key, (d: { pages: Page[] } | undefined) =>
+        d
+          ? {
+              ...d,
+              pages: d.pages.map((p) => ({
+                ...p,
+                rows: p.rows.filter((r) => r.id !== row.id),
+              })),
+            }
+          : d,
+      );
+      let cancelled = false;
+      push(t(`toast.${action}`), () => {
+        cancelled = true;
+        restore();
+      });
+      window.setTimeout(() => {
+        void (async () => {
+          if (cancelled) return; // Undo pressed — decision never committed
+          try {
+            await api(`/api/v1/cases/${row.id}/${action}`, {
+              method: "POST",
+              body: body ?? {},
+              idem: `${row.id}:${action}:${uuid()}`,
+            });
+          } catch (e) {
+            restore(); // spring rollback of just this row
+            setError((e as Error).message);
+          } finally {
+            void qc.invalidateQueries({ queryKey: ["queue"] });
+          }
+        })();
+      }, 4500);
     },
-    [qc, tab, showToast],
+    [qc, tab, push, t],
   );
 
   const openCase = useCallback((row?: CaseRow) => {
     if (row) location.hash = `#/case/${row.id}`;
   }, []);
-
-  // Focus GLIDES between rows on j/k — animation follows focus, never
-  // delays it; the keypress updates selection synchronously.
-  useEffect(() => {
-    focusGlide(
-      document.querySelector(`[data-row-id=\"${current?.id ?? ""}\"]`),
-      reduced === true,
-    );
-  }, [current?.id, reduced]);
 
   useKeyboardNav(
     {
@@ -140,14 +168,6 @@ export function QueuePage() {
     KEYMAP,
   );
 
-  if (isError)
-    return (
-      <main>
-        <p role="alert" className="error">
-          {t("error.title")}: {t("queue.load_error")}
-        </p>
-      </main>
-    );
   if (isLoading) return <p>{t("loading")}</p>;
   return (
     <main>
@@ -195,23 +215,27 @@ export function QueuePage() {
         caption={t("queue.caption")}
         emptyMessage={t("queue.empty")}
         selectedId={current?.id}
+        glideId="queue"
         rows={rows}
-        morphIdPrefix="case"
-        morphKey="ref"
-        gestures={{
-          onSwipeRight: (r) => void act("approve", r),
-          onSwipeLeft: (r) => {
-            // swipe-to-reject opens the reason box — a swipe can't carry
-            // the ≥20-char reason the guard requires, so it lands there.
-            location.hash = `#/case/${r.id}?reject=1`;
+        rowMotion={(r) => ({
+          drag: "x",
+          dragConstraints: { left: 0, right: 0 },
+          dragElastic: 0.35,
+          transition: springs.gentle,
+          onDragEnd: (_, info) => {
+            if (info.offset.x > 96) void act("approve", r);
+            else if (info.offset.x < -96)
+              location.hash = `#/case/${r.id}?reject=1`;
           },
-          leftHint: t("action.reject"),
-          rightHint: t("action.approve"),
-          onReassign: (r) => void act("claim", r),
-          reassignHint: t("queue.dragclaim"),
-        }}
+        })}
         columns={[
-          { key: "ref", header: t("col.ref"), render: (r) => r.customer_ref },
+          {
+            key: "ref",
+            header: t("col.ref"),
+            render: (r) => (
+              <Morph morphId={r.id === current?.id ? `case-${r.id}` : undefined}>{r.customer_ref}</Morph>
+            ),
+          },
           {
             key: "status",
             header: t("col.status"),
@@ -241,16 +265,18 @@ export function QueuePage() {
           { label: t("action.open"), onSelect: (r) => openCase(r) },
         ]}
       />
-      {toast && (
-        <p role="status" className="toast">
-          {toast}
-        </p>
-      )}
       {hasNextPage && (
         <button type="button" onClick={() => void fetchNextPage()}>
           {isFetchingNextPage ? t("loading") : t("queue.loadmore")}
         </button>
       )}
+      <div className="toasts">
+        {toasts.map((x) => (
+          <Toast key={x.id} id={x.id} onUndo={x.undo}>
+            {x.node}
+          </Toast>
+        ))}
+      </div>
     </main>
   );
 }

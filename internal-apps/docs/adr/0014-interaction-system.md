@@ -1,91 +1,125 @@
-# ADR-0014 — One interaction system: springs, continuity, materials
+# ADR-0014 — Interaction system: one motion library in platform-ui
 
-Date: 2026-10-15 · Status: accepted · Owner: platform-ui
-Context: the fleet's D1–D10 surfaces needed physics-grade polish WITHOUT
-letting every app grow its own animation code — the exact failure mode the
-spec bans ("apps import primitives; no app writes its own animation code").
+Status: accepted · Date: 2026-10-15 · Governs: `platform/packages/ui` +
+every app's feel.
 
-## Library choice — `motion` (motion/react), argued against `react-spring`
+## Context
 
-**Winner: `motion@12`.** Spring physics is its core model (every value is a
-spring; mid-flight retargets preserve velocity by construction — that is the
-interruption law, not a feature we bolt on). `layout`/`layoutId` give
-shared-element FLIP morphs for free — the row→case morph is a `layoutId`
-prop, not hand-rolled `getBoundingClientRect` code. `drag` + `dragElastic`
-implement rubber-band resistance natively. `MotionConfig reducedMotion`
-honours `prefers-reduced-motion` fleet-wide from one provider.
+Internal apps ship with zero animation code today. The program wants
+perceived-speed and delight as an engineered quality (UX-GAP.md): the
+queue is the money surface and its feel budget is input→feedback
+<100 ms. Law from the constitution: new runtime deps require an ADR;
+dependency direction is apps → platform one-way; no app may write its
+own animation code (ONE library, primitives in `platform-ui` ONLY).
 
-**Rejected: `@react-spring/web` — argued at full strength.** Its springs are
-equally good physics (`useSpring`, `useTrail`, velocity preservation on
-retarget), its bundle is smaller, and `useTransition` is mature. It loses on
-the one thing this spec makes law: *continuity*. react-spring has no
-shared-element/FLIP primitive — a queue row morphing into the case header
-would be hand-computed FLIP in app code or a platform wrapper we maintain
-ourselves. That is precisely the bespoke animation code the spec forbids
-every app from writing — and the platform owning a hand-rolled FLIP engine
-is strictly worse than adopting the library that already does it correctly.
-Cost of the rejection: motion's API surface is larger (variants, gestures,
-layout) — we shrink what apps can reach by exporting only our primitives.
+## Options
 
-**Also rejected:** CSS transitions (no interruption, no velocity — banned by
-the springs-not-easings law); GSAP (license + imperative model fights
-React's); Web Animations API (imperative, no spring/FLIP primitives).
+### A — `motion` (chosen)
 
-## Spring presets (the fleet's only transitions — apps never define their own)
+`motion` 14 (the maintained successor line to framer-motion): springs as
+first-class transitions, `layoutId` shared-element FLIP morphs,
+`LayoutGroup`, `AnimatePresence`, drag gestures with elastic
+constraints, `useReducedMotion`, `MotionConfig` global reduced/frozen
+mode. MIT. ~30 kB gz runtime for what we use.
 
-| Preset | stiffness / damping | Use |
-|---|---|---|
-| `snappyUI` | 420 / 34 | input-adjacent feedback — buttons, chips, focus glides |
-| `gentleSettle` | 170 / 26 | panels, lists, page transitions |
-| `overshootSettle` | 320 / 14 | hero moments only — visible overshoot, then calm |
+### B — `react-spring` (rejected, argued at full strength)
 
-## The interruption law (verified, not asserted)
+react-spring is the spring-physics purist choice: its animation model
+is *only* springs — every value is a `SpringValue`, retargeting is
+velocity-preserving by construction, and the `useSpring`/`useSprings`/
+`useTransition`/`useTrail` API surface is smaller to teach and harder
+to misuse for layout work. It is also lighter and framework-agnostic
+(you could in principle reuse configs across non-React surfaces). For
+the strict physics requirement it is arguably the *better* library:
+motion ships easings and tweens alongside springs, so "springs, not
+easings" is a convention we must enforce ourselves, whereas
+react-spring makes the wrong thing impossible.
 
-Every animation is interruptible and reversible: retarget a spring
-mid-flight and it continues from its current position AND velocity — nothing
-snaps back to start, nothing waits. Evidence: three interactions retargeted
-mid-flight during the measurement pass (PR evidence section). Same library
-law covers the queue row drag: below threshold the drag settles back to
-zero — never half-commits.
+It still loses on the deciding axis: **continuity law**. The required
+moments are shared-element morphs — a queue row becoming the case
+detail, masked text blurring into revealed text, panels handing off.
+react-spring has no layout engine: a FLIP/shared-element morph has to
+be hand-built on `getBoundingClientRect` + transform deltas, which is
+exactly the error-prone app-level animation code this ADR exists to
+keep out of apps. motion provides it as a primitive (`layoutId` inside
+a `LayoutGroup`), tested upstream. Second axis: gestures — drag with
+elastic/rubber-band constraints and drop detection is built in on
+motion and separate-lib (`@use-gesture`) on react-spring, adding a
+second dependency to govern. We would rather enforce "springs only" in
+40 lines of `springs` presets than reimplement FLIP and gestures in
+every app.
 
-## Continuity law
+### C — CSS transitions / WAAPI per-app (rejected)
 
-Elements come FROM somewhere and go TO somewhere: a queue row's ref cell
-MORPHS into the case header via shared `layoutId` under one `LayoutGroup`;
-toasts/statuses settle from their trigger; exits animate to somewhere, not
-to nothing (`Reveal` exits upward-fade, not opacity-only).
+Violates the one-library law and the interruption law (CSS animations
+can't retarget mid-flight preserving velocity). Also makes
+reduced-motion and test-mode flags per-app bespoke — non-starter.
 
-## Materials
+## Decision
 
-Backdrop-blur translucency on overlays, layered `elev-1..3` shadows, ambient
-hover (Pressable `whileHover`), press state `scale 0.97` (Pressable
-`whileTap`). Semantic token refresh ships in `tailwindPreset`: `status.*`,
-`risk.*`, `sla.*`, typography scale, `spacing.touch`, dark-mode-ready
-(apps compose `dark:` variants; platform ships no theme).
+`motion@14` is the single animation dependency of the monorepo, vendored
+once as a dep of `@company/ui`. Apps may only consume the exported
+primitives — they may NOT import `motion`/`framer-motion`/`react-spring`
+directly (enforced: `import-lint.ts` gains a forbidden-imports rule;
+no other package.json may declare a motion library).
 
-## Reduced-motion path + test mode
+## API surface (platform/packages/ui/src/motion.tsx)
 
-`prefers-reduced-motion` → the full alternative path: CROSSFADE (tween,
-opacity-only) replaces every spring — no layout motion, no shake, no drag.
-Test mode `?motion=frozen` or `localStorage["motion-frozen"]="1"` freezes
-all motion (zero-duration + reduced path) for FT determinism — no rebuild.
+- `springs` — the only allowed curves: `snappy` (500/35, buttons,
+  cursor glide), `gentle` (170/26, panels/rows/toasts), `hero`
+  (120/14, overshoot-and-settle for hero moments). Object.freeze in
+  tests; anything else is a violation.
+- `MotionProvider` — `MotionConfig reducedMotion="user"` + `LayoutGroup`;
+  `freeze` / `data-motion="off"` ⇒ zero-duration transitions
+  (FT determinism).
+- `Morph` (shared-element `layoutId` FLIP) · `FocusGlide` (j/k cursor
+  glide) · `Pulse` (one-shot spring pulse) · `ColorSpring` (color on a
+  spring) · `BlurMorph` (masked→revealed blur-out) · `SwipeRow`
+  (drag-x rubber-band, threshold commit, snap-back) · `Pressable`
+  (scale .97) · `Stagger`/`staggerChild` · `CountUp` · `Skeleton` ·
+  `Toast`+`useToasts` (undo) · re-exports `AnimatePresence`,
+  `useReducedMotion`, `motion` for platform-internal use.
+- `QueueTable.rowMotion` / `glideId` — apps attach motion props to
+  rows without writing animation code.
 
-## The fixed hierarchy (enforcement)
+## The laws (fixed hierarchy — perf > a11y > beauty)
 
-1. `platform/packages/ui/src/motion/` — the ONLY place motion lives:
-   springs, primitives, provider.
-2. `QueueTable` gesture hooks — the only app-adjacent surface (platform-owned).
-3. Apps compose primitives by name; an app importing `motion`/`react-spring`
-   directly fails review (import-lint candidates if it recurs).
+1. **Input always wins** — animation follows focus, never delays it;
+   keyboard handlers never await animations.
+2. **Interruptible + reversible** — every animated value is a spring;
+   mid-flight retargeting preserves velocity; nothing snaps to start.
+3. **Continuity** — elements come FROM somewhere and go TO somewhere
+   (`layoutId` morphs), never pop in/out.
+4. **GPU only** — `transform`/`opacity`/`filter` only; layout changes
+   go through FLIP (`layout`/`layoutId`), never width/height tweens.
+5. **prefers-reduced-motion** — full alternative path (crossfades, no
+   springs) via `MotionConfig reducedMotion="user"`; per-primitive
+   `useReducedMotion` where needed.
+6. **Test-mode freeze** — `?motion=off` ⇒ `data-motion="off"` ⇒
+   zero-duration; FTs run in both modes.
+7. **Perceived budget** — input→feedback <100 ms; INP <100 ms p75;
+   no long task >50 ms in interaction bursts; zero CLS.
+
+## Tradeoffs
+
+- Cost: ~30 kB gz on every app bundle and a new runtime dep to track
+  (the point of this ADR). Mitigation: single lib, tree-shaken,
+  primitives-only surface.
+- Cost: springs are harder to write tests against than fixed-duration
+  tweens — answered by the freeze flag (deterministic) and testing
+  semantics over frames.
+- We accept policing "springs only" as convention because the rejected
+  alternative (react-spring) cannot express the continuity moments —
+  see Options.
+- Keyboard supremacy is verifiable: PHASE-C gate runs keyboard-day
+  timings BEFORE vs AFTER — polish must win or tie, never lose.
 
 ## Consequences
 
-- One runtime dep added: `motion@^12` on `@company/ui` only (this ADR is its
-  dependency waiver under root AGENTS "new runtime deps need ADR").
-- Undo-toasts are NOT shipped: FastLane transitions are one-way by law
-  (AGENTS §4) — a toast 'undo' would claim a non-existent legal reversal.
-  Toasts carry outcome text; undo returns only if a reversible action lands.
-- Flags `/demo` moments are deferred: the demo surface does not exist yet
-  (docs + shim only); when it lands it inherits these primitives unchanged.
-- Measured budgets (INP <100ms p75, frame trace, keyboard-day before/after,
-  queue p95) are pasted on the PR.
+- FastLane retrofitted first: row→detail morph, masked→reveal blur,
+  pill color-spring, SLA pulse, optimistic decide + spring rollback,
+  swipe-to-decide, FocusGlide on j/k, auto-advance, toasts with undo.
+- RefundLens/flags wire `CountUp`, `Stagger`, `Morph`, `springs.hero`
+  when their owning sessions land the moments (primitives ready).
+- import-lint extended: `motion`, `framer-motion`, `react-spring`,
+  `@use-gesture/*` are forbidden imports outside `platform/packages/ui`.

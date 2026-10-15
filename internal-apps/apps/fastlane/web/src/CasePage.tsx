@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BlurMorph,
   Morph,
-  Pressable,
-  Reveal,
-  Shake,
   useKeyboardNav,
   useTranslation,
   type KeyMap,
@@ -162,13 +160,9 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
   if (isLoading || !kase) return <p>{t("loading")}</p>;
   return (
     <main>
-      {/* shared-element morph: the queue row's ref cell MORPHS into this
-          header (same layoutId under the root LayoutGroup) — ADR-0014 §1 */}
       <h1>
         {t("app.title")} —{" "}
-        <Morph layoutId={`case-${kase.id}`} style={{ display: "inline-block" }}>
-          {kase.customer_ref}
-        </Morph>
+        <Morph morphId={`case-${kase.id}`}>{kase.customer_ref}</Morph>
       </h1>
       <p className="keys" aria-hidden="true">
         {t("case.keys")}
@@ -182,11 +176,9 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         ← {t("case.back")}
       </button>
       {error && (
-        <Shake trigger={error}>
-          <p role="alert" className="error">
-            {t("error.title")}: {error}
-          </p>
-        </Shake>
+        <p role="alert" className="error">
+          {t("error.title")}: {error}
+        </p>
       )}
 
       <dl className="case-fields">
@@ -218,19 +210,18 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <h2 id="pii-h">{t("case.pii.title")}</h2>
         {revealed === null ? (
           <p>
-            <span className="masked">{t("case.pii.masked")}</span>{" "}
+            <BlurMorph revealed={false}>
+              <span className="masked">{t("case.pii.masked")}</span>
+            </BlurMorph>{" "}
             <button type="button" onClick={() => void doReveal()}>
               {t("case.pii.reveal")}
             </button>
           </p>
         ) : (
           <p>
-            {/* masked→reveal blur-out morph (ADR-0014 §3): the masked
-                placeholder exits as the revealed value arrives already
-                de-blurring in on the snappy spring. */}
-            <Reveal spring="snappyUI" style={{ display: "inline-block" }}>
+            <BlurMorph revealed>
               <strong>{revealed}</strong>
-            </Reveal>{" "}
+            </BlurMorph>{" "}
             <span className="keys">({t("case.pii.revealed")})</span>
           </p>
         )}

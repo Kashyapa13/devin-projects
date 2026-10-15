@@ -51,6 +51,8 @@ export const resources = {
       "action.note": "Note",
       "action.reveal": "Reveal name",
       "action.doc": "Open doc",
+      "toast.approve": "Case approved",
+      "toast.reject": "Case rejected",
       "action.open": "Open case",
       "doc.title": "Document",
       "doc.issue": "Get signed link (audited)",
