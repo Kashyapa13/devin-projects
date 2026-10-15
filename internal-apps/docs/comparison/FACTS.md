@@ -3,16 +3,30 @@
 ## Power Apps (microsoft.com + learn.microsoft.com)
 
 - Premium $20/user/mo paid yearly; $12 at 2,000-seat min
+  ([pricing](https://www.microsoft.com/en-us/power-platform/products/power-apps/pricing),
+  [licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-flow-licensing-faq))
 - Per-app plan sales to new customers ENDED Jan 2 2026
+  ([end-of-sale notice](https://www.microsoft.com/en-us/licensing/news/power-app-per-app-end-of-sale))
 - Dataverse add-on $40/GB/mo
+  ([pricing](https://www.microsoft.com/en-us/power-platform/products/power-apps/pricing))
 - Dev Plan free (3 envs, 2GB, 750 flows/mo)
-- Canvas apps 200+ data sources; M365 seeded rights = standard connectors only
+  ([pricing](https://www.microsoft.com/en-us/power-platform/products/power-apps/pricing))
+- Canvas apps reach the built-in connector catalog (~1,000+ marketed, ~1,600
+  listed — earlier "200+" figure stale); M365 seeded rights = standard
+  connectors only
+  ([connector reference](https://learn.microsoft.com/en-us/connectors/connector-reference),
+  [licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-flow-licensing-faq))
 - M365 Copilot chat GA model-driven / preview canvas
+  ([licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-flow-licensing-faq))
 - Agentic features model-driven only
+  ([licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-flow-licensing-faq))
 - Vibe/Plans app-building preview, US/AU/Asia/India + English only, moving
   into Copilot Studio/Copilot Cowork
+  ([vibe overview](https://learn.microsoft.com/en-us/power-apps/vibe/overview))
 - Managed Environments included with standalone licenses
+  ([managed environments](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-overview))
 - FedRAMP High GA
+  ([FedRAMP audit scope](https://learn.microsoft.com/en-us/azure/azure-government/compliance/azure-services-in-fedramp-auditscope))
 
 ## Devin (cognition.ai + docs.devin.ai)
 
