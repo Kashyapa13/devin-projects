@@ -1,9 +1,19 @@
 # flags — capability-demo spec
 
-> Stub. The pilot builds a Devin replica of the Power Apps flag panel purely
-> as the capability comparison (walk-out decision D1).
+The capability demo (pilot): a Devin-built replica measured against the
+live PA panel —
 
-Scope: CRUD + env scoping + audit + RBAC + runtime eval API.
+- CRUD
+- env scoping (dev/staging/prod)
+- typed-confirm delete
+- full audit (actor/action/timestamp on every change)
+- RBAC (flag_editor non-prod / flag_admin prod)
+- runtime eval API: `GET /api/flags/evaluate?key=&userId=` with
+  deterministic hash bucketing (same userId+key = same result), cached,
+  <50ms local, stale-while-revalidate
+- `/demo` page where a flip visibly changes UI
 
-Demo metric: flag flips with complete attribution 100% — production flags
-remain on Power Apps (KPI dashboard).
+Deployed demo-grade: synthetic flags only, demo-tier deploy. Labeled on
+every surface: "capability demo — production continues on Power Apps."
+
+The replica prices what we'd own — the strongest argument for staying put.

@@ -3,7 +3,7 @@
 This monorepo hosts the company's internal tools program. Three build lanes:
 Power Apps (forms/approvals on M365 data — analyst-maintained, NOT in this
 repo), Devin-built apps (this repo), Power BI (reporting — not in this repo).
-Commodities are bought, never built.
+Commodities are bought, never built (see apps/flags and ADR-0002).
 
 ## Platform stack (fixed; changes require an ADR)
 Node 22 LTS, TypeScript strict, ESM · Fastify + TypeBox · Drizzle with

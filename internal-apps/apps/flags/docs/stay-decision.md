@@ -1,14 +1,11 @@
-# flags — stay decision
+# flags — stay decision (ADR-0002)
 
-Production flag admin panel **stays on Power Apps** — no migration, no
-vendor bake-off. Decision and reasoning: [ADR-0002](../../../docs/adr/0002-flags-stay-on-power-apps.md).
+Production flag admin panel **stays on Power Apps** — production continues
+on the existing PA panel — no migration, no vendor bake-off; this
+engagement reasons Devin vs Power Apps only.
 
-This is a two-way door: the pilot's Devin replica + the flags trigger define
-the reverse path. The trigger requires BOTH:
+The honest cost on record: whoever owns a flag system owns SDKs for ~60
+services + a 99.95% runtime SLA + on-call — that bar gates any future
+move, whichever platform owns it.
 
-1. The replica demonstrates a clear capability/run-cost advantage over the
-   PA panel, AND
-2. The license audit shows Premium spend growth.
-
-If it fires, migration is Devin-built on the scaffold via ADR amendment —
-see `exit-design.md` (DORMANT).
+Decision and reasoning: [ADR-0002](../../../docs/adr/0002-flags-stay-on-power-apps.md).
