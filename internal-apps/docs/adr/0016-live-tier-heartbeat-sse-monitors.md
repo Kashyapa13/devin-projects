@@ -4,7 +4,7 @@ Date: 2026-10-15 · Status: decided · Owner: refundlens owner (D7 Devin lane)
 
 ## Context
 
-ADR-0015 made RefundLens the Power BI replacement; a BI replacement that
+ADR-0019 made RefundLens the Power BI replacement; a BI replacement that
 isn't LIVE is a screenshot. Full CDC/streaming (Debezium/Kafka) is too
 heavy for a 60-eng pilot.
 

@@ -1,6 +1,6 @@
 # RL-GAP — RefundLens BI-dashboard retrofit audit
 
-Phase A of the RefundLens dashboard retrofit (the §4.2 spec + ADR-0015/0016).
+Phase A of the RefundLens dashboard retrofit (the §4.2 spec + ADR-0019/0016).
 Posture: wrap what exists, never rewrite working flows. Two laws survive
 every upgrade — **WIDGET LAW** (every widget = server-computed series via
 the SAME fenced aggregation layer; the BI bar buys ZERO fence exceptions)

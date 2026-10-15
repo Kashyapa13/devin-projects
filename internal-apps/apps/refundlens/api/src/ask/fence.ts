@@ -1,4 +1,5 @@
 import {
+  BANNED_EXPR_PREFIXES,
   BANNED_EXPR_WORDS,
   NON_SELECT_VERBS,
   parseSql,
@@ -148,6 +149,19 @@ export function validateSql(sql: string, scope: FenceScope = {}): SelectAst {
       "mutation",
       `expression uses a banned function (${bad})`,
       "ask for aggregates over refunds — server-side functions are not data",
+    );
+  }
+  // banned function families — every pg_*/dblink*/lo_* identifier is
+  // server-side machinery, never refund data (verifier breach: denylist
+  // missed pg_read_file/pg_ls_dir/pg_sleep — now the whole family fails)
+  const badFamily = ast.verbs.find((v) =>
+    BANNED_EXPR_PREFIXES.some((p) => v.startsWith(p)),
+  );
+  if (badFamily) {
+    throw new FencedRejection(
+      "mutation",
+      `expression uses a server-side function (${badFamily})`,
+      "ask for aggregates over refunds — server functions are not data",
     );
   }
   const sneakyVerb = VERB_IN_VERBS(ast.verbs, NON_SELECT_VERBS);

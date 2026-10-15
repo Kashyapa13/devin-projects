@@ -35,6 +35,7 @@ const deps: BeatDeps & { apiBase?: string } = {
 beforeAll(async () => {
   pg = await pgHarness("refundlens");
   pool = new Pool({ connectionString: pg.dsn });
+  pool.on("error", () => {});
   await migrationRunner(pool).migrate(loadMigrations(MIGRATIONS));
   await runSeeds(pool, registry, "refund-seed-v1");
   await runSync(pool, pool, { sourceTable: "source.refund_events" });

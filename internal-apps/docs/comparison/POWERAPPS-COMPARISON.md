@@ -29,7 +29,7 @@ Power Apps list pricing ([pricing page](https://www.microsoft.com/en-us/power-pl
 [licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-flow-licensing-faq)):
 Premium $20/user/mo paid yearly; $12 at 2,000-seat minimum;
 $22/$14 effective Jan 1 2027 ([price update notice](https://www.microsoft.com/en-us/licensing/news/power-apps-premium-price-update)).
-Dataverse add-on $40/GB/mo. Per-app plan ended for new customers Jan 2026.
+Dataverse add-on $40/GB/mo (commercial SKU CFQ7TTC0LHRL-2-P1Y, [capacity model](https://learn.microsoft.com/en-us/power-platform/admin/capacity-storage) — price published in the Power Platform Licensing Guide Aug-2024). Per-app plan ended for new customers Jan 2026 ([end-of-sale notice](https://www.microsoft.com/en-us/licensing/news/power-app-per-app-end-of-sale)).
 
 ```
 PA_annual(app)   = seats × $240  (+ Dataverse GB × $480)
@@ -39,7 +39,7 @@ Devin_annual(app)= build_cost + run + review_overhead
 
 | Active users | PA Premium/yr | Devin-built (build+yr-1 run) [EST] |
 |---|---|---|
-| 100 | $24,000 | ~$8–16k one-time + ~$6k/yr run+review |
+| 100 | $24,000 | ~$4–12.5k one-time + ~$6k/yr run+review |
 | 300 | $72,000 | same one-time + ~$8k/yr |
 | 1,000 | $240,000 | same one-time + ~$12k/yr |
 
@@ -73,13 +73,14 @@ $250k line shrinks mostly by contract work, not by lane choice.
   itself — Microsoft runs it ([managed environments](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-overview)).
 - **Maker velocity on M365 data.** Forms, approvals, and data entry
   against SharePoint/Teams/Dataverse by analysts, not engineers — that is
-  the lane's design point, with [200+ connectors](https://learn.microsoft.com/en-us/connectors/) already built.
+  the lane's design point, with the built-in connector catalog (~1,000+ marketed; ~1,600 listed in the [connector reference](https://learn.microsoft.com/en-us/connectors/connector-reference)).
 - **Bundled economics.** M365-seeded rights cover standard connectors;
   if the org already pays, marginal app cost can be ~$0 — the strongest
   honest argument for PA-primary on forms-shaped work.
-- **Copilot authoring.** AI-assisted app building GA on model-driven
+- **Copilot authoring.** Copilot chat/form-fill GA for Dynamics 365 users;
+  for standalone Power Apps these stay in public preview
   ([licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-flow-licensing-faq)).
-- **Compliance posture.** FedRAMP High GA ([Microsoft compliance offerings](https://learn.microsoft.com/en-us/compliance/regulatory/offering-fedramp)).
+- **Compliance posture.** FedRAMP High GA ([FedRAMP audit scope](https://learn.microsoft.com/en-us/azure/azure-government/compliance/azure-services-in-fedramp-auditscope)).
 - **Bus factor.** The maker community is larger than our platform team —
   a staffing argument that survives scrutiny.
 

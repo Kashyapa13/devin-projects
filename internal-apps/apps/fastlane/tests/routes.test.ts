@@ -70,6 +70,9 @@ async function pendingCaseId(): Promise<string> {
 beforeAll(async () => {
   pg = await pgHarness("fastlane");
   pool = new Pool({ connectionString: pg.dsn });
+  // absorb the 57P01 that lands on already-ended clients when the
+  // container stops — teardown race, not a test error
+  pool.on("error", () => {});
   const runner = migrationRunner(pool);
   await runner.migrate(loadMigrations(MIGRATIONS));
   await runSeeds(pool, makeRegistry(cipher), "kyc-seed-v1");

@@ -35,11 +35,15 @@ const reqId = (req: FastifyRequest): string => String(req.reqId ?? "");
 
 const IdemBody = Type.Object({});
 
-/** Idempotency-Key required on every mutation; replays return the original. */
+/** Idempotency-Key required on every mutation; replays return the original.
+ * `cache: false` keeps the key requirement but never replays — each call
+ * executes (and audits) fresh. Used by /reveal: a replayed response would
+ * re-disclose C4 plaintext with no new audit row (verifier breach). */
 async function idempotent<T>(
   deps: RouteDeps,
   req: FastifyRequest,
   run: () => Promise<T>,
+  opts: { cache?: boolean } = {},
 ): Promise<T | { replayed: true; result: unknown }> {
   const key = req.headers["idempotency-key"];
   if (typeof key !== "string" || key.length < 8) {
@@ -50,6 +54,7 @@ async function idempotent<T>(
     );
   }
   const actor = userOf(req);
+  if (opts.cache === false) return run();
   const found = await deps.db.query(
     "SELECT response FROM idempotency_keys WHERE key = $1",
     [`${actor.sub}:${key}`],
@@ -115,6 +120,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     path: string,
     run: (req: FastifyRequest) => Promise<unknown>,
     body?: typeof IdemBody | ReturnType<typeof Type.Object>,
+    idemOpts?: { cache?: boolean },
   ) =>
     app.post(
       path,
@@ -124,7 +130,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
         preHandler: roleGate(["reviewer", "supervisor"]),
       },
       async (req, reply) => {
-        const out = await idempotent(deps, req, () => run(req));
+        const out = await idempotent(deps, req, () => run(req), idemOpts);
         return reply.send(
           (out as { replayed?: boolean }).replayed === true
             ? (out as { result: unknown }).result
@@ -162,8 +168,14 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     Type.Object({ body: Type.String({ minLength: 1 }) }),
   );
 
-  mutation("/api/v1/cases/:id/reveal", (req) =>
-    svc.reveal(deps, (req.params as { id: string }).id, userOf(req), reqId(req)),
+  // cache:false — every reveal is a real disclosure, so every call writes
+  // its own audit row. A cached replay would leak C4 off the books.
+  mutation(
+    "/api/v1/cases/:id/reveal",
+    (req) =>
+      svc.reveal(deps, (req.params as { id: string }).id, userOf(req), reqId(req)),
+    undefined,
+    { cache: false },
   );
 
   app.get(

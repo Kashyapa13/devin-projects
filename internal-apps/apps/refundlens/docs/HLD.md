@@ -1,7 +1,7 @@
 # RefundLens — HLD
 
 Refunds answer service — THE Power BI replacement for refunds reporting
-(Tier-2, Devin-built; ADR-0015). Press release:
+(Tier-2, Devin-built; ADR-0019). Press release:
 docs/comparison/press-releases/refundlens.md — the doc the promises trace to.
 
 ## Architecture (§4.2 — rollup store, two-tier live per ADR-0016)
@@ -41,7 +41,7 @@ dot shows last-event age (green <2min · amber 2–5 · red beyond).
 | Decision | Chosen | Rejected (and its cost) |
 |---|---|---|
 | Ask box | Deterministic NL→SQL generated behind the fence; ONE instrumented feature — keep/retire at 4 weeks on usage evidence | Canned templates only — the ask box becomes a dropdown, users retreat to analyst tickets, and the <60s promise dies as a form; pre-judging costs a dead conversational layer (<20% sessions → retire via ADR amendment); unfenced generation — rejected outright (write/cost risk, no best-effort) |
-| Dashboard | THE surface (ADR-0015 — Datadog/BI-grade widget bar: KPI stat row, multi-series time charts, hour×dow heatmap, donut, top-N bars, scatter, cross-filter, compare-to-previous) | A plain console — invalidates the Power BI replacement claim outright |
+| Dashboard | THE surface (ADR-0019 — Datadog/BI-grade widget bar: KPI stat row, multi-series time charts, hour×dow heatmap, donut, top-N bars, scatter, cross-filter, compare-to-previous) | A plain console — invalidates the Power BI replacement claim outright |
 | Widget data law | Every widget = a server-computed series via the SAME fenced template/aggregation layer — typed params only | Any client-side SQL or bespoke per-widget query path — bypasses the fence; the BI bar buys ZERO fence exceptions |
 | Console views | Typed params {dim,metric,from,to,filters[]} rendered server-side | Client-composed SQL — an injection surface that also bypasses the fence entirely |
 
@@ -64,10 +64,10 @@ AST parsing — never regex. Every violation returns
 Client views NEVER submit SQL — typed params only, rendered server-side
 by the same template library. Full spec + rejection contract: LLD §Fence.
 
-## The fork (closed for the domain — ADR-0015; ask-box fork remains)
+## The fork (closed for the domain — ADR-0019; ask-box fork remains)
 
 The console-vs-PBI fork is DECIDED: RefundLens is the Power BI
-replacement for refunds reporting (ADR-0015). What remains open is the
+replacement for refunds reporting (ADR-0019). What remains open is the
 ASK BOX's own keep/retire evaluation — now one instrumented feature, not
 the app's identity:
 
@@ -82,4 +82,4 @@ the app's identity:
   untouchable. Removing evidence early = pre-judging the fork =
   STOP-condition (AGENTS §9).
 - Tracked as OPEN-1 #askbox-keep-retire with owner + dated trigger
-  (the prior #conversational-vs-pbi entry closed by ADR-0015).
+  (the prior #conversational-vs-pbi entry closed by ADR-0019).
