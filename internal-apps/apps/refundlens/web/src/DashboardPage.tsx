@@ -90,7 +90,10 @@ function rangeOf(p: URLSearchParams): { from: string; to: string; preset: string
     return { from: `${customFrom}T00:00:00Z`, to: `${customTo}T23:59:59Z`, preset };
   }
   const h = PRESETS.find((x) => x.key === preset)?.hours ?? 30 * 24;
+  // Quantize `to` to the minute — a per-render timestamp would change the
+  // query key every render and loop refetches forever.
   const to = new Date();
+  to.setSeconds(0, 0);
   const from = new Date(to.getTime() - h * 3_600_000);
   return { from: from.toISOString(), to: to.toISOString(), preset };
 }
