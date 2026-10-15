@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { FieldCipher } from "@company/crypto";
 import * as svc from "../api/src/services.js";
+import { otelRegistry } from "@company/otel";
 
 /**
  * Service-layer unit tests against a scripted Queryable — every branch of
@@ -37,6 +38,7 @@ const fakeCipher = (over: Partial<FieldCipher> = {}): FieldCipher => ({
 const deps = (cipher?: FieldCipher): svc.Deps => ({
   db: stubDb(),
   cipher: cipher ?? fakeCipher(),
+  metrics: otelRegistry("fastlane_test"),
 });
 const actor = { sub: "11111111-1111-1111-1111-111111111111", roles: ["reviewer"] };
 const sup = { sub: "22222222-2222-2222-2222-222222222222", roles: ["supervisor"] };
