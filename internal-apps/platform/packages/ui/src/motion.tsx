@@ -82,7 +82,7 @@ export function Morph({
   morphId,
   children,
   ...rest
-}: HTMLMotionProps<"div"> & { morphId?: string }): ReactElement {
+}: HTMLMotionProps<"div"> & { morphId?: string | undefined }): ReactElement {
   // morphId undefined = opt out of layoutId measurement (keeps shared-group
   // measure cost at ~1 element — frame budget law).
   if (morphId === undefined) return <span {...(rest as unknown as ComponentProps<"span">)}>{children as ReactNode}</span>;
