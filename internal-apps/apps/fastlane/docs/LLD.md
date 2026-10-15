@@ -44,6 +44,48 @@ optimistic lock on version) · GET /cases/:id/audit + GET /audit (exportable)
 RBAC: reviewer (claim, act on own) · supervisor (+ reopen ESCALATED, team
 views) · admin (config) — server-side only.
 
+### RBAC matrix (server-side — platform-auth requireRole)
+
+| Endpoint | reviewer | supervisor | admin |
+|---|---|---|---|
+| GET /queue | own + team tabs | all | all |
+| GET /cases/:id | claimed/team | all | all |
+| POST /claim | ✓ | ✓ | — |
+| POST /approve · /reject | assignee only | supervisor reopen path | — |
+| POST /escalate | assignee only | ✓ | — |
+| ESCALATED→IN_REVIEW (supervisor reopen) | — | ✓ | — |
+| POST /note | assignee | ✓ | — |
+| POST /reveal | assignee (audited) | assignee (audited) | — |
+| GET /cases/:id/audit · GET /audit | ✓ | ✓ | ✓ |
+| GET /doc-url | assignee | ✓ | — |
+| POST /cron/sla-digest | — | — | service |
+| config | — | — | ✓ |
+
+### Observability (§3.2 §6 — exact names)
+
+Metrics: `fastlane_queue_load_ms` (h, tab) · `fastlane_transition_total`
+(c, from,to,ok) · `fastlane_cases_active` (g, status) ·
+`fastlane_sla_breach_count` (g) · `fastlane_audit_write_fail_total` (c) ·
+`fastlane_keystroke_decision_ms` (h) · `fastlane_pii_reveal_total` (c).
+Alerts: audit_write_fail >0 PAGE · queue_load p95 >1000ms/10m PAGE ·
+sla_breach +20%/h PAGE · p95 >300ms/30m ticket. Log fields: ts, level,
+req_id, actor_id, case_id, action, ms, outcome. Banned: legal_name, doc
+contents, assignee PII.
+
+### Testing gates (§3.2 §7)
+
+lint+typecheck → statemachine full matrix → integration (ephemeral PG:
+RBAC matrix 3 roles × every endpoint, audit kill-test, reveal-before-
+return kill-test, cursor stability) → OpenAPI/LLD contract diff → e2e
+keyboard-only (claim→reject-400→reject-ok→audit→removal) → axe zero
+critical → k6 10k cases/50 VU/5m, queue p95 <1000ms, err <0.1%.
+Coverage: statemachine+services ≥90% branches, routes ≥80%.
+
+### Capacity envelope (§3.2 §8)
+
+[EST] 60 concurrent analysts · 30 RPS peak · 50k active cases —
+revisit at 5x.
+
 ## Deployment
 
 dev (ephemeral seed) → staging (synthetic full-volume, pen-tested) → prod
