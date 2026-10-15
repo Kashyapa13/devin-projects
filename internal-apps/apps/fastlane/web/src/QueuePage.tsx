@@ -45,6 +45,7 @@ export function QueuePage() {
   const [error, setError] = useState<string | null>(null);
   const { toasts, push } = useToasts();
 
+
   const {
     data,
     isLoading,
@@ -202,11 +203,12 @@ export function QueuePage() {
   );
 
   if (isLoading) return <p>{t("loading")}</p>;
+
   if (isError)
     return (
       <main>
         <p role="alert" className="error">
-          {t("error.title")}: {t("queue.load_error")}
+          {t("error.title")}: {t("queue.error")}
         </p>
       </main>
     );
