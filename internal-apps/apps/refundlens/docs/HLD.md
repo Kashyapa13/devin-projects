@@ -1,18 +1,24 @@
 # RefundLens — HLD
 
-Refunds answer service (Tier-2, Devin-built; fork). Press release:
+Refunds answer service — THE Power BI replacement for refunds reporting
+(Tier-2, Devin-built; ADR-0015). Press release:
 docs/comparison/press-releases/refundlens.md — the doc the promises trace to.
 
-## Architecture (§4.2 — rollup store)
+## Architecture (§4.2 — rollup store, two-tier live per ADR-0016)
 
-prod refunds DB ──hourly ETL──▶ READ REPLICA (REPLICA_DSN; never primary)
+prod refunds DB ──heartbeat delta (30–60s)──▶ READ REPLICA (REPLICA_DSN; never primary)
+             ──hourly reconciliation (full+delta)──▶ same replica
         │   idempotent UPSERT on (id, updated_at) → refund_events_raw
-        │   one-transaction agg_daily rebuild → sync_runs row every run
+        │   live-window aggregate recompute + one-transaction agg rebuilds
+        │   → sync_runs row every run (a beat skipped = degraded beat, never silent)
         ▼
 RefundLens Postgres rollup store ──SELECT-only app role──▶ API
         ├── typed-param view renderer (client sends params, never SQL)
-        └── NL→SQL ask engine behind the fence (six fences + AST; §3)
-Every answer surface carries the sync watermark — banner + page on lag.
+        ├── NL→SQL ask engine behind the fence (six fences + AST; §3)
+        ├── SSE /api/stream/heartbeat — widgets re-bind, NEVER full reload
+        └── monitors-as-code evaluated per beat → Slack + monitor panel
+Every surface carries the watermark — banner + page on lag; the heartbeat
+dot shows last-event age (green <2min · amber 2–5 · red beyond).
 
 ## Tradeoff tables (chosen + rejected with cost)
 
@@ -20,21 +26,23 @@ Every answer surface carries the sync watermark — banner + page on lag.
 
 | Decision | Chosen | Rejected (and its cost) |
 |---|---|---|
-| Data path | Own rollup store fed by hourly ETL off the read replica | Direct replica reads — source schema drift breaks the app silently, and Tier-2 uptime becomes coupled to prod load; warehouse/dbt — a second BI stack stood up for one app at pilot scale |
-| Sync shape | full+delta UPSERT idempotent on (id, updated_at); agg_daily rebuilt in ONE transaction; sync_runs row every run, success or failure | Streaming/CDC — pipeline infrastructure heavier than the app it feeds; sync without sync_runs — freshness becomes unverifiable, which makes the watermark lie |
+| Data path | Own rollup store fed by two-tier sync off the read replica (ADR-0016: 30–60s heartbeat delta + hourly reconciliation) | Direct replica reads — source schema drift breaks the app silently, and Tier-2 uptime becomes coupled to prod load; warehouse/dbt — a second BI stack stood up for one app at pilot scale |
+| Sync shape | full+delta UPSERT idempotent on (id, updated_at); agg rebuilt in ONE transaction; sync_runs row every run, success or failure; skipped beat = degraded beat, never silent | Streaming/CDC (Debezium+Kafka) — pipeline infrastructure heavier than the app it feeds at 60-eng pilot scale (revisitable via ADR if 30–60s freshness ever proves insufficient); hourly-only ETL — a BI replacement with hour-old data fails the live claim; sync without sync_runs — freshness becomes unverifiable, which makes the watermark lie |
 
 ### Store
 
 | Decision | Chosen | Rejected (and its cost) |
 |---|---|---|
-| Rollup engine | Postgres raw + agg_daily, one DB, migrations in-app | DuckDB/parquet — superb analytics buy a second engine, a second ops story, a second bus factor |
+| Rollup engine | Postgres raw + agg_daily + agg_hourly (heatmap grain), one DB, migrations in-app | DuckDB/parquet — superb analytics buy a second engine, a second ops story, a second bus factor |
 | Query target | Views hit agg_daily; raw events reachable only through the fenced ask path | Everything on raw — p95 blows the <60s answer promise on a 5M-row table |
 
 ### Answer paths
 
 | Decision | Chosen | Rejected (and its cost) |
 |---|---|---|
-| Ask box | Deterministic NL→SQL generated behind the fence | Canned templates only — the ask box becomes a dropdown, users retreat to analyst tickets, and the <60s promise dies as a form; unfenced generation — rejected outright (write/cost risk, no best-effort) |
+| Ask box | Deterministic NL→SQL generated behind the fence; ONE instrumented feature — keep/retire at 4 weeks on usage evidence | Canned templates only — the ask box becomes a dropdown, users retreat to analyst tickets, and the <60s promise dies as a form; pre-judging costs a dead conversational layer (<20% sessions → retire via ADR amendment); unfenced generation — rejected outright (write/cost risk, no best-effort) |
+| Dashboard | THE surface (ADR-0015 — Datadog/BI-grade widget bar: KPI stat row, multi-series time charts, hour×dow heatmap, donut, top-N bars, scatter, cross-filter, compare-to-previous) | A plain console — invalidates the Power BI replacement claim outright |
+| Widget data law | Every widget = a server-computed series via the SAME fenced template/aggregation layer — typed params only | Any client-side SQL or bespoke per-widget query path — bypasses the fence; the BI bar buys ZERO fence exceptions |
 | Console views | Typed params {dim,metric,from,to,filters[]} rendered server-side | Client-composed SQL — an injection surface that also bypasses the fence entirely |
 
 ### Serving & staleness
@@ -56,20 +64,22 @@ AST parsing — never regex. Every violation returns
 Client views NEVER submit SQL — typed params only, rendered server-side
 by the same template library. Full spec + rejection contract: LLD §Fence.
 
-## The fork (evidence-gated — do not pre-judge)
+## The fork (closed for the domain — ADR-0015; ask-box fork remains)
 
-Console-first build with the ask box shipped instrumented, not decided.
-Falsifier, pre-committed (ROUTING-PLAYBOOK door map: two-way, team-level):
+The console-vs-PBI fork is DECIDED: RefundLens is the Power BI
+replacement for refunds reporting (ADR-0015). What remains open is the
+ASK BOX's own keep/retire evaluation — now one instrumented feature, not
+the app's identity:
 
 - **Evidence:** scripts/fork_report.ts, run weekly, splits sessions
   ask-vs-filter from `ask_log` (which is itself a banned table for the
   fence — evidence reads it, the ask path may not).
 - **Threshold:** at 4 weeks post-GA, ask-box <20% of sessions → draft the
   retirement ADR, notify the owner in the PR.
-- **On retirement:** conversational layer removed; reporting
-  consolidates in Power BI (already inside the $250k line) — the lanes
-  stay complementary, the falsifier keeps the split honest.
+- **On retirement:** the conversational layer is removed; the dashboard
+  (the app's identity) is unaffected — it was never on the fork.
 - **Before the date:** ask_log, the report, and the instrumentation are
   untouchable. Removing evidence early = pre-judging the fork =
   STOP-condition (AGENTS §9).
-- Tracked as OPEN-1 #conversational-vs-pbi with owner + dated trigger.
+- Tracked as OPEN-1 #askbox-keep-retire with owner + dated trigger
+  (the prior #conversational-vs-pbi entry closed by ADR-0015).
