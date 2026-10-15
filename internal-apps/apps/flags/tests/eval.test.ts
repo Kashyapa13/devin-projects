@@ -220,4 +220,32 @@ describe("SwrCache — stale-while-revalidate", () => {
     expect(await c.get("k")).toBe("v2");
     expect(n).toBe(2);
   });
+
+  it("concurrent gets on a cold key share one in-flight load", async () => {
+    let n = 0;
+    const c = new SwrCache<string>(60_000, async () => {
+      n++;
+      await new Promise((r) => setTimeout(r, 10));
+      return "v";
+    });
+    const [a, b] = await Promise.all([c.get("k"), c.get("k")]);
+    expect(a).toBe("v");
+    expect(b).toBe("v");
+    expect(n).toBe(1); // deduped — one load, not two
+  });
+
+  it("a load that resolves after invalidate() does not repopulate the cache", async () => {
+    let n = 0;
+    let release: () => void = () => {};
+    const c = new SwrCache<string>(60_000, async () => {
+      n++;
+      if (n === 1) await new Promise<void>((r) => { release = r; });
+      return `v${n}`;
+    });
+    const pending = c.get("k");   // load n=1 in flight
+    c.invalidate();               // gen++ — the pending result must be dropped
+    release();
+    await pending;
+    expect(await c.get("k")).toBe("v2"); // n=1's value was never installed → reload n=2
+  });
 });
