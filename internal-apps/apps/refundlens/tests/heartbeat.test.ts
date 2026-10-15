@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { pgHarness, runSeeds, type PgHarness } from "@company/testing";
 import { loadMigrations, migrationRunner } from "@company/db";
 import type { FastifyInstance } from "fastify";
-import { buildServer } from "../api/src/server.js";
+import { buildServer } from "../api/src/app.js";
 import { registry } from "../scripts/seed.js";
 import { runSync } from "../etl/sync.js";
 import { runBeat, type BeatDeps } from "../scripts/heartbeat.js";
