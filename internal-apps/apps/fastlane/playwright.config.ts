@@ -27,7 +27,18 @@ export default defineConfig({
     video: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { browserName: "chromium" } }],
+  // Interaction law: every FT runs twice — motion on, and frozen
+  // (localStorage "motion-frozen"="1" planted by global-setup).
+  projects: [
+    {
+      name: "chromium-motion-on",
+      use: { browserName: "chromium", storageState: "e2e/.auth/state.json" },
+    },
+    {
+      name: "chromium-motion-frozen",
+      use: { browserName: "chromium", storageState: "e2e/.auth/state-frozen.json" },
+    },
+  ],
   webServer: [
     {
       command: "node dist/server.js",

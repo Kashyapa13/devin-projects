@@ -64,11 +64,11 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     setError(null);
   }, [id]);
 
-  const { data: kase, isLoading } = useQuery({
+  const { data: kase, isLoading, isError } = useQuery({
     queryKey: ["case", id],
     queryFn: () => api(`/api/v1/cases/${id}`) as Promise<CaseRow>,
   });
-  const { data: audit } = useQuery({
+  const { data: audit, isError: auditFailed } = useQuery({
     queryKey: ["audit", id],
     queryFn: () => api(`/api/v1/cases/${id}/audit`) as Promise<AuditRow[]>,
     refetchInterval: 4000,
@@ -157,6 +157,24 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     if (autoReject) setRejecting(true);
   }, [autoReject]);
 
+  // Explicit error state — a failed fetch must not hang on "Loading…".
+  if (isError) {
+    return (
+      <main>
+        <p role="alert" className="error">
+          {t("error.title")}: {t("case.error")}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            location.hash = "#/";
+          }}
+        >
+          ← {t("case.back")}
+        </button>
+      </main>
+    );
+  }
   if (isLoading || !kase) return <p>{t("loading")}</p>;
   return (
     <main>
@@ -293,13 +311,19 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <section className="panel" aria-labelledby="audit-h">
         <h2 id="audit-h">{t("audit.title")}</h2>
-        <ul className="timeline">
-          {(audit ?? []).map((r, i) => (
-            <li key={i}>
-              {String(r.at)} · {r.actor} · {r.action}
-            </li>
-          ))}
-        </ul>
+        {auditFailed ? (
+          <p role="alert" className="error">
+            {t("audit.error")}
+          </p>
+        ) : (
+          <ul className="timeline">
+            {(audit ?? []).map((r, i) => (
+              <li key={i}>
+                {String(r.at)} · {r.actor} · {r.action}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </main>
   );
