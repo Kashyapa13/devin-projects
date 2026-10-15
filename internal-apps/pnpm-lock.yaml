@@ -202,6 +202,67 @@ importers:
         specifier: ^4.0.0
         version: 4.1.12(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(@vitest/coverage-v8@4.1.12)(jsdom@25.0.1)(vite@6.4.4(@types/node@22.20.5)(tsx@4.23.15)(yaml@2.9.1))
 
+  apps/flags:
+    dependencies:
+      '@company/db':
+        specifier: workspace:*
+        version: link:../../platform/packages/db
+      '@company/http':
+        specifier: workspace:*
+        version: link:../../platform/packages/http
+      '@company/ui':
+        specifier: workspace:*
+        version: link:../../platform/packages/ui
+      fastify:
+        specifier: ^5.1.0
+        version: 5.12.7
+      pg:
+        specifier: ^8.13.1
+        version: 8.23.1
+    devDependencies:
+      '@company/testing':
+        specifier: workspace:*
+        version: link:../../platform/packages/testing
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.20.5
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.23.1
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.3.0(@types/react@19.3.0)
+      i18next:
+        specifier: ^24.0.0
+        version: 24.2.3(typescript@5.9.3)
+      pg-mem:
+        specifier: ^3.0.4
+        version: 3.0.14
+      react:
+        specifier: ^19.0.0
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.3.1(react@19.3.1)
+      react-i18next:
+        specifier: ^15.1.0
+        version: 15.7.4(i18next@24.2.3(typescript@5.9.3))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.4(@types/node@22.20.5)(tsx@4.23.15)(yaml@2.9.1)
+      vitest:
+        specifier: ^4.0.0
+        version: 4.1.12(@types/node@22.20.5)(@vitest/coverage-v8@4.1.12)(jsdom@25.0.1)(vite@6.4.4(@types/node@22.20.5)(tsx@4.23.15)(yaml@2.9.1))
+
   apps/refundlens:
     dependencies:
       '@company/auth':
