@@ -53,7 +53,14 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
   const [noting, setNoting] = useState(false);
   const [note, setNote] = useState("");
   const [revealed, setRevealed] = useState<string | null>(null);
-  const [docUrl, setDocUrl] = useState<{ url: string; expires_at: string } | null>(null);
+  const [docUrl, setDocUrl] = useState<{ caseId: string; url: string; expires_at: string } | null>(null);
+
+  // navigating case→case: drop the prior case's issued link + revealed PII
+  useEffect(() => {
+    setDocUrl(null);
+    setRevealed(null);
+    setError(null);
+  }, [id]);
 
   const { data: kase, isLoading } = useQuery({
     queryKey: ["case", id],
@@ -90,7 +97,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     try {
       setError(null);
       const res = (await api(`/api/v1/cases/${id}/doc-url`)) as { url: string; expires_at: string };
-      setDocUrl(res);
+      setDocUrl({ caseId: id, ...res });
       void qc.invalidateQueries({ queryKey: ["audit", id] });
     } catch (e) {
       setError((e as Error).message);
@@ -266,7 +273,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <section className="panel" aria-labelledby="doc-h">
         <h2 id="doc-h">{t("doc.title")}</h2>
-        {docUrl === null ? (
+        {docUrl === null || docUrl.caseId !== id ? (
           <p>
             <button type="button" onClick={() => void doDocUrl()}>
               {t("doc.issue")} (d)
