@@ -54,7 +54,9 @@ export function QueuePage() {
         ) as Promise<{ rows: CaseRow[]; next_cursor?: string }>,
       initialPageParam: "",
       getNextPageParam: (last) => last.next_cursor,
-      refetchInterval: 5000,
+      // stop polling once errored — otherwise the alert flaps against
+      // react-query's pending reset every cycle (verifier residual)
+      refetchInterval: (q) => (q.state.status === "error" ? false : 5000),
     });
   const allRows = useMemo(
     () => data?.pages.flatMap((p) => p.rows) ?? [],
