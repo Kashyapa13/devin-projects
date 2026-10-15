@@ -2,8 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "api/src",
-    "types": ["node"]
+    "rootDir": ".",
+    "types": [
+      "node"
+    ]
   },
-  "include": ["api/src"]
+  "include": [
+    "api/src",
+    "strategies"
+  ]
 }
