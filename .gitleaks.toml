@@ -1,0 +1,8 @@
+# Historical dev-token helper (internal-apps/apps/fastlane/web/public/settoken.html)
+# was deleted in 47a695e — the JWT is a dead commit blob, not a live secret.
+title = "internal-apps gitleaks config"
+[extend]
+useDefault = true
+[allowlist]
+description = "deleted dev-token helper blob"
+paths = ['''settoken\.html''']
