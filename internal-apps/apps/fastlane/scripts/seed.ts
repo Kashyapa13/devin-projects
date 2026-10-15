@@ -8,14 +8,15 @@ import { cipherFromEnv } from "../api/src/crypto.js";
  * 40 cases, 3 users, zero PII-shaped values: legal_name plaintexts are
  * SYNTH-ENTITY tokens before encryption, not person-shaped strings.
  */
-export function makeRegistry(cipher: FieldCipher, caseCount = 40) {
-  const USERS = [
+const USERS = [
     { id: "11111111-1111-1111-1111-111111111111", handle: "r-reviewer", roles: "{reviewer}" },
     { id: "22222222-2222-2222-2222-222222222222", handle: "s-supervisor", roles: "{supervisor}" },
     { id: "33333333-3333-3333-3333-333333333333", handle: "a-admin", roles: "{admin}" },
     // "+1" service account — the cron/sla-digest principal (not a human seat)
     { id: "44444444-4444-4444-4444-444444444444", handle: "svc-digest", roles: "{service}" },
-  ];
+  ] as const;
+
+export function makeRegistry(cipher: FieldCipher, caseCount = 40) {
   const STATUSES = [
     "PENDING", "PENDING", "PENDING", "PENDING",
     "IN_REVIEW", "IN_REVIEW", "IN_REVIEW",

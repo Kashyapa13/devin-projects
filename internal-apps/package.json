@@ -16,17 +16,24 @@
     "test": "turbo run test --affected",
     "lint": "turbo run lint --affected",
     "import-lint": "tsx scripts/ci/import-lint.ts",
+    "repo-lint": "tsx scripts/ci/repo-lint.ts",
+    "license-check": "tsx scripts/ci/license-check.ts",
+    "security-audit": "tsx scripts/ci/security-audit.ts",
+    "pr-semantics": "tsx scripts/ci/pr-semantics.ts",
+    "affected-apps": "tsx scripts/ci/affected-apps.ts",
     "drift": "scripts/ci/schema-drift.sh && scripts/ci/api-drift.sh && scripts/ci/docs-lint.sh && scripts/ci/adr-check.sh",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "publish-packages": "changeset publish"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
     "@changesets/cli": "^2.27.9",
+    "@playwright/test": "^1.48.2",
     "@types/node": "^22.9.0",
     "tsx": "^4.19.2",
     "turbo": "^2.0.0",
     "typescript": "^5.6.3",
-    "vitest": "^2.1.4"
+    "vitest": "^4.0.0"
   }
 }

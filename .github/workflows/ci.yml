@@ -1,0 +1,173 @@
+name: ci
+
+# Path-filtered per deployment law: apps/<app>/** runs that app only;
+# platform/** fans out to ALL apps (realized via `turbo --affected` —
+# workspace deps make dependents affected). The trigger is every PR:
+# workflow-level paths: filters would leave required checks unreported
+# (merge deadlock), so `changes` detects internal-apps/** and the heavy
+# jobs pass trivially when untouched. import-lint always runs on affected
+# diffs — dependency law is global. Wall-clock budget: ≤15 min end to
+# end; a breach is a filed CI defect, never an accepted norm.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "internal-apps/**"
+      - ".github/workflows/ci.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+  TURBO_SCM_HEAD: ${{ github.event.pull_request.head.sha || github.event.after }}
+
+defaults:
+  run:
+    working-directory: internal-apps
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      hit: ${{ steps.d.outputs.hit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: d
+        run: |
+          if git diff --name-only "$TURBO_SCM_BASE...$TURBO_SCM_HEAD" | grep -q '^internal-apps/'; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+        working-directory: .
+        env:
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          TURBO_SCM_HEAD: ${{ github.event.pull_request.head.sha || github.event.after }}
+
+  lint:
+    # Dependency law (import-lint, global) + structural hygiene (repo-lint).
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.hit == 'true'
+      - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        if: needs.changes.outputs.hit == 'true'
+      - run: pnpm import-lint
+        if: needs.changes.outputs.hit == 'true'
+      - run: pnpm repo-lint
+        if: needs.changes.outputs.hit == 'true'
+      - run: echo "internal-apps untouched — gate passes trivially"
+        if: needs.changes.outputs.hit != 'true'
+
+  typecheck:
+    needs: [changes, lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        if: needs.changes.outputs.hit == 'true'
+      - run: pnpm turbo run lint --affected
+        if: needs.changes.outputs.hit == 'true'
+      - run: echo "internal-apps untouched — gate passes trivially"
+        if: needs.changes.outputs.hit != 'true'
+
+  unit:
+    needs: [changes, typecheck]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        if: needs.changes.outputs.hit == 'true'
+      - run: pnpm turbo run test --affected
+        if: needs.changes.outputs.hit == 'true'
+      - run: echo "internal-apps untouched — gate passes trivially"
+        if: needs.changes.outputs.hit != 'true'
+
+  build:
+    needs: [changes, unit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      apps: ${{ steps.affected.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.hit == 'true'
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        if: needs.changes.outputs.hit == 'true'
+      - run: pnpm turbo run build --affected
+        if: needs.changes.outputs.hit == 'true'
+      - id: affected
+        if: needs.changes.outputs.hit == 'true'
+        run: |
+          echo "apps=$(pnpm -s affected-apps --base "$TURBO_SCM_BASE" --head "$TURBO_SCM_HEAD" | jq -c '.apps')" >> "$GITHUB_OUTPUT"
+      - name: docker image per affected app
+        if: ${{ needs.changes.outputs.hit == 'true' && steps.affected.outputs.apps != '[]' }}
+        run: |
+          for app in $(echo '${{ steps.affected.outputs.apps }}' | jq -r '.[]'); do
+            if [ -f "apps/$app/Dockerfile" ] && [ -f "apps/$app/package.json" ]; then
+              echo "== docker build $app =="
+              docker build --build-arg APP_DIR="$app" \
+                -f "apps/$app/Dockerfile" -t "app-$app:ci" .
+            fi
+          done
+      - run: echo "internal-apps untouched — gate passes trivially"
+        if: needs.changes.outputs.hit != 'true'

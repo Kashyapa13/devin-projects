@@ -1,0 +1,32 @@
+name: semantics
+
+# The kit's own law, machine-enforced:
+#   title ^(feat|fix|docs|test|chore|refactor|perf|ci|build|revert)(\(.+\))?!?:.+
+#   scope (when present) = an app or platform package name
+#   body references the PR-promise it serves, or carries
+#   docs-unchanged: <reason> (≥40 chars — a justification, not a token)
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  semantics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm -C internal-apps install --frozen-lockfile
+      - run: pnpm -C internal-apps pr-semantics

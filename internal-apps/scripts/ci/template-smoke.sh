@@ -18,7 +18,9 @@ trap cleanup EXIT
 cp -r apps/_template "$SMOKE"
 
 echo "== install (workspace links resolve verbatim) =="
-pnpm install
+# _smoke_run isn't in the committed lockfile — CI's frozen-lockfile default
+# would fail. Install unfrozen here; the lockfile is restored by the trap.
+pnpm install --no-frozen-lockfile
 
 echo "== build: platform deps + app =="
 pnpm --filter "@app/template..." build
