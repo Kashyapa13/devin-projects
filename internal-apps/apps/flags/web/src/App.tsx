@@ -34,9 +34,12 @@ export function App() {
   const [del, setDel] = useState<Record<string, string>>({});
   const [rules, setRules] = useState<Record<string, string>>({});
   const seedRef = useRef<Record<string, string>>({});
+  const loadSeq = useRef(0);
 
   const load = () => {
+    const s = ++loadSeq.current;               // only the latest list request may apply
     api("/api/flags").then((d) => {
+      if (s !== loadSeq.current) return;
       const fs: any[] = d.flags ?? [];
       setFlags(fs);
       // re-seed rules editors the user hasn't touched; keep in-flight edits
@@ -50,7 +53,10 @@ export function App() {
         return next;
       });
     });
-    api("/api/flags/audit").then((d) => setEvents(d.events ?? []));
+    api("/api/flags/audit").then((d) => {
+      if (s !== loadSeq.current) return;
+      setEvents(d.events ?? []);
+    });
   };
   useEffect(load, []);
   useEffect(() => {
