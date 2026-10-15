@@ -19,6 +19,8 @@ export interface QueueTableProps<T extends { id: string | number }> {
   /** Per-row actions rendered as real <button>s. */
   actions?: QueueAction<T>[];
   emptyMessage?: string;
+  /** Row id the keyboard cursor sits on — sets aria-current + data-selected. */
+  selectedId?: string | number | undefined;
 }
 
 /**
@@ -32,6 +34,7 @@ export function QueueTable<T extends { id: string | number }>({
   rows,
   actions = [],
   emptyMessage = "No items",
+  selectedId,
 }: QueueTableProps<T>) {
   return (
     <table className="queue-table">
@@ -55,7 +58,14 @@ export function QueueTable<T extends { id: string | number }>({
           </tr>
         ) : (
           rows.map((row) => (
-            <tr key={row.id} tabIndex={0} data-row-id={String(row.id)}>
+            <tr
+              key={row.id}
+              tabIndex={0}
+              data-row-id={String(row.id)}
+              {...(row.id === selectedId
+                ? { "data-selected": "true", "aria-current": "true" }
+                : {})}
+            >
               {columns.map((c) => (
                 <td key={c.key}>{c.render(row)}</td>
               ))}

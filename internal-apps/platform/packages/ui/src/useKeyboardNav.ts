@@ -7,6 +7,11 @@ export interface QueueKeys {
   claim: () => void;
   assign: () => void;
   refresh: () => void;
+  reject: () => void;
+  note?: () => void;
+  escalate?: () => void;
+  open?: () => void;
+  back?: () => void;
 }
 
 export type QueueAction = keyof QueueKeys;

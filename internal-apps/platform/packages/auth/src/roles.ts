@@ -6,6 +6,23 @@ export const rolesMatrix = {
   operator: ["case:read", "case:claim", "case:decide", "queue:read"],
   analyst: ["case:read", "queue:read", "report:read"],
   viewer: ["case:read", "queue:read"],
+  reviewer: [
+    "case:read",
+    "case:claim",
+    "case:decide",
+    "case:reveal",
+    "queue:read",
+  ],
+  supervisor: [
+    "case:read",
+    "case:claim",
+    "case:decide",
+    "case:reveal",
+    "case:reopen",
+    "queue:read",
+    "team:read",
+    "audit:read",
+  ],
 } as const;
 
 export type Role = keyof typeof rolesMatrix;
