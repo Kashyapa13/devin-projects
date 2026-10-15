@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { auditWriter } from "@company/audit";
 import { ApiError } from "@company/http";
 import type { FieldCipher } from "@company/crypto";
@@ -58,6 +59,25 @@ async function lockCase(
 export interface Actor {
   sub: string;
   roles: string[];
+}
+
+/** LLD RBAC matrix: assignee-scoped surfaces (doc-url, reveal, note) —
+ *  supervisor/admin bypass; reviewers must be the case assignee. */
+function assertAssignee(
+  kase: Record<string, unknown>,
+  actor: Actor,
+): void {
+  if (actor.roles.includes("supervisor") || actor.roles.includes("admin")) return;
+  const assigned = kase.assignee_id as string | null;
+  // assignee_id is a PG UUID (canonical lowercase); actor.sub is a raw JWT
+  // string — compare case-insensitively so uppercase UUID subjects match.
+  if (assigned === null || assigned.toLowerCase() !== actor.sub.toLowerCase()) {
+    throw new ApiError(
+      "NOT_ASSIGNEE",
+      "only the assignee can act on this case — claim it first or ask the assignee",
+      403,
+    );
+  }
 }
 
 /** A decision: guard (pure) → state change → audit row, ONE transaction. */
@@ -152,7 +172,8 @@ export async function addNote(
     throw new ApiError("VALIDATION", "note body is empty", 400);
   }
   return withTx(deps.db, async (tx) => {
-    await lockCase(tx, caseId);
+    const kase = await lockCase(tx, caseId);
+    assertAssignee(kase, actor);
     const res = rows(
       await tx.query(
         `INSERT INTO case_notes (case_id, author_id, body)
@@ -184,6 +205,19 @@ export async function reveal(
   actor: Actor,
   reqId: string,
 ): Promise<{ legal_name: string }> {
+  const res = rows(
+    await deps.db.query(
+      `SELECT legal_name_enc, assignee_id FROM kyc_cases WHERE id = $1`,
+      [caseId],
+    ),
+  );
+  const kase = res[0];
+  if (!kase || typeof kase.legal_name_enc !== "string") {
+    throw new ApiError("NOT_FOUND", "case not found or has no C4 field", 404);
+  }
+  // existence + assignee checks precede the write-ahead audit: a denied
+  // attempt must not mint a `case.reveal` row for a reveal that never happened.
+  assertAssignee(kase, actor);
   try {
     await auditWriter(deps.db, {
       actor: actor.sub,
@@ -197,17 +231,7 @@ export async function reveal(
     deps.metrics.counter("audit_write_fail_total").inc();
     throw e;
   }
-  const res = rows(
-    await deps.db.query(
-      `SELECT legal_name_enc FROM kyc_cases WHERE id = $1`,
-      [caseId],
-    ),
-  );
-  const enc = res[0]?.legal_name_enc;
-  if (typeof enc !== "string") {
-    throw new ApiError("NOT_FOUND", "case not found or has no C4 field", 404);
-  }
-  const legal_name = await deps.cipher.decrypt(enc);
+  const legal_name = await deps.cipher.decrypt(kase.legal_name_enc as string);
   deps.metrics.counter("pii_reveal_total").inc();
   return { legal_name };
 }
@@ -224,11 +248,15 @@ export async function docUrl(
   reqId: string,
 ): Promise<{ url: string; expires_at: string }> {
   const exists = rows(
-    await deps.db.query(`SELECT id FROM kyc_cases WHERE id = $1`, [caseId]),
+    await deps.db.query(
+      `SELECT id, assignee_id FROM kyc_cases WHERE id = $1`,
+      [caseId],
+    ),
   );
   if (!exists[0]) {
     throw new ApiError("NOT_FOUND", "case not found", 404);
   }
+  assertAssignee(exists[0]!, actor); // check precedes the write-ahead audit
   await auditWriter(deps.db, {
     actor: actor.sub,
     action: "case.doc_url",
@@ -239,8 +267,20 @@ export async function docUrl(
   });
   const exp = new Date(Date.now() + 900_000);
   const bucket = process.env.DOC_BUCKET ?? "docs.local";
+  // Never sign with the public 'dev' fallback outside local dev: a missing
+  // DOC_SIGNING_KEY in a configured deploy is a hard error, not a forgery
+  // opportunity (ADR-0007).
+  const secret =
+    process.env.DOC_SIGNING_KEY ??
+    (process.env.NODE_ENV === "production" ? undefined : process.env.DEV_KMS_KEY ?? "dev");
+  if (!secret) {
+    throw new ApiError("DOC_SIGNING_KEY_MISSING", "doc signing key not configured", 503);
+  }
+  const sig = createHmac("sha256", secret)
+    .update(`${caseId}|${exp.toISOString()}`)
+    .digest("hex");
   return {
-    url: `https://${bucket}/kyc/${encodeURIComponent(caseId)}?expires=${exp.toISOString()}&sig=dev`,
+    url: `https://${bucket}/kyc/${encodeURIComponent(caseId)}?expires=${exp.toISOString()}&sig=${sig}`,
     expires_at: exp.toISOString(),
   };
 }

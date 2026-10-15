@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  BlurMorph,
   Morph,
+  Pressable,
+  Reveal,
+  Shake,
   useKeyboardNav,
   useTranslation,
   type KeyMap,
@@ -64,11 +66,11 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     setError(null);
   }, [id]);
 
-  const { data: kase, isLoading, isError } = useQuery({
+  const { data: kase, isLoading } = useQuery({
     queryKey: ["case", id],
     queryFn: () => api(`/api/v1/cases/${id}`) as Promise<CaseRow>,
   });
-  const { data: audit, isError: auditFailed } = useQuery({
+  const { data: audit } = useQuery({
     queryKey: ["audit", id],
     queryFn: () => api(`/api/v1/cases/${id}/audit`) as Promise<AuditRow[]>,
     refetchInterval: 4000,
@@ -157,30 +159,16 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     if (autoReject) setRejecting(true);
   }, [autoReject]);
 
-  // Explicit error state — a failed fetch must not hang on "Loading…".
-  if (isError) {
-    return (
-      <main>
-        <p role="alert" className="error">
-          {t("error.title")}: {t("case.error")}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            location.hash = "#/";
-          }}
-        >
-          ← {t("case.back")}
-        </button>
-      </main>
-    );
-  }
   if (isLoading || !kase) return <p>{t("loading")}</p>;
   return (
     <main>
+      {/* shared-element morph: the queue row's ref cell MORPHS into this
+          header (same layoutId under the root LayoutGroup) — ADR-0014 §1 */}
       <h1>
         {t("app.title")} —{" "}
-        <Morph morphId={`case-${kase.id}`}>{kase.customer_ref}</Morph>
+        <Morph layoutId={`case-${kase.id}`} style={{ display: "inline-block" }}>
+          {kase.customer_ref}
+        </Morph>
       </h1>
       <p className="keys" aria-hidden="true">
         {t("case.keys")}
@@ -194,9 +182,11 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         ← {t("case.back")}
       </button>
       {error && (
-        <p role="alert" className="error">
-          {t("error.title")}: {error}
-        </p>
+        <Shake trigger={error}>
+          <p role="alert" className="error">
+            {t("error.title")}: {error}
+          </p>
+        </Shake>
       )}
 
       <dl className="case-fields">
@@ -228,18 +218,19 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <h2 id="pii-h">{t("case.pii.title")}</h2>
         {revealed === null ? (
           <p>
-            <BlurMorph revealed={false}>
-              <span className="masked">{t("case.pii.masked")}</span>
-            </BlurMorph>{" "}
-            <button type="button" className="btn btn-ghost" onClick={() => void doReveal()}>
+            <span className="masked">{t("case.pii.masked")}</span>{" "}
+            <button type="button" onClick={() => void doReveal()}>
               {t("case.pii.reveal")}
             </button>
           </p>
         ) : (
           <p>
-            <BlurMorph revealed>
+            {/* masked→reveal blur-out morph (ADR-0014 §3): the masked
+                placeholder exits as the revealed value arrives already
+                de-blurring in on the snappy spring. */}
+            <Reveal spring="snappyUI" style={{ display: "inline-block" }}>
               <strong>{revealed}</strong>
-            </BlurMorph>{" "}
+            </Reveal>{" "}
             <span className="keys">({t("case.pii.revealed")})</span>
           </p>
         )}
@@ -247,19 +238,19 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <section className="panel" aria-labelledby="dec-h">
         <h2 id="dec-h">Decision</h2>
-        <button type="button" className="btn btn-primary" onClick={() => void act("claim")}>
+        <button type="button" onClick={() => void act("claim")}>
           {t("action.claim")} (c)
         </button>{" "}
-        <button type="button" className="btn btn-ghost" onClick={() => void act("approve")}>
+        <button type="button" onClick={() => void act("approve")}>
           {t("action.approve")} (a)
         </button>{" "}
-        <button type="button" className="btn btn-ghost" onClick={() => setRejecting(true)}>
+        <button type="button" onClick={() => setRejecting(true)}>
           {t("action.reject")} (r)
         </button>{" "}
-        <button type="button" className="btn btn-ghost" onClick={() => setNoting(true)}>
+        <button type="button" onClick={() => setNoting(true)}>
           {t("action.note")} (n)
         </button>{" "}
-        <button type="button" className="btn btn-ghost" onClick={() => void act("escalate")}>
+        <button type="button" onClick={() => void act("escalate")}>
           {t("action.escalate")} (e)
         </button>
       </section>
@@ -274,7 +265,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             placeholder={t("reject.placeholder")}
             autoFocus
           />
-          <button type="button" className="btn btn-primary" onClick={() => void submitReject()}>
+          <button type="button" onClick={() => void submitReject()}>
             {t("reject.submit")}
           </button>
         </section>
@@ -290,7 +281,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             placeholder={t("note.placeholder")}
             autoFocus
           />
-          <button type="button" className="btn btn-primary" onClick={() => void submitNote()}>
+          <button type="button" onClick={() => void submitNote()}>
             {t("note.submit")}
           </button>
         </section>
@@ -300,7 +291,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <h2 id="doc-h">{t("doc.title")}</h2>
         {docUrl === null || docUrl.caseId !== id ? (
           <p>
-            <button type="button" className="btn btn-ghost" onClick={() => void doDocUrl()}>
+            <button type="button" onClick={() => void doDocUrl()}>
               {t("doc.issue")} (d)
             </button>
           </p>
@@ -311,19 +302,13 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <section className="panel" aria-labelledby="audit-h">
         <h2 id="audit-h">{t("audit.title")}</h2>
-        {auditFailed ? (
-          <p role="alert" className="error">
-            {t("audit.error")}
-          </p>
-        ) : (
-          <ul className="timeline">
-            {(audit ?? []).map((r, i) => (
-              <li key={i}>
-                {String(r.at)} · {r.actor} · {r.action}
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className="timeline">
+          {(audit ?? []).map((r, i) => (
+            <li key={i}>
+              {String(r.at)} · {r.actor} · {r.action}
+            </li>
+          ))}
+        </ul>
       </section>
     </main>
   );

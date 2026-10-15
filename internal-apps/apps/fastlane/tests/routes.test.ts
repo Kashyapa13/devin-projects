@@ -226,6 +226,7 @@ describe("routes + RBAC matrix (gate: §7.3 integration)", () => {
 
   it("reveal writes its audit row BEFORE returning the value (kill-test)", async () => {
     const id = await pendingCaseId();
+    await post(`/api/v1/cases/${id}/claim`, ["reviewer"], {}, "reveal-clm");
     const exploding = {
       ...cipher,
       decrypt: () => Promise.reject(new Error("kms dead")),
@@ -253,6 +254,7 @@ describe("routes + RBAC matrix (gate: §7.3 integration)", () => {
 
   it("reveal happy path returns the decrypted synthetic value", async () => {
     const id = await pendingCaseId();
+    await post(`/api/v1/cases/${id}/claim`, ["reviewer"], {}, "reveal-cl2");
     const res = await post(`/api/v1/cases/${id}/reveal`, ["reviewer"], {}, "reveal-ok");
     expect(res.statusCode).toBe(200);
     expect(res.json().legal_name).toMatch(/^SYNTH-ENTITY-\d{4}$/);
@@ -313,6 +315,7 @@ describe("routes + RBAC matrix (gate: §7.3 integration)", () => {
 
   it("note surface: empty 400, ok note audited", async () => {
     const id = await pendingCaseId();
+    await post(`/api/v1/cases/${id}/claim`, ["reviewer"], {}, "note-clm1");
     const empty = await post(`/api/v1/cases/${id}/note`, ["reviewer"], { body: "   " }, "note-emp1");
     expect(empty.statusCode).toBe(400);
     const ok = await post(`/api/v1/cases/${id}/note`, ["reviewer"], { body: "call logged with entity" }, "note-ok01");
@@ -323,11 +326,24 @@ describe("routes + RBAC matrix (gate: §7.3 integration)", () => {
 
   it("FT doc-panel: issuance is audited write-ahead with ~15-min expiry (ADR-0007)", async () => {
     const id = await pendingCaseId();
+    // assignee-scope (LLD matrix): non-assignee reviewer denied before any audit row
+    const other = await token(["reviewer"], "55555555-5555-5555-5555-555555555555");
+    const denied = await app.inject({
+      method: "GET", url: `/api/v1/cases/${id}/doc-url`,
+      headers: { authorization: `Bearer ${other}` },
+    });
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe("NOT_ASSIGNEE");
+    // supervisor can issue for any case
+    const sup = await get(`/api/v1/cases/${id}/doc-url`, ["supervisor"]);
+    expect(sup.statusCode).toBe(200);
+    await post(`/api/v1/cases/${id}/claim`, ["reviewer"], {}, "doc-claim1");
     const before = await get(`/api/v1/cases/${id}/audit`);
     const doc = await get(`/api/v1/cases/${id}/doc-url`);
     expect(doc.statusCode).toBe(200);
     const { url, expires_at } = doc.json() as { url: string; expires_at: string };
     expect(url).toMatch(/expires=/);
+    expect(url).toMatch(/sig=[0-9a-f]{64}/); // HMAC-signed, not the dev stub
     const ttlMs = Date.parse(expires_at) - Date.now();
     expect(ttlMs).toBeGreaterThan(840_000); // ≥14 min
     expect(ttlMs).toBeLessThanOrEqual(900_000); // ≤15 min
