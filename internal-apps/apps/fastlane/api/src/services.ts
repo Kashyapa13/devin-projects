@@ -223,6 +223,12 @@ export async function docUrl(
   actor: Actor,
   reqId: string,
 ): Promise<{ url: string; expires_at: string }> {
+  const exists = rows(
+    await deps.db.query(`SELECT id FROM kyc_cases WHERE id = $1`, [caseId]),
+  );
+  if (!exists[0]) {
+    throw new ApiError("NOT_FOUND", "case not found", 404);
+  }
   await auditWriter(deps.db, {
     actor: actor.sub,
     action: "case.doc_url",

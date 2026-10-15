@@ -37,10 +37,6 @@ CREATE TABLE audit_events (
   actor_id uuid NOT NULL, action text NOT NULL, diff jsonb, req_id text,
   created_at timestamptz NOT NULL DEFAULT now()
 );  REVOKE UPDATE, DELETE ON audit_events FROM PUBLIC;  -- append-only, enforced
--- Runtime binds NOLOGIN group role fastlane_app (migration 0002): CRUD on
--- the app tables, SELECT+INSERT only on audit_events. The API must never
--- connect as a superuser — a superuser DSN bypasses the PUBLIC revoke
--- (verifier breach: audit rows rewritten as postgres).
 CREATE INDEX audit_entity ON audit_events (entity, entity_id);
 ```
 
@@ -48,9 +44,7 @@ CREATE INDEX audit_entity ON audit_events (entity, entity_id);
 
 GET /queue?tab=mine|team|breaching + filters (partial indexes) · GET /cases/:id
 · POST claim|approve|reject|escalate|note|reveal (reveal = audited unmask —
-every call is a real disclosure: no idempotency-cache replay, each request
-re-executes and writes its own audit row; masked by default; allow-table
-validation; reject requires reason → 400;
+masked by default; allow-table validation; reject requires reason → 400;
 optimistic lock on version) · GET /cases/:id/audit + GET /audit (exportable)
 · GET doc-url (signed, never bytes) · POST /cron/sla-digest ·
 GET /metrics (unauthenticated; Prometheus exposition — ops scrape only).
@@ -119,7 +113,7 @@ one feature per session, copying the anchor's shape (schema → routes → UI
 | Entry | Status | Slice |
 |---|---|---|
 | Keyboard-day queue + decision panel | **anchor — this PR** | /queue (tabs, risk filter, badges/pills/chips, cursor) + /cases/[id] (c claim · a approve · r reject-with-reason · n note · e escalate) + audit timeline + audited masked-PII reveal · **motion notes (ADR-0014):** row→case shared-element morph on the ref cell · swipe-right approve / swipe-left opens reject / drag-to-claim drop strip (rubber-band, settle-back below threshold) · optimistic approve with spring rollback on error · focus glides on j/k · status-pill color-spring · SLA chip one-pulse on breach crossing · masked→reveal blur morph · press states scale 0.97 |
-| Signed doc panel (doc-url expiry UX) | FB | /cases/[id] doc section |
+| Signed doc panel (doc-url expiry UX) | **built** — evidence: `FT doc-panel` test + `d`-key DocPanel (live countdown, expired→re-issue, audited issuance) | /cases/[id] doc section |
 | SLA breaching alert surfaces | FB | queue breaching tab + cron digest consumer |
 | Notes timeline in queue row | FB | expandable row |
 | Supervisor team dashboard | FB | /team view (supervisor role) |

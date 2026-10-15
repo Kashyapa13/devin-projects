@@ -321,6 +321,27 @@ describe("routes + RBAC matrix (gate: §7.3 integration)", () => {
     expect((trail.json() as { action: string }[]).some((a) => a.action === "case.note")).toBe(true);
   });
 
+  it("FT doc-panel: issuance is audited write-ahead with ~15-min expiry (ADR-0007)", async () => {
+    const id = await pendingCaseId();
+    const before = await get(`/api/v1/cases/${id}/audit`);
+    const doc = await get(`/api/v1/cases/${id}/doc-url`);
+    expect(doc.statusCode).toBe(200);
+    const { url, expires_at } = doc.json() as { url: string; expires_at: string };
+    expect(url).toMatch(/expires=/);
+    const ttlMs = Date.parse(expires_at) - Date.now();
+    expect(ttlMs).toBeGreaterThan(840_000); // ≥14 min
+    expect(ttlMs).toBeLessThanOrEqual(900_000); // ≤15 min
+    const after = await get(`/api/v1/cases/${id}/audit`);
+    const gained = (after.json() as { action: string }[]).length - (before.json() as unknown[]).length;
+    expect(gained).toBe(1);
+    expect((after.json() as { action: string }[]).at(-1)?.action).toBe("case.doc_url");
+    // never serves bytes through the API — the URL is signed-shape, not proxied
+    expect(url).not.toContain("/api/v1/");
+    // ghost case → 404 and NO audit row (existence check precedes write-ahead)
+    const ghost = await get(`/api/v1/cases/00000000-0000-0000-0000-000000000000/doc-url`);
+    expect(ghost.statusCode).toBe(404);
+  });
+
   it("supervisor reopen: reviewer escalates, supervisor claims back to IN_REVIEW", async () => {
     const id = await pendingCaseId();
     await post(`/api/v1/cases/${id}/claim`, ["reviewer"], {}, "esc-claim");

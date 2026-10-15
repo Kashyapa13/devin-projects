@@ -5,6 +5,7 @@ coverage/
 .env
 .env.local
 *.log
+apps/fastlane/web/dist-web/
 
 # Playwright FT
 apps/*/e2e/.auth/
