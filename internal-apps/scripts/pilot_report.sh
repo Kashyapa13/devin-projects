@@ -28,7 +28,7 @@ for p in merged:
 median_turn = round(statistics.median(turns), 1) if turns else None
 
 # telemetry metric lines: - METRIC <key> <value> <unit> — <note>
-metrics = dict(re.findall(r"^- METRIC (\S+) ([\d.]+) ?(\S*)", tel, re.M))
+metrics = {k: v for k, v, _u in re.findall(r"^- METRIC (\S+) ([\d.]+) ?(\S*)", tel, re.M)}
 verdicts = re.findall(r"promise-verdict:\s*(\S+)\s*→\s*(kept|missed|pending)", tel)
 kept = sum(1 for _, v in verdicts if v == "kept")
 verdict_str = f"{kept}/{len(verdicts)}" if verdicts else "—"
