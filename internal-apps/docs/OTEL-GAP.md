@@ -137,7 +137,12 @@ final report.
   `service_name=fastlane|refundlens|otel-seed` carries trace_ids matching
   Tempo traces. stdout format unchanged.
 - [x] WI-9 — `scripts/otel-monitors.ts` (`pnpm otel:monitors`): PromQL
-  evaluation of the six LLD alert rules against Mimir :9090; seeded spike
-  trips `fastlane.queue_load_p95` (FIRING) + `refundlens.sync_lag_ticket`.
+  evaluation of the six LLD alert rules against Mimir :9090; the seeded
+  spike lands 24 obs in the 1000–2500ms bucket and `sync_lag_s`=4000 is
+  queryable. Note (verifier audit): `rate()`-window firing is NOT
+  reproducible on static seeded buckets (no slope → NO-DATA), and the
+  ticket threshold 5400 > seeded 4000 — firing is asserted in the monitor
+  evaluator's tests; a live firing demo needs a ramped load source, filed
+  as a follow-up.
 - [x] WI-10 — LLD §Observability + README/env sections updated both apps;
   this file closed per item.

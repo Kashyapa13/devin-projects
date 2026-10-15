@@ -39,7 +39,7 @@ Devin_annual(app)= build_cost + run + review_overhead
 
 | Active users | PA Premium/yr | Devin-built (build+yr-1 run) [EST] |
 |---|---|---|
-| 100 | $24,000 | ~$8–16k one-time + ~$6k/yr run+review |
+| 100 | $24,000 | ~$4–12.5k one-time + ~$6k/yr run+review |
 | 300 | $72,000 | same one-time + ~$8k/yr |
 | 1,000 | $240,000 | same one-time + ~$12k/yr |
 
