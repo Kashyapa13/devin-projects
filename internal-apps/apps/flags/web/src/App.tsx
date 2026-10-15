@@ -32,6 +32,7 @@ export function App() {
   const [demoFlag, setDemoFlag] = useState<any>(null);
   const [uid] = useState("demo-user-1");
   const [del, setDel] = useState<Record<string, string>>({});
+  const [rules, setRules] = useState<Record<string, string>>({});
 
   const load = () => {
     api("/api/flags").then((d) => setFlags(d.flags ?? []));
@@ -42,11 +43,11 @@ export function App() {
     api(`/api/flags/evaluate?key=demo-hero&userId=${uid}&env=dev`).then(setDemoFlag);
   }, [flags, uid]);
 
-  const create = async () => {
+  const create = async (targeting?: any) => {
     const r = await api("/api/flags", {
       method: "POST",
       headers: H(role),
-      body: JSON.stringify({ key, env }),
+      body: JSON.stringify(targeting === undefined ? { key, env } : { key, env, targeting }),
     });
     const e = showErr(r);
     if (e) setErr(e);
@@ -55,6 +56,18 @@ export function App() {
       setKey("");
     }
     load();
+  };
+  const createWithRules = async () => {
+    const raw = rules.__create ?? "";
+    let parsed: any;
+    try {
+      parsed = raw.trim() === "" ? {} : JSON.parse(raw);
+    } catch {
+      setErr(t("rules.badjson"));
+      return;
+    }
+    await create(parsed);
+    setRules({ ...rules, __create: "" });
   };
   const del1 = async (f: any) => {
     const r = await api(
@@ -67,13 +80,35 @@ export function App() {
     load();
   };
   const flip = async (f: any) => {
-    await api(`/api/flags/${f.id}`, {
+    const r = await api(`/api/flags/${f.id}`, {
       method: "PUT",
       headers: H(role),
       body: JSON.stringify({
-        targeting: { default_enabled: !(f.targeting?.default_enabled === true) },
+        // toggle the base switch, never silently drop a targeting rule
+        targeting: { ...(f.targeting ?? {}), default_enabled: !(f.targeting?.default_enabled === true) },
       }),
     });
+    const e = showErr(r);
+    if (e) setErr(e);
+    load();
+  };
+  const saveRules = async (f: any) => {
+    const raw = rules[f.id] ?? "";
+    let parsed: any;
+    try {
+      parsed = raw.trim() === "" ? {} : JSON.parse(raw);
+    } catch {
+      setErr(t("rules.badjson"));
+      return;
+    }
+    const r = await api(`/api/flags/${f.id}`, {
+      method: "PUT",
+      headers: H(role),
+      body: JSON.stringify({ targeting: parsed }),
+    });
+    const e = showErr(r);
+    if (e) setErr(e);
+    else setErr("");
     load();
   };
 
@@ -139,6 +174,27 @@ export function App() {
             {t("create.button")}
           </button>
         </form>
+        <details className="panel" style={{ marginTop: 0 }}>
+          <summary className="keys">{t("rules.create")}</summary>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void createWithRules();
+            }}
+          >
+            <textarea
+              value={rules.__create ?? ""}
+              onChange={(e) => setRules({ ...rules, __create: e.target.value })}
+              placeholder={t("rules.placeholder")}
+              aria-label={t("rules.placeholder")}
+              className="mono"
+              rows={3}
+            />
+            <button type="submit" className="btn-primary">
+              {t("rules.createbtn")}
+            </button>
+          </form>
+        </details>
         {err && <p className="error-card">{err}</p>}
 
         <div className="table-card">
@@ -179,6 +235,28 @@ export function App() {
                       <button className="btn-ghost" onClick={() => void flip(f)}>
                         {t("action.flip")}
                       </button>
+                      <details className="rules-editor">
+                        <summary
+                          onClick={() =>
+                            setRules((r) => ({
+                              ...r,
+                              [f.id]: r[f.id] ?? JSON.stringify(f.targeting ?? {}, null, 2),
+                            }))
+                          }
+                        >
+                          {t("rules.edit")}
+                        </summary>
+                        <textarea
+                          className="mono"
+                          rows={4}
+                          aria-label={`${t("rules.edit")} ${String(f.key)}`}
+                          value={rules[f.id] ?? JSON.stringify(f.targeting ?? {}, null, 2)}
+                          onChange={(e) => setRules({ ...rules, [f.id]: e.target.value })}
+                        />
+                        <button className="btn-ghost" onClick={() => void saveRules(f)}>
+                          {t("rules.save")}
+                        </button>
+                      </details>
                       <input
                         className="del-input"
                         placeholder={t("action.delete.placeholder")}

@@ -23,4 +23,24 @@ describe("SWR cache", () => {
     expect(second).toBe(first); await new Promise((r) => setTimeout(r, 5));
     expect(await c.get("k")).toEqual(["v2"]);                // revalidated
   });
+  it("invalidate() during an in-flight refresh blocks the stale install", async () => {
+    let resolveLoad!: (v: string[]) => void;
+    const c = new SwrCache<string[]>(0, () => new Promise((r) => { resolveLoad = r; }));
+    const p = c.get("k");                                    // miss → in-flight load
+    c.invalidate();                                          // mutation lands mid-flight
+    resolveLoad(["old"]);
+    await p;                                                 // load resolves — must NOT install
+    let loaded = 0;
+    const c2 = c;                                            // next get misses (cache still empty)
+    (c2 as any).load = async () => { loaded++; return ["fresh"]; };
+    expect(await c2.get("k")).toEqual(["fresh"]);
+    expect(loaded).toBe(1);
+  });
+  it("coalesces simultaneous refreshes for the same key", async () => {
+    let n = 0;
+    const c = new SwrCache<string[]>(30_000, async () => { n++; return [`v${n}`]; });
+    const [a, b] = await Promise.all([c.get("k"), c.get("k")]);
+    expect(a).toEqual(b);
+    expect(n).toBe(1);
+  });
 });

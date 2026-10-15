@@ -1065,6 +1065,44 @@ details.sql pre {
   outline-offset: 1px;
 }
 
+/* per-row targeting-rules editor */
+.rules-editor {
+  position: relative;
+}
+.rules-editor summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  padding: 0.26rem 0.6rem;
+  border-radius: var(--r-md);
+}
+.rules-editor summary:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.rules-editor[open] summary {
+  color: var(--accent-ink);
+}
+.rules-editor textarea {
+  position: absolute;
+  right: 0;
+  top: 2rem;
+  z-index: 20;
+  width: 20rem;
+  min-height: 6rem;
+  font-size: 0.78rem;
+  box-shadow: var(--elev-3);
+}
+.rules-editor[open] button {
+  position: absolute;
+  right: 0.5rem;
+  top: 7.4rem;
+  z-index: 21;
+  background: var(--surface-solid);
+  box-shadow: var(--elev-2);
+}
+
 /* /demo flip zone — the panel a flag flip visibly repaints */
 .flip-zone {
   margin-top: 0.6rem;
