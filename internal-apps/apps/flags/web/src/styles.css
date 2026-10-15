@@ -1085,22 +1085,15 @@ details.sql pre {
   color: var(--accent-ink);
 }
 .rules-editor textarea {
-  position: absolute;
-  right: 0;
-  top: 2rem;
-  z-index: 20;
-  width: 20rem;
-  min-height: 6rem;
+  display: block;
+  width: 22rem;
+  max-width: 100%;
+  min-height: 5.5rem;
+  margin: 0.5rem 0 0.4rem;
   font-size: 0.78rem;
-  box-shadow: var(--elev-3);
 }
 .rules-editor[open] button {
-  position: absolute;
-  right: 0.5rem;
-  top: 7.4rem;
-  z-index: 21;
-  background: var(--surface-solid);
-  box-shadow: var(--elev-2);
+  margin-bottom: 0.3rem;
 }
 
 /* /demo flip zone — the panel a flag flip visibly repaints */

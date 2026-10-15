@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const H = (role: string) => ({
@@ -33,9 +33,23 @@ export function App() {
   const [uid] = useState("demo-user-1");
   const [del, setDel] = useState<Record<string, string>>({});
   const [rules, setRules] = useState<Record<string, string>>({});
+  const seedRef = useRef<Record<string, string>>({});
 
   const load = () => {
-    api("/api/flags").then((d) => setFlags(d.flags ?? []));
+    api("/api/flags").then((d) => {
+      const fs: any[] = d.flags ?? [];
+      setFlags(fs);
+      // re-seed rules editors the user hasn't touched; keep in-flight edits
+      setRules((r) => {
+        const next = { ...r };
+        for (const f of fs) {
+          const js = JSON.stringify(f.targeting ?? {}, null, 2);
+          if (next[f.id] !== undefined && next[f.id] === seedRef.current[f.id]) next[f.id] = js;
+          seedRef.current[f.id] = js;
+        }
+        return next;
+      });
+    });
     api("/api/flags/audit").then((d) => setEvents(d.events ?? []));
   };
   useEffect(load, []);
@@ -43,19 +57,18 @@ export function App() {
     api(`/api/flags/evaluate?key=demo-hero&userId=${uid}&env=dev`).then(setDemoFlag);
   }, [flags, uid]);
 
-  const create = async (targeting?: any) => {
+  const create = async (targeting?: any): Promise<boolean> => {
     const r = await api("/api/flags", {
       method: "POST",
       headers: H(role),
       body: JSON.stringify(targeting === undefined ? { key, env } : { key, env, targeting }),
     });
     const e = showErr(r);
-    if (e) setErr(e);
-    else {
-      setErr("");
-      setKey("");
-    }
+    if (e) { setErr(e); load(); return false; }
+    setErr("");
+    setKey("");
     load();
+    return true;
   };
   const createWithRules = async () => {
     const raw = rules.__create ?? "";
@@ -66,8 +79,7 @@ export function App() {
       setErr(t("rules.badjson"));
       return;
     }
-    await create(parsed);
-    setRules({ ...rules, __create: "" });
+    if (await create(parsed)) setRules({ ...rules, __create: "" });
   };
   const del1 = async (f: any) => {
     const r = await api(
@@ -229,10 +241,19 @@ export function App() {
                     >
                       {f.targeting?.default_enabled ? t("state.on") : t("state.off")}
                     </span>
+                    {f.targeting?.enabled_if?.bucket_lt !== undefined && (
+                      <span className="chip tone-info" style={{ marginLeft: "0.45rem" }}>
+                        {t("state.bucket", { pct: f.targeting.enabled_if.bucket_lt })}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <div className="actions">
-                      <button className="btn-ghost" onClick={() => void flip(f)}>
+                      <button
+                        className="btn-ghost"
+                        title={t("action.flip.hint")}
+                        onClick={() => void flip(f)}
+                      >
                         {t("action.flip")}
                       </button>
                       <details className="rules-editor">

@@ -25,7 +25,7 @@ export class SwrCache<V> {
     const e = this.m.get(k);
     if (e && Date.now() - e.at < this.ttlMs) return e.v;
     if (e) {
-      void this.refresh(k);                        // stale-while-revalidate
+      void this.refresh(k).catch(() => {});        // stale-while-revalidate; keep last-known on failure
       return e.v;
     }
     return this.refresh(k);
@@ -37,9 +37,9 @@ export class SwrCache<V> {
     const g = this.gen;
     const q = this.load(k)
       .then((v) => { if (this.gen === g) this.m.set(k, { v, at: Date.now() }); return v; })
-      .finally(() => this.inflight.delete(k));
+      .finally(() => { if (this.inflight.get(k) === q) this.inflight.delete(k); });
     this.inflight.set(k, q);
     return q;
   }
-  invalidate() { this.gen++; this.m.clear(); }
+  invalidate() { this.gen++; this.m.clear(); this.inflight.clear(); }
 }

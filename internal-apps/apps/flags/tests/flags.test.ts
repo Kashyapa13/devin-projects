@@ -43,4 +43,17 @@ describe("SWR cache", () => {
     expect(a).toEqual(b);
     expect(n).toBe(1);
   });
+  it("post-invalidate gets never join a pre-mutation in-flight load", async () => {
+    let n = 0; let res!: (v: string[]) => void;
+    const c = new SwrCache<string[]>(0, async () => {
+      n++; if (n === 1) return new Promise<string[]>((r) => { res = r; });
+      return ["fresh"];
+    });
+    const p1 = c.get("k");                                   // in-flight, generation 0
+    c.invalidate();                                          // mutation lands mid-flight
+    const p2 = c.get("k");                                   // must start its own load, not join p1
+    res(["old"]); await p1;
+    expect(await p2).toEqual(["fresh"]);
+    expect(n).toBe(2);
+  });
 });
