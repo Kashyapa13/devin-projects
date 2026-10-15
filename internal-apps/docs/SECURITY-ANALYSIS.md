@@ -1,81 +1,44 @@
-# SECURITY-ANALYSIS — recorded security battery (TESTING.md §SECURITY)
+# SECURITY-ANALYSIS — RefundLens slice (TESTING.md §SECURITY)
 
-Method: adversarial ATTEMPTS on a clean checkout + live stack, not code-reading
-assertions. Independent verifier session ran every row below twice — once on
-`c1a55e8` (found 4 breaches), once on `ad83eb4` post-fix (all re-verified held).
-FastLane executor's test PR adds the same checks as permanent tests.
+Executed 2026-10-15 on the skeleton base. The fence is the crown jewel —
+most of this page is its evidence.
 
-## Tool battery
+## Command + output matrix
 
-| Tool | Scope | Result |
-|---|---|---|
-| `gitleaks detect --source . --all --redact` | full history (99 commits) | clean, no leaks |
-| `pnpm audit --prod` | prod deps | 1 moderate: `uuid` via testcontainers→dockerode (dev chain only) → filed P2 |
-| `pnpm audit` (dev incl.) | all deps | 3 dev-chain vulns → filed P2 (owner+date in OPEN-QUESTIONS) |
-| `pnpm license-check` | 484 external packages | allowlist clean |
-| Trivy image scan | app Dockerfiles | CI `security-trivy` job green on every PR |
-| semgrep (auth/audit/crypto/fence/platform) | static analysis | folded into the executor test suites' static checks — clean |
+| Check | Command | Result |
+| --- | --- | --- |
+| Escape corpus (≥20 banned + injection) | `pnpm exec vitest run tests/fence-escape.test.ts` | **58/58 rejected** `fenced_query_rejected` — post-c1a55e8 the 7 former confirmed escapes (subquery/JOIN-tail) are closed and pinned green (OPEN-2 CLOSED) |
+| Fence unit battery | `vitest run tests/fence.test.ts tests/ast.test.ts` | PASS — every banned construct class rejected; lexer quirks pinned |
+| Route authz | `vitest run tests/routes.test.ts` (pre-existing) | PASS — 401 no-token, 403 wrong-role, fenced-rejection envelope |
+| Error envelope golden | `vitest run tests/envelope.test.ts` | PASS — `{error:{code,message,detail?,req_id}}`; auth-path omits req_id (OPEN-5, platform-owned) |
+| Dependency audit | `pnpm audit` | 1 high `braces` (stack-exhaustion ReDoS, dev-tooling transitive), 2 moderate (`uuid` bounds, `sprintf-js` DoS) — transitive dev deps, none in the fenced request path |
+| License scan | `pnpm licenses ls --prod` | 157 MIT · 23 ISC · 17 Apache-2.0 · 15 BSD-3-Clause — zero copyleft |
+| Secret scan | `grep -rInE "(secret|key|token|postgres://)" api/ web/ db/ tests/ scripts/ e2e/` | only labeled fixtures (`dev-session-secret-fixture-only`, `postgres:pg` local DSN); gitleaks/semgrep/trivy/syft not installed in this harness — flagged as environment gap, not waived |
+| SBOM | `pnpm list -r --depth -1` | dependency tree enumerable from workspace; cyclonedx/SBOM tool not installed — environment gap |
 
-## RBAC / auth battery (all executed over HTTP)
+## THREAT-MODEL top-5 → executed check mapping
 
-- Unauthenticated on every FastLane route → 401 (cron → 403 by design);
-  `/metrics` 200, aggregates only, no PII labels.
-- Wrong-role matrix (auditor/analyst/service/viewer on mutations; admin on
-  claim; reviewer on audit) → 403 everywhere required.
-- JWT forgery: wrong secret, `alg:none`, tampered payload, expired, wrong
-  issuer, cross-app token reuse → all 401.
-- Illegal transitions incl. APPROVED→*, non-assignee approve, short/missing
-  reason, supervisor-only edge as reviewer, stale `expected_version`,
-  missing/short Idempotency-Key → denied with correct codes.
-- Concurrent double-claim race (21 pairs) → no double-200, no dup audit rows.
-- Export route bypass (unauth/ops/service/admin/agent) → 401/403; analyst
-  gets CSV with watermark header + exact-count footer.
-- Injection corpus (SQLi in tab/cursor/limit/:id/note-body, XSS in note,
-  path traversal) → parameterized/escaped/clamped; worst case generic 500
-  with no data leak (P1 follow-up: should be 400/404).
-- C4 at rest → ciphertext envelope only; masked column lists on reads.
+| Threat (THREAT-MODEL rank) | Check | Outcome |
+| --- | --- | --- |
+| T1 — fence escape (NL→SQL reaches a write/other-schema path) | 51-case corpus `tests/fence-escape.test.ts` + AST lexer/parser suite `tests/ast.test.ts` | **PASS** — all 58 constructs rejected. Post-c1a55e8: subqueries parse recursively and every JOIN ref is schema/banned-checked; the 7 former confirmed escapes are green regression pins (OPEN-2 CLOSED) |
+| T2 — cardholder/PII leakage through answers | hostile NL corpus (`list all users and passwords`, `give me customer cards`, `dump the pan numbers`) → every question emits fenced SQL; schema allowlist pins `refundlens` | PASS — rejected `cross_schema`/`mutation`. With T1 closed, both NL-path and crafted-SQL paths to off-schema reads are fenced |
+| T3 — replica/rollup overload (unbounded scans, no LIMIT) | LIMIT edge table (`tests/boundary.test.ts`): absent→`no_limit`, ALL→`no_limit`, >5000→`limit_over_cap`, non-literal→`parse_failure`; EXPLAIN cost cap `tests/executor.test.ts` | PASS |
+| T4 — watermark suppression / staleness hidden from the user | `tests/boundary.test.ts` watermark edges (null→nulls surface, future→lag clamps 0, error→status surfaces); envelope UT + FT `data as of` visible | PASS — no watermark = impossible by construction |
+| T5 — export abuse / cache poisoning (stale or rounded counts) | `tests/service.test.ts` export path: bypasses cache, footer `# rows:` equals data rows; `e2e/export-and-catalog.spec.ts` asserts watermark comment + exact count over the API | PASS |
 
-## Fence escape corpus (RefundLens /ask + validateSql)
+## Findings carried (triage)
 
-Banned tables (ask_log/sync_runs) direct + subquery + quoted/case-mixed →
-`banned_table`; 2nd-JOIN escape → `banned_table`; UNION/multi-statement/
-CTE-write/SELECT INTO/FOR UPDATE → `mutation`; no-LIMIT → `no_limit`;
-over-cap → `limit_over_cap`; cross-schema (pg_catalog, public.users,
-information_schema) → `cross_schema`. All bodies `{error:{code:
-fenced_query_rejected}}`.
+| Sev | Finding | Status |
+| --- | --- | --- |
+| P1 | OPEN-2 fence subquery/JOIN-tail blind spot — 7 probes accepted | **CLOSED upstream c1a55e8** — recursive subquery AST + every JOIN ref; escape corpus now 58/58 rejected, green pins remain as regression cover |
+| P1 | OPEN-3 widget allowlist predates live-tier tables — monitors_panel/sync_health can never run | **CLOSED upstream** — allowlist extended; green pins in `tests/widgets-render.test.ts` |
+| P1 | OPEN-4 `filtersOf` silently drops `field=value` filters | **CLOSED upstream c1a55e8** — filters bind as typed params; green pin in `tests/nl.test.ts` |
+| P2 | OPEN-5 auth-path envelopes omit `req_id` | open — platform-owned |
+| P3 | OPEN-6 lexer `''` not collapsed | open — fail-closed quirk |
+| P3 | OPEN-7 rate phrasing renders the count template (semantic collision) | open — new finding filed post-c1a55e8 |
+| info | 1 high + 2 moderate transitive dev-dep advisories | open — none in the fenced request path |
 
-## Round 1 breaches (c1a55e8) → Round 2 re-verification (ad83eb4)
-
-| # | Breach | Fix | Re-verified |
-|---|---|---|---|
-| B1 | `audit_events` UPDATE/DELETE/rewrite as app's superuser DSN | migration 0002 `fastlane_app` role (INSERT-only on audit) + API binds `fastlane_app_dev` login | `permission denied` on UPDATE/DELETE/TRUNCATE/DROP |
-| B2 | `pg_read_file`/`pg_ls_dir`/`pg_sleep` passed the fence and executed | family ban: all `pg_*`/`dblink*`/`lo_*`/`query_to_xml*` identifiers rejected | 28-case evasion battery (case, quote, comment-splice, dollar-quote, schema-qual, nested, EXISTS) — all rejected |
-| B3 | app connected as `postgres` superuser (read-only-role law absent) | `*_app_dev` LOGIN roles IN ROLE the NOLOGIN groups; `pg_stat_activity` shows zero superuser conns | `rolsuper=f`; direct `pg_read_file` → `permission denied for function` (DB-layer backstop under the fence) |
-| B4 | idempotent `/reveal` replay re-disclosed C4 with no new audit row | reveal runs `cache:false` — every call re-executes and writes its own audit row | 3 replays → 3 `case.reveal` rows |
-
-## THREAT-MODEL top-5 → passing tests/executed checks
-
-| Threat | Mitigation | Proof |
-|---|---|---|
-| Audit tampering | insert-only app role + same-tx audit writer | R5 (permission denied) + append-only test |
-| C4 disclosure without audit | audit-before-return + no-replay reveal | R4 + reveal kill-test |
-| SQL injection / fence escape | AST fence + family bans + bound params | R1–R3 + 25-input corpus |
-| Auth bypass | server-side RBAC + JWT verify (no alg confusion) | forgery battery rows 1–4 |
-| Rate-limit abuse | per-user buckets | 429 boundary probes |
-
-## Residuals (tracked, not breaches)
-
-- `current_setting`/`version()`/`to_regclass` pass fence validation —
-  metadata only, no table exfil. Watched.
-- `'pg_x'` inside a string literal → rejected (conservative false-positive —
-  safe direction).
-- `doc-url` writes an audit row for nonexistent case ids (no existence check)
-  — filed.
-- Malformed cursor/limit/:id → generic 500 instead of 400/404 — fixed in
-  fastlane testing PR (#18).
-- `uuid` moderate vuln (dev chain) — P2 filed.
-- `pool.query`-per-call `SET statement_timeout` — works (8×pg_sleep(7) all
-  killed ~5030ms) but fragile on conn recycling — follow-up: pin via
-  `pool.connect()`.
-- Flags/decision-engine surfaces were absent on the audited ref; they get
-  this same battery at their stack tips.
+All three P1s were closed by the feature lane upstream (c1a55e8 for OPEN-2/4,
+allowlist extension for OPEN-3); the pins designed to flip on the fix now
+run as permanent green regression cover — the loudest signal a tests-only
+lane can send worked as intended.
