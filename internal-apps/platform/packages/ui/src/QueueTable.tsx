@@ -38,9 +38,9 @@ interface RowProps<T extends { id: string | number }> {
   rowMotion?: ((row: T) => HTMLMotionProps<"tr">) | undefined;
 }
 
-// Row visual depends only on row data + isSelected; functions are treated
-// as stable per-row behavior (documented motion-law contract). Memo keeps
-// a j/k selection change at ~2 re-rendered rows, not 50 (frame budget).
+// Every observable prop compared by reference — callers must memoize
+// columns/actions/rowMotion for the skip to hold (documented contract).
+// Keeps a j/k selection change at ~2 re-rendered rows, not 50.
 const QueueRow = memo(function QueueRow<T extends { id: string | number }>({
   row,
   isSelected,
@@ -82,7 +82,13 @@ const QueueRow = memo(function QueueRow<T extends { id: string | number }>({
       )}
     </RowEl>
   );
-}, (a, b) => a.row === b.row && a.isSelected === b.isSelected) as <
+}, (a, b) =>
+  a.row === b.row &&
+  a.isSelected === b.isSelected &&
+  a.columns === b.columns &&
+  a.actions === b.actions &&
+  a.glideId === b.glideId &&
+  a.rowMotion === b.rowMotion) as <
   T extends { id: string | number }
 >(props: RowProps<T>) => ReactElement;
 const TypedQueueRow = QueueRow;

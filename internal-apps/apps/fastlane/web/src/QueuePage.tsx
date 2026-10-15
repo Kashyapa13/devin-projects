@@ -69,37 +69,83 @@ export function QueuePage() {
       setError(null);
       const key = ["queue", tab];
       type Page = { rows: CaseRow[]; next_cursor?: string };
-      const snap = qc.getQueryData<{ pages: Page[] }>(key);
       const deciding = action === "approve" || action === "reject";
-      if (deciding) {
+      if (!deciding) {
+        try {
+          await api(`/api/v1/cases/${row.id}/${action}`, {
+            method: "POST",
+            body: body ?? {},
+            idem: `${row.id}:${action}:${uuid()}`,
+          });
+        } catch (e) {
+          setError((e as Error).message);
+        } finally {
+          void qc.invalidateQueries({ queryKey: ["queue"] });
+        }
+        return;
+      }
+      // Optimistic decide with a REAL undo window: the row springs away now;
+      // the POST is deferred ~5s so Undo cancels the commit entirely (there
+      // is no approved→in_review transition — cache-only "undo" would be a
+      // lie). Rollback is per-row (page+index), never a whole-snapshot swap,
+      // so overlapping decisions can't resurrect each other's rows.
+      const restore = () =>
         qc.setQueryData(key, (d: { pages: Page[] } | undefined) =>
           d
             ? {
                 ...d,
-                pages: d.pages.map((p) => ({
-                  ...p,
-                  rows: p.rows.filter((r) => r.id !== row.id),
-                })),
+                pages: d.pages.map((p) => {
+                  const i = p.rows.findIndex(
+                    (r) => String(r.id) > String(row.id),
+                  );
+                  const at = i === -1 ? p.rows.length : i;
+                  return p.rows.some((r) => r.id === row.id)
+                    ? p
+                    : {
+                        ...p,
+                        rows: [
+                          ...p.rows.slice(0, at),
+                          row,
+                          ...p.rows.slice(at),
+                        ],
+                      };
+                }),
               }
             : d,
         );
-        push(t(`toast.${action}`), () => {
-          qc.setQueryData(key, snap);
-          void qc.invalidateQueries({ queryKey: ["queue"] });
-        });
-      }
-      try {
-        await api(`/api/v1/cases/${row.id}/${action}`, {
-          method: "POST",
-          body: body ?? {},
-          idem: `${row.id}:${action}:${uuid()}`,
-        });
-      } catch (e) {
-        if (deciding) qc.setQueryData(key, snap); // spring rollback
-        setError((e as Error).message);
-      } finally {
-        void qc.invalidateQueries({ queryKey: ["queue"] });
-      }
+      qc.setQueryData(key, (d: { pages: Page[] } | undefined) =>
+        d
+          ? {
+              ...d,
+              pages: d.pages.map((p) => ({
+                ...p,
+                rows: p.rows.filter((r) => r.id !== row.id),
+              })),
+            }
+          : d,
+      );
+      let cancelled = false;
+      push(t(`toast.${action}`), () => {
+        cancelled = true;
+        restore();
+      });
+      window.setTimeout(() => {
+        void (async () => {
+          if (cancelled) return; // Undo pressed — decision never committed
+          try {
+            await api(`/api/v1/cases/${row.id}/${action}`, {
+              method: "POST",
+              body: body ?? {},
+              idem: `${row.id}:${action}:${uuid()}`,
+            });
+          } catch (e) {
+            restore(); // spring rollback of just this row
+            setError((e as Error).message);
+          } finally {
+            void qc.invalidateQueries({ queryKey: ["queue"] });
+          }
+        })();
+      }, 4500);
     },
     [qc, tab, push, t],
   );
