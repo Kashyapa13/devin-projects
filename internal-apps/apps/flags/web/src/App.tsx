@@ -2,7 +2,13 @@ import React, { useEffect, useState } from "react";
 const LABEL = "capability demo — production continues on Power Apps";
 const H = (role: string) => ({ "x-demo-role": role, "x-demo-actor": "demo-user",
   "content-type": "application/json" });
+const R = (role: string) => ({ "x-demo-role": role, "x-demo-actor": "demo-user" }); // no content-type: bodyless
 const api = (p: string, o?: RequestInit) => fetch(p, o).then((r) => r.json());
+const showErr = (r: any): string => { const e = r?.error;
+  if (!e) return "";
+  return typeof e === "string"
+    ? `${e}${r.message ? ": " + r.message : ""}`      // fastify framework errors {statusCode,error,message}
+    : `${e.code}: ${e.message}`; };                    // app envelope {error:{code,message}}
 
 export function App() {
   const [flags, setFlags] = useState<any[]>([]);
@@ -18,11 +24,11 @@ export function App() {
     api(`/api/flags/evaluate?key=${k}&userId=${uid}&env=dev`).then(setDemoFlag); }, [flags]);
   const create = async () => { const r = await api("/api/flags",
     { method: "POST", headers: H(role), body: JSON.stringify({ key, env }) });
-    if (r.error) setErr(`${r.error.code}: ${r.error.message}`); else { setErr(""); setKey(""); } load(); };
+    const e = showErr(r); if (e) setErr(e); else { setErr(""); setKey(""); } load(); };
   const del1 = async (f: any) => { const r = await api(
     `/api/flags/${f.id}?confirm=${encodeURIComponent(del[f.id] ?? "")}`,
-    { method: "DELETE", headers: H(role) });
-    if (r.error) setErr(`${r.error.code}: ${r.error.message}`); else setErr(""); load(); };
+    { method: "DELETE", headers: R(role) });
+    const e = showErr(r); if (e) setErr(e); else setErr(""); load(); };
   const flip = async (f: any) => { await api(`/api/flags/${f.id}`, { method: "PUT",
     headers: H(role), body: JSON.stringify({ targeting:
       { default_enabled: !(f.targeting?.default_enabled === true) } }) }); load(); };

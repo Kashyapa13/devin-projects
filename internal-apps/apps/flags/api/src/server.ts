@@ -4,7 +4,8 @@ import { evaluateFlag, SwrCache } from "./eval.js";
 
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const ENVS = ["dev", "staging", "prod"] as const;
-const LABEL = "capability demo — production continues on Power Apps";
+const LABEL = "capability demo — production continues on Power Apps"; // page/UI verbatim
+const LABEL_HEADER = "capability demo - production continues on Power Apps"; // header-safe ASCII
 const flagCache = new SwrCache(30_000, async (k) => {
   const { rows } = await db.query(`SELECT key, targeting, env FROM flags
     WHERE key = $1 AND deleted = false`, [k]); return rows;
@@ -20,7 +21,7 @@ async function audit(flagId: string | null, actorName: string, action: string, d
 export function buildApp() {
   const app = Fastify({ logger: true });
   app.get("/healthz", () => ({ ok: true }));
-  app.addHook("onSend", async (_req, reply) => { reply.header("x-demo-label", LABEL); });
+  app.addHook("onSend", async (_req, reply) => { reply.header("x-demo-label", LABEL_HEADER); });
 
   app.get("/api/flags", async () => {
     const { rows } = await db.query(
