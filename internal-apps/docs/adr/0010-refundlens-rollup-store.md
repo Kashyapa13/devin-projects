@@ -1,4 +1,4 @@
-# ADR-0009 — RefundLens data path: own rollup store via hourly ETL off the replica
+# ADR-0010 — RefundLens data path: own rollup store via hourly ETL off the replica
 
 Status: accepted · Immutable once merged; amend by new ADR.
 

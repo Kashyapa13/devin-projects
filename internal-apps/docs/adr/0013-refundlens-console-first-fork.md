@@ -1,4 +1,4 @@
-# ADR-0012 — RefundLens fork: console-first build, instrumented ask box, evidence-gated
+# ADR-0013 — RefundLens fork: console-first build, instrumented ask box, evidence-gated
 
 Status: accepted · Immutable once merged; amend by new ADR.
 

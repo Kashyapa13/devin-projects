@@ -1,4 +1,4 @@
-# ADR-0010 — RefundLens ask engine: generated NL→SQL behind the fence + AST
+# ADR-0011 — RefundLens ask engine: generated NL→SQL behind the fence + AST
 
 Status: accepted · Immutable once merged; amend by new ADR.
 

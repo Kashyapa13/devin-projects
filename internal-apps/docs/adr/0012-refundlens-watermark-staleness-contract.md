@@ -1,10 +1,10 @@
-# ADR-0011 — RefundLens staleness contract: watermark on every surface
+# ADR-0012 — RefundLens staleness contract: watermark on every surface
 
 Status: accepted · Immutable once merged; amend by new ADR.
 
 ## Context
 
-ADR-0009 accepts up to an hour of designed staleness. The app's only
+ADR-0010 accepts up to an hour of designed staleness. The app's only
 honesty mechanism is the sync watermark — a user must always know how
 old the number they're reading is. Press release: "the same number
 twice", which breaks silently if staleness is hidden.
