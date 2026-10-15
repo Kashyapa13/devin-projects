@@ -1,0 +1,16 @@
+{
+  "GHSA-vfj7-8cjw-p6xm": {
+    "package": "braces",
+    "severity": "high",
+    "why": "Stack-exhaustion DoS via deeply nested glob patterns. No patched version exists (advisory lists patched <0.0.0). Reached only through @changesets/cli — release tooling that never runs in prod or tests.",
+    "review": "2026-11-15",
+    "owner": "keeper dep-bump run"
+  },
+  "GHSA-hp3w-g68c-fv3c": {
+    "package": "sprintf-js",
+    "severity": "moderate",
+    "why": "DoS via crafted format string; no patched version exists. Dev-only transitive dep below the production-install boundary.",
+    "review": "2026-11-15",
+    "owner": "keeper dep-bump run"
+  }
+}

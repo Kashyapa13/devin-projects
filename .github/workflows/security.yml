@@ -1,0 +1,93 @@
+name: security
+
+# NEVER path-filtered — runs on ALL paths, every change
+# (AGENTS.md → Repo & deployment law §2). gitleaks · audit high ·
+# Trivy (fs + image) · license denylist. Daily re-scan on schedule.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    working-directory: internal-apps
+
+jobs:
+  security-gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks detect (pinned CLI — no org-license needed)
+        run: |
+          VER=v8.24.3
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/${VER}/gitleaks_${VER#v}_linux_x64.tar.gz" -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          /tmp/gitleaks detect --source . --verbose --redact --exit-code 1
+
+  security-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm security-audit  # pnpm audit --audit-level=high + documented exceptions
+
+  security-trivy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan (repo + lockfile)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: internal-apps
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: build + Trivy image scan per app with a real Dockerfile
+        run: |
+          for d in apps/*/; do
+            app=$(basename "$d")
+            [ "$app" = "_template" ] && continue
+            [ -f "$d/Dockerfile" ] && [ -f "$d/package.json" ] || continue
+            echo "== image: app-$app:sec =="
+            docker build --build-arg APP_DIR="$app" -f "$d/Dockerfile" -t "app-$app:sec" .
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:0.57.1 image --severity HIGH,CRITICAL \
+              --ignore-unfixed --exit-code 1 "app-$app:sec"
+          done
+
+  security-license:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm license-check

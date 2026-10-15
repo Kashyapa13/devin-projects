@@ -1,0 +1,52 @@
+name: template-smoke
+
+# The fleet gate: `cp -r apps/_template apps/x && pipeline green with no
+# edits` — that sentence is the acceptance test. Copies _template →
+# apps/_smoke_run, runs lint/typecheck/test + builds the image, always
+# deletes _smoke_run after (trap in scripts/ci/template-smoke.sh).
+
+on:
+  pull_request:
+    paths:
+      - "internal-apps/apps/_template/**"
+      - "internal-apps/platform/**"
+      - "internal-apps/scripts/ci/template-smoke.sh"
+      - "internal-apps/pnpm-lock.yaml"
+      - "internal-apps/pnpm-workspace.yaml"
+      - ".github/workflows/template-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "internal-apps/apps/_template/**"
+      - "internal-apps/platform/**"
+      - "internal-apps/scripts/ci/template-smoke.sh"
+      - "internal-apps/pnpm-lock.yaml"
+      - "internal-apps/pnpm-workspace.yaml"
+      - ".github/workflows/template-smoke.yml"
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  template-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: internal-apps
+      - name: cp → lint/typecheck/test + image build (always cleans up)
+        run: bash scripts/ci/template-smoke.sh
+        working-directory: internal-apps

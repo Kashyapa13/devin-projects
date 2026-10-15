@@ -5,3 +5,9 @@ coverage/
 .env
 .env.local
 *.log
+
+# Playwright FT
+apps/*/e2e/.auth/
+apps/*/test-results/
+apps/*/playwright-report/
+apps/*/blob-report/

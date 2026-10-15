@@ -1,0 +1,135 @@
+name: ci
+
+# Path-filtered per deployment law: apps/<app>/** runs that app only;
+# platform/** fans out to ALL apps (realized via `turbo --affected` —
+# workspace deps make dependents affected). import-lint always runs —
+# dependency law is global. Wall-clock budget: ≤15 min end to end;
+# a breach is a filed CI defect, never an accepted norm.
+
+on:
+  pull_request:
+    paths:
+      - "internal-apps/apps/**"
+      - "internal-apps/platform/**"
+      - "internal-apps/scripts/**"
+      - "internal-apps/package.json"
+      - "internal-apps/pnpm-lock.yaml"
+      - "internal-apps/pnpm-workspace.yaml"
+      - "internal-apps/turbo.json"
+      - "internal-apps/tsconfig.base.json"
+      - ".github/workflows/ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "internal-apps/apps/**"
+      - "internal-apps/platform/**"
+      - "internal-apps/scripts/**"
+      - "internal-apps/package.json"
+      - "internal-apps/pnpm-lock.yaml"
+      - "internal-apps/pnpm-workspace.yaml"
+      - "internal-apps/turbo.json"
+      - "internal-apps/tsconfig.base.json"
+      - ".github/workflows/ci.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+  TURBO_SCM_HEAD: ${{ github.event.pull_request.head.sha || github.event.after }}
+
+defaults:
+  run:
+    working-directory: internal-apps
+
+jobs:
+  lint:
+    # Dependency law (import-lint, global) + structural hygiene (repo-lint).
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm import-lint
+      - run: pnpm repo-lint
+
+  typecheck:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run lint --affected
+
+  unit:
+    needs: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test --affected
+
+  build:
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      apps: ${{ steps.affected.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build --affected
+      - id: affected
+        run: |
+          echo "apps=$(pnpm -s affected-apps --base "$TURBO_SCM_BASE" --head "$TURBO_SCM_HEAD" | jq -c '.apps')" >> "$GITHUB_OUTPUT"
+      - name: docker image per affected app
+        if: ${{ steps.affected.outputs.apps != '[]' }}
+        run: |
+          for app in $(echo '${{ steps.affected.outputs.apps }}' | jq -r '.[]'); do
+            if [ -f "apps/$app/Dockerfile" ] && [ -f "apps/$app/package.json" ]; then
+              echo "== docker build $app =="
+              docker build --build-arg APP_DIR="$app" \
+                -f "apps/$app/Dockerfile" -t "app-$app:ci" .
+            fi
+          done

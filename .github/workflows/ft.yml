@@ -1,0 +1,135 @@
+name: ft
+
+# Functional tests on PR. `ft` needs `ft-unit` (self-contained chain —
+# workflow_run can't order across files pre-merge). Per affected app:
+# docker compose up (<app>-pg) → db:setup (migrate + seed) → Playwright
+# keyboard-mode suites. Traces + recordings upload on failure (14-day).
+# Apps without a playwright.config are skipped by affected-apps' ft list.
+
+on:
+  pull_request:
+    paths:
+      - "internal-apps/apps/**"
+      - "internal-apps/platform/**"
+      - "internal-apps/scripts/**"
+      - "internal-apps/package.json"
+      - "internal-apps/pnpm-lock.yaml"
+      - "internal-apps/docker-compose.yml"
+      - ".github/workflows/ft.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
+  TURBO_SCM_HEAD: ${{ github.event.pull_request.head.sha }}
+  SESSION_SECRET: ft-session-fixture-not-prod
+  CRON_SECRET: ft-cron-fixture
+  SSO_ISSUER: fastlane
+
+defaults:
+  run:
+    working-directory: internal-apps
+
+jobs:
+  ft-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test --affected
+
+  affected:
+    needs: ft-unit
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.m.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - id: m
+        run: echo "apps=$(pnpm -s affected-apps | jq -c '.ft')" >> "$GITHUB_OUTPUT"
+
+  ft:
+    needs: affected
+    if: ${{ needs.affected.outputs.apps != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.affected.outputs.apps) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+
+      - name: per-app Postgres up
+        run: docker compose up -d ${{ matrix.app }}-pg
+      - name: wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            docker compose exec -T ${{ matrix.app }}-pg pg_isready -U ${{ matrix.app }} && exit 0
+            sleep 1
+          done
+          echo "postgres never became ready" >&2; exit 1
+
+      - name: build app + platform deps
+        run: pnpm --filter "@app/${{ matrix.app }}..." build
+
+      - name: db:setup (migrate + kyc-seed-v1)
+        run: |
+          DB_PORT=$(docker compose port ${{ matrix.app }}-pg 5432 | cut -d: -f2)
+          export DATABASE_URL="postgres://${{ matrix.app }}:${{ matrix.app }}-dev@localhost:${DB_PORT}/${{ matrix.app }}"
+          pnpm --filter "@app/${{ matrix.app }}" migrate
+          pnpm --filter "@app/${{ matrix.app }}" seed
+
+      - name: playwright browsers
+        run: pnpm --filter "@app/${{ matrix.app }}" exec playwright install --with-deps chromium
+
+      - name: FT suite (keyboard-mode)
+        run: |
+          DB_PORT=$(docker compose port ${{ matrix.app }}-pg 5432 | cut -d: -f2)
+          export DATABASE_URL="postgres://${{ matrix.app }}:${{ matrix.app }}-dev@localhost:${DB_PORT}/${{ matrix.app }}"
+          pnpm --filter "@app/${{ matrix.app }}" test:ft
+
+      - name: upload traces + recordings on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ft-${{ matrix.app }}-artifacts
+          path: |
+            internal-apps/apps/${{ matrix.app }}/test-results/
+            internal-apps/apps/${{ matrix.app }}/playwright-report/
+            internal-apps/apps/${{ matrix.app }}/blob-report/
+          retention-days: 14
+          if-no-files-found: ignore
