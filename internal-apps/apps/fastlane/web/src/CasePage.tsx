@@ -20,8 +20,29 @@ const KEYMAP: KeyMap = {
   r: "reject", // opens the reason box
   n: "note",
   e: "escalate",
+  d: "doc", // issue signed doc link
   Escape: "back",
 };
+
+function DocPanel({ docUrl, onExpire }: { docUrl: { url: string; expires_at: string }; onExpire: () => void }) {
+  const { t } = useTranslation();
+  const [left, setLeft] = useState(() => Date.parse(docUrl.expires_at) - Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setLeft(Date.parse(docUrl.expires_at) - Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [docUrl.expires_at]);
+  useEffect(() => {
+    if (left <= 0) onExpire();
+  }, [left, onExpire]);
+  if (left <= 0) return <p>{t("doc.expired")}</p>;
+  const mmss = `${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, "0")}`;
+  return (
+    <p>
+      <a href={docUrl.url} target="_blank" rel="noreferrer">{t("action.doc")}</a>{" "}
+      <span className="keys">{t("doc.expires")} {mmss} · {t("doc.audited")}</span>
+    </p>
+  );
+}
 
 export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean }) {
   const { t } = useTranslation();
@@ -32,6 +53,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
   const [noting, setNoting] = useState(false);
   const [note, setNote] = useState("");
   const [revealed, setRevealed] = useState<string | null>(null);
+  const [docUrl, setDocUrl] = useState<{ url: string; expires_at: string } | null>(null);
 
   const { data: kase, isLoading } = useQuery({
     queryKey: ["case", id],
@@ -63,6 +85,17 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     },
     [id, qc],
   );
+
+  const doDocUrl = useCallback(async () => {
+    try {
+      setError(null);
+      const res = (await api(`/api/v1/cases/${id}/doc-url`)) as { url: string; expires_at: string };
+      setDocUrl(res);
+      void qc.invalidateQueries({ queryKey: ["audit", id] });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [id, qc]);
 
   const doReveal = useCallback(async () => {
     try {
@@ -102,6 +135,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
       reject: () => setRejecting(true),
       note: () => setNoting(true),
       escalate: () => void act("escalate"),
+      doc: () => void doDocUrl(),
       back: () => {
         location.hash = "#/";
       },
@@ -229,6 +263,19 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
           </button>
         </section>
       )}
+
+      <section className="panel" aria-labelledby="doc-h">
+        <h2 id="doc-h">{t("doc.title")}</h2>
+        {docUrl === null ? (
+          <p>
+            <button type="button" onClick={() => void doDocUrl()}>
+              {t("doc.issue")} (d)
+            </button>
+          </p>
+        ) : (
+          <DocPanel docUrl={docUrl} onExpire={() => setDocUrl(null)} />
+        )}
+      </section>
 
       <section className="panel" aria-labelledby="audit-h">
         <h2 id="audit-h">{t("audit.title")}</h2>

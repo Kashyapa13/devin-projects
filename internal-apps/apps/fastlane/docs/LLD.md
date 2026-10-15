@@ -101,7 +101,7 @@ one feature per session, copying the anchor's shape (schema → routes → UI
 | Entry | Status | Slice |
 |---|---|---|
 | Keyboard-day queue + decision panel | **anchor — this PR** | /queue (tabs, risk filter, badges/pills/chips, cursor) + /cases/[id] (c claim · a approve · r reject-with-reason · n note · e escalate) + audit timeline + audited masked-PII reveal |
-| Signed doc panel (doc-url expiry UX) | FB | /cases/[id] doc section |
+| Signed doc panel (doc-url expiry UX) | **built** — evidence: `FT doc-panel` test + `d`-key DocPanel (live countdown, expired→re-issue, audited issuance) | /cases/[id] doc section |
 | SLA breaching alert surfaces | FB | queue breaching tab + cron digest consumer |
 | Notes timeline in queue row | FB | expandable row |
 | Supervisor team dashboard | FB | /team view (supervisor role) |

@@ -6,7 +6,7 @@ Status: accepted · Immutable once merged; amend by new ADR.
 
 FastLane's constitution (§4/§5) names `reviewer` and `supervisor` roles —
 the platform `rolesMatrix` only shipped admin/operator/analyst/viewer, `useKeyboardNav`'s `QueueKeys` lacked the actions FastLane's anchor
-surface binds (`reject`, `note`, `escalate`, `open`, `back`), and
+surface binds (`reject`, `note`, `escalate`, `open`, `back`, later `doc`), and
 `QueueTable` couldn't mark the keyboard-cursor row. Instantiating the
 first real app surfaced both gaps.
 
@@ -14,7 +14,7 @@ first real app surfaced both gaps.
 
 - **(A) Extend the platform surfaces** — add `reviewer`/`supervisor` rows
   to `rolesMatrix` (additive keys; existing roles unchanged); add optional
-  `reject`/`note`/`escalate`/`open`/`back` handlers to `QueueKeys`
+  `reject`/`note`/`escalate`/`open`/`back`/`doc` handlers to `QueueKeys`
   (`defaultKeyMap` unchanged — apps pass a custom `keyMap`); add
   `selectedId` to `QueueTable` (aria-current + data-selected on the row).
 - **(B) Per-app role/parallel matrices** — each app redefines roles;
@@ -41,7 +41,7 @@ app-local RBAC, which the dependency law exists to prevent.
 - `Role` union now includes `reviewer`/`supervisor`; no existing role's
   permissions change.
 - Apps bind any of the optional keys via a custom `keyMap`
-  (e.g. `{...defaultKeyMap, r:"reject", n:"note", e:"escalate"}`).
+  (e.g. `{...defaultKeyMap, r:"reject", n:"note", e:"escalate", d:"doc"}`).
 - `QueueTable`'s `selectedId` gives keyboard nav a visible + announced
   cursor row (aria-current) without forking the component.
 - New app-specific roles ride future ADRs on this pattern.

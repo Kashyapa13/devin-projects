@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-/** Queue actions addressable by key — j/k/c/a/r by default. */
+/** Queue actions addressable by key — j/k/c/a/r by default; doc/note/escalate/open/back are opt-in. */
 export interface QueueKeys {
   next: () => void;
   prev: () => void;
@@ -10,6 +10,7 @@ export interface QueueKeys {
   reject: () => void;
   note?: () => void;
   escalate?: () => void;
+  doc?: () => void;
   open?: () => void;
   back?: () => void;
 }
