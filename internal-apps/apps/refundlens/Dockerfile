@@ -11,7 +11,8 @@ ARG PKG_NAME=@app/refundlens
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY . .
 RUN corepack enable && pnpm install --frozen-lockfile --prod=false \
- && pnpm --filter "${PKG_NAME}..." build
+ && pnpm --filter "${PKG_NAME}..." build \
+ && pnpm deploy --filter "${PKG_NAME}" --prod /prod/app
 
 # ---- runtime ----
 FROM ${NODE_IMAGE} AS runtime
@@ -21,7 +22,7 @@ ENV NODE_ENV=production \
     PORT=8080
 WORKDIR /app
 RUN groupadd -r app && useradd -r -g app app
-COPY --from=build --chown=app:app /app /app
+COPY --from=build --chown=app:app /prod/app /app
 USER app
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
