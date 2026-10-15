@@ -1,0 +1,4 @@
+# Source of truth for workspace layout — package.json "workspaces" mirrors this file.
+packages:
+  - "platform/packages/*"
+  - "apps/*"

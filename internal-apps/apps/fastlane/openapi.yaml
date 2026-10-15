@@ -1,0 +1,7 @@
+# Stub — API shape lands with the first fastlane PR (state machine + endpoints need an ADR).
+openapi: 3.0.3
+info:
+  title: fastlane-api
+  version: 0.0.0
+  description: Queue/console API — contract stub.
+paths: {}

@@ -1,0 +1,33 @@
+# Local development only — NEVER prod (AGENTS.md → Repo & deployment law).
+# Two dev Postgres containers on different ports make cross-app DB access
+# physically awkward by design; each app owns its own database.
+services:
+  fastlane-pg:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: fastlane
+      POSTGRES_PASSWORD: fastlane-dev
+      POSTGRES_DB: fastlane
+
+  refundlens-pg:
+    image: postgres:16
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: refundlens
+      POSTGRES_PASSWORD: refundlens-dev
+      POSTGRES_DB: refundlens
+
+  slack-stub:
+    # Stands in for Slack webhook endpoints (digests, ETL alerts) locally.
+    image: wiremock/wiremock:3
+    ports:
+      - "8443:8080"
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025" # smtp
+      - "8025:8025" # web UI

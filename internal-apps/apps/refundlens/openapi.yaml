@@ -1,0 +1,7 @@
+# Stub — API shape lands with the first refundlens PR.
+openapi: 3.0.3
+info:
+  title: refundlens-api
+  version: 0.0.0
+  description: Reporting/ETL API — contract stub.
+paths: {}

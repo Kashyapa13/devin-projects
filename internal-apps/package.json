@@ -1,0 +1,23 @@
+{
+  "name": "internal-apps",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "workspaces": [
+    "platform/packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "turbo run build --affected",
+    "test": "turbo run test --affected",
+    "lint": "turbo run lint --affected",
+    "drift": "scripts/ci/schema-drift.sh && scripts/ci/api-drift.sh && scripts/ci/docs-lint.sh && scripts/ci/adr-check.sh"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  }
+}

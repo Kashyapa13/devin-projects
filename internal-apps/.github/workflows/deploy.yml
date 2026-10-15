@@ -1,0 +1,64 @@
+name: deploy
+
+# Per-app matrix stub: one OCI image, one version stream, one pipeline, one
+# rollback per app. prod = manual approval (protected environment).
+# platform/** changes → security wave: FastLane canary 30–60 min first,
+# then all apps, each gated on its own smoke suite.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "platform/**"
+  workflow_dispatch:
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.matrix.outputs.apps }}
+      wave: ${{ steps.matrix.outputs.wave }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: matrix
+        run: |
+          # Stub: derive affected apps from changed paths.
+          # platform/** → wave=true (FastLane canary first, then all apps).
+          echo "apps=[\"fastlane\",\"refundlens\"]" >> "$GITHUB_OUTPUT"
+          echo "wave=false" >> "$GITHUB_OUTPUT"
+
+  build-image:
+    needs: plan
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: build + push ${{ matrix.app }} image (stub)
+        run: echo "stub — build apps/${{ matrix.app }}/Dockerfile, tag, push"
+      - name: smoke ${{ matrix.app }} (stub)
+        run: echo "stub — per-app smoke suite gates promotion"
+
+  canary-fastlane:
+    needs: [plan, build-image]
+    if: needs.plan.outputs.wave == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: FastLane canary 30–60 min (stub)
+        run: 'echo "stub — platform wave: fastlane canary, soak 30–60 min, own smoke suite"'
+
+  deploy-prod:
+    needs: [plan, build-image, canary-fastlane]
+    if: always() && (needs.canary-fastlane.result == 'success' || needs.canary-fastlane.result == 'skipped')
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
+    runs-on: ubuntu-latest
+    environment: production # protected — manual approval required
+    steps:
+      - name: deploy ${{ matrix.app }} (stub)
+        run: echo "stub — blue/green or rollback per app; see app RUNBOOK.md"

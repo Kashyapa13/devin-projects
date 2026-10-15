@@ -1,0 +1,7 @@
+{
+  "$schema": "https://devin.ai/wiki/schema.json",
+  "name": "internal-apps",
+  "description": "Auto-generated repo wiki (DeepWiki) for the internal-tools monorepo.",
+  "include": ["AGENTS.md", "platform/**", "apps/**", "docs/**", "infra/**"],
+  "exclude": ["**/node_modules/**", "docs/site/**", "**/dist/**"]
+}

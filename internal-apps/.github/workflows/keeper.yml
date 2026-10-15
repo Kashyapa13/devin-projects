@@ -1,0 +1,32 @@
+name: keeper
+
+# Weekly dep-bump PR · monthly staging PITR drill.
+# Companion to .devin/skills/keeper.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Mon 09:00 — dependency bump
+    - cron: "0 9 1 * *"  # 1st of month — PITR drill
+  workflow_dispatch:
+
+jobs:
+  dep-bump:
+    if: github.event_name != 'schedule' || github.event.schedule == '0 9 * * 1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: bump deps + open PR (stub)
+        run: echo "stub — pnpm update, run affected tests, open dep-bump PR"
+
+  pitr-drill:
+    if: github.event_name != 'schedule' || github.event.schedule == '0 9 1 * *'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: monthly staging PITR restore drill (stub)
+        run: echo "stub — restore per-app DB from PITR on staging, record in RUNBOOK"
