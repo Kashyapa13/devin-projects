@@ -23,3 +23,4 @@ See `AGENTS.md` for the root constitution.
 | `apps/flags` | — | — | — | procurement artifact: no build, no deploy |
 
 New app = `cp -r apps/_template apps/<name>` — see `.devin/skills/app-building`.
+<!-- gate proof -->
