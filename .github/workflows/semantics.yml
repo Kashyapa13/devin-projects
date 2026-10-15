@@ -28,5 +28,5 @@ jobs:
           node-version-file: internal-apps/.nvmrc
           cache: pnpm
           cache-dependency-path: internal-apps/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm pr-semantics
+      - run: pnpm -C internal-apps install --frozen-lockfile
+      - run: pnpm -C internal-apps pr-semantics
