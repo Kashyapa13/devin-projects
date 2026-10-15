@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "RefundLens — Tier-2 refunds answer service (C3, read-only). See AGENTS.md.",
+  "description": "RefundLens \u2014 Tier-2 refunds answer service (C3, read-only). See AGENTS.md.",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && vite build web",
     "lint": "tsc -p tsconfig.json --noEmit",
@@ -44,6 +44,6 @@
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vite": "^6.0.0",
-    "vitest": "^2.1.4"
+    "vitest": "^4.0.0"
   }
 }

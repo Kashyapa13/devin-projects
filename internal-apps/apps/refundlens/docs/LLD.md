@@ -30,6 +30,9 @@ CREATE TABLE refund_events_raw (   -- hourly full+delta, idempotent on (id, upda
   state text, latency_ms int, updated_at timestamptz NOT NULL,
   ingested_at timestamptz DEFAULT now()
 );
+CREATE INDEX raw_by_updated ON refund_events_raw (updated_at);   -- sync watermark cursor
+CREATE INDEX raw_by_day_channel ON refund_events_raw
+  (occurred_at, channel, merchant_segment, reason_code);
 CREATE TABLE agg_daily (           -- rebuilt in ONE tx after each sync; views hit this
   day date, channel text, merchant_segment text, reason_code text,
   cnt bigint, amount bigint, p50_ms int, p95_ms int,

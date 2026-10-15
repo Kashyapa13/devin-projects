@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "FastLane — Tier-1 KYC review queue (C4). See AGENTS.md.",
+  "description": "FastLane \u2014 Tier-1 KYC review queue (C4). See AGENTS.md.",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && vite build web",
     "lint": "tsc -p tsconfig.json --noEmit",
@@ -36,7 +36,7 @@
     "@types/pg": "^8.11.10",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/coverage-v8": "^4.0.0",
     "i18next": "^24.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
