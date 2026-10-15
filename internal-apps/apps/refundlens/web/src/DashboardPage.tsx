@@ -199,7 +199,7 @@ export function DashboardPage() {
     <Pressable
       key={key}
       onClick={() => setParam(key, on ? null : label)}
-      ariaLabel={`${key}=${label}`}
+      aria-label={`${key}=${label}`}
       className={`chip${on ? " chip-on" : ""}`}
     >
       {label}
@@ -267,7 +267,7 @@ export function DashboardPage() {
             <Pressable
               key={p.key}
               className={`chip${preset === p.key ? " chip-on" : ""}`}
-              ariaLabel={t(`dash.range.${p.key}`)}
+              aria-label={t(`dash.range.${p.key}`)}
               onClick={() => setParam("range", p.key)}
             >
               {t(`dash.range.${p.key}`)}
@@ -275,7 +275,7 @@ export function DashboardPage() {
           ))}
           <Pressable
             className={`chip${preset === "custom" ? " chip-on" : ""}`}
-            ariaLabel={t("dash.range.custom")}
+            aria-label={t("dash.range.custom")}
             onClick={() => setParam("range", "custom")}
           >
             {t("dash.range.custom")}
@@ -298,7 +298,7 @@ export function DashboardPage() {
           )}
           <Pressable
             className={`chip${compare ? " chip-on" : ""}`}
-            ariaLabel={t("dash.compare")}
+            aria-label={t("dash.compare")}
             onClick={() => setParam("compare", compare ? null : "1")}
           >
             {t("dash.compare")}
@@ -327,7 +327,7 @@ export function DashboardPage() {
           {(params.get("channel") ?? params.get("segment") ?? params.get("reason") ?? params.get("state")) && (
             <Pressable
               className="chip"
-              ariaLabel={t("dash.clearFilters")}
+              aria-label={t("dash.clearFilters")}
               onClick={() => {
                 for (const k2 of ["channel", "segment", "reason", "state"]) setParam(k2, null);
               }}
@@ -358,11 +358,11 @@ export function DashboardPage() {
           <section data-testid="w-timeseries">
             <h2>
               {t("dash.w.volume")}
-              <Pressable className={`chip${stacked ? " chip-on" : ""}`} ariaLabel={t("dash.stacked")} onClick={() => setParam("stacked", stacked ? null : "1")}>
+              <Pressable className={`chip${stacked ? " chip-on" : ""}`} aria-label={t("dash.stacked")} onClick={() => setParam("stacked", stacked ? null : "1")}>
                 {t("dash.stacked")}
               </Pressable>
               {["channel", "merchant_segment", "reason_code"].map((d) => (
-                <Pressable key={d} className={`chip${tsDim === d ? " chip-on" : ""}`} ariaLabel={d} onClick={() => setParam("tsdim", d)}>
+                <Pressable key={d} className={`chip${tsDim === d ? " chip-on" : ""}`} aria-label={d} onClick={() => setParam("tsdim", d)}>
                   {t(`dash.dim.${d}`)}
                 </Pressable>
               ))}
@@ -432,7 +432,7 @@ export function DashboardPage() {
             <h2>
               {t("dash.w.topn")}
               {["count", "amount", "rate"].map((s) => (
-                <Pressable key={s} className={`chip${topSort === s ? " chip-on" : ""}`} ariaLabel={s} onClick={() => setParam("sort", s)}>
+                <Pressable key={s} className={`chip${topSort === s ? " chip-on" : ""}`} aria-label={s} onClick={() => setParam("sort", s)}>
                   {t(`dash.sort.${s}`)}
                 </Pressable>
               ))}
@@ -487,7 +487,7 @@ export function DashboardPage() {
         <section data-testid="w-detail">
           <h2>
             {t("dash.w.detail")}
-            <Pressable className="chip" ariaLabel={t("dash.export")} onClick={() => void exportCsv()}>
+            <Pressable className="chip" aria-label={t("dash.export")} onClick={() => void exportCsv()}>
               {t("dash.export")}
             </Pressable>
           </h2>
