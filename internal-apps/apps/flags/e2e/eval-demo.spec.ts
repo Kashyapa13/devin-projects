@@ -58,13 +58,13 @@ test.describe("F-09 /demo flip — the critical path (recorded)", () => {
     await expect(p.demoSection).toContainText("HERO VARIANT", {
       timeout: 10_000,
     });
-    await expect(p.demoSection).toContainText("flag is ON for demo-user-1");
+    await expect(p.demoSection).toContainText("is ON for demo-user-1");
 
     const row = p.flagRow("demo-hero", "dev");
     await p.flip(row);
 
     // The demo section re-evaluates after the mutation — visible flip, no reload.
-    await expect(p.demoSection).toContainText("control — flag is off", {
+    await expect(p.demoSection).toContainText("demo-hero is off for demo-user-1", {
       timeout: 10_000,
     });
     await expect(p.rowState(row)).toHaveText("off");

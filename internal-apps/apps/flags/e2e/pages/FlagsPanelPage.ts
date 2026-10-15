@@ -18,14 +18,14 @@ export class FlagsPanelPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.banner = page.locator(".banner");
+    this.banner = page.locator(".demo-label");
     this.roleSelect = page.locator("select").first();
-    this.keyInput = page.locator('input[placeholder="flag key"]');
-    this.envSelect = page.locator("select").nth(1);
-    this.createButton = page.getByRole("button", { name: "Create" });
-    this.errorText = page.locator(".err");
+    this.keyInput = page.locator('input[aria-label="new flag key (demo-*)"]');
+    this.envSelect = page.locator(".flagform .seg button");
+    this.createButton = page.getByRole("button", { name: "Create flag" });
+    this.errorText = page.locator(".error-card");
     this.flagTable = page.locator("table").first();
-    this.demoSection = page.locator(".demopage");
+    this.demoSection = page.locator(".flip-zone");
     this.auditTable = page.locator("table").nth(1);
   }
 
@@ -60,7 +60,7 @@ export class FlagsPanelPage {
   /** Create via the form; resolves with the POST response (await it before next action). */
   async create(key: string, env: string): Promise<Response> {
     await this.keyInput.fill(key);
-    await this.envSelect.selectOption(env);
+    await this.page.locator(".flagform .seg button", { hasText: env }).click();
     const [res] = await Promise.all([
       this.page.waitForResponse((r) => isApi(r, "POST")),
       this.createButton.click(),
