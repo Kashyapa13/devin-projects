@@ -45,8 +45,8 @@ Synthetic data only — no C4 `legal_name` ever appears on screen.
 
 ### D2 — masked PII → audited reveal  ⏱ 2:00 · NEVER CUT
 - **Setup:** case page open, `legal_name` masked (`CUST-****`).
-- **Steps:** `p` reveal → masked value blurs out → real value → audit row
-  `reveal` lands instantly.
+- **Steps:** click **reveal** → masked value blurs out → real value → audit
+  row `reveal` lands instantly.
 - **Say line:** "Regulated PII is masked by default; even looking at it is a
   audited, role-gated event."
 - **Evidence:** audit timeline shows the reveal event with actor.
@@ -123,9 +123,12 @@ Synthetic data only — no C4 `legal_name` ever appears on screen.
 
 ### D10 — the engine that watches itself  ⏱ 1:30
 - **Setup:** decision-engine daily shadow report.
-- **Steps:** report shows shadow decisions by band, disagreements vs
-  humans, confidence distribution → kill-switch demo: engage → every
-  decision freezes.
+- **Steps:** `GET :8081/api/v1/engine/reports/daily` — shadow decisions by
+  band, disagreements vs humans, confidence distribution →
+  `POST /api/v1/engine/kill-switch` (bodyless, engine token header) →
+  next `POST /api/v1/engine/decide` (numeric `signal_version: 1`) returns
+  `ENGINE_KILLED` → release restores. The JSON renders raw on screen —
+  that's the point: the engine reports to operators, not a slide.
 - **Say line:** "The engine decides nothing today — it watches humans and
   reports where they'd disagree, with a one-click kill switch and a named
   strategy writer."
@@ -144,8 +147,20 @@ Synthetic data only — no C4 `legal_name` ever appears on screen.
 - **Rule:** never hand-typed numbers. Regenerate with
   `./scripts/pilot_report.sh` the morning of the demo.
 
+## Presenter notes
+
+- Re-run `./scripts/demo-reseed.sh` — it now runs the refundlens ETL too
+  (without it D5 answers "no refunds in that window").
+- Answer cache is 60s TTL: after a reseed the first ask may serve a cached
+  empty result — ask once, wait a beat, ask again.
+- Mint the operator token matching the seeded user's `sub` — the keyboard
+  day's claim/approve paths require the assignee to be you.
+- flags web runs on :5175 (vite proxy → :8082); refundlens on :5174
+  (proxy → :8083); fastlane :5173 (proxy → :8080); engine API :8081.
+
 ## Rehearsal record
 
 Full-arc runs are timed and recorded in `docs/comparison/PILOT-TELEMETRY.md`
 (wall-clock per segment + ACU). Anything over its slot gets fixed or cut
-per the order above.
+per the order above. First pass 2026-10-15: **3m19s pure execution**
+(script allots ~16min with narration — comfortable).

@@ -17,7 +17,7 @@ FLAGS_DSN="${FLAGS_DSN:-postgres://postgres:dev@localhost:55432/flags}"
 
 echo "== demo-reseed: ensuring databases =="
 $PGC -c "SELECT 1" >/dev/null   # fails fast if fastlane-pg isn't up
-for db in fastlane refundlens flags; do
+for db in fastlane refundlens flags decision_db; do
   $PGC -tc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 \
     || $PGC -c "CREATE DATABASE $db"
 done
@@ -45,9 +45,12 @@ SQL
 echo "   breaching cases past SLA: $($PGC -d fastlane -tc \
   "SELECT count(*) FROM kyc_cases WHERE sla_due_at < now() AND status='PENDING'" | tr -d ' ')"
 
-echo "== refundlens: migrate + seed (ripe question ready) =="
+echo "== refundlens: migrate + seed + ETL (ripe question ready) =="
 (cd apps/refundlens && DATABASE_URL=$RL_DSN pnpm exec tsx scripts/migrate.ts >/dev/null)
 (cd apps/refundlens && DATABASE_URL=$RL_DSN pnpm exec tsx scripts/seed.ts >/dev/null)
+# ETL feeds the rollup — without it asks answer 'no refunds in that window'.
+# Demo box: REPLICA_DSN = the same seeded DB (in prod it is the replica).
+(cd apps/refundlens && DATABASE_URL=$RL_DSN REPLICA_DSN=$RL_DSN pnpm exec tsx scripts/etl.ts >/dev/null)
 echo "   ripe ask: 'refund total by merchant, last 90 days'"
 
 echo "== flags: migrate + position demo-hero OFF =="
