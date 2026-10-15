@@ -1,14 +1,15 @@
 name: ci
 
-# Path-filtered stub: apps/<app>/** runs that app only; platform/** runs ALL
-# apps. Realized via `turbo --affected` today; split into per-app pipelines
-# when the first app lands (AGENTS.md → Repo & deployment law §2).
+# Path-filtered: apps/<app>/** runs that app only; platform/** runs ALL
+# apps. Realized via `turbo --affected`; split into per-app pipelines when
+# the first app ships. import-lint always runs — dependency law is global.
 
 on:
   pull_request:
     paths:
       - "apps/**"
       - "platform/**"
+      - "scripts/**"
       - "package.json"
       - "pnpm-workspace.yaml"
       - "turbo.json"
@@ -17,12 +18,26 @@ on:
     paths:
       - "apps/**"
       - "platform/**"
+      - "scripts/**"
       - "package.json"
       - "pnpm-workspace.yaml"
       - "turbo.json"
 
 jobs:
+  import-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm import-lint
+
   build-test:
+    needs: import-lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

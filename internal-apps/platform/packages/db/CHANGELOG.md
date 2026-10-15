@@ -1,3 +1,6 @@
 # @company/db — changelog
 
-Required before publishing (stable-API ADR gate). Unreleased.
+## Unreleased
+
+- `migrationRunner` (raw-SQL up/down), `appDb` binding, `paginate`
+  cursor pagination.

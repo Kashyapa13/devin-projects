@@ -1,3 +1,6 @@
 # @company/testing — changelog
 
-Required before publishing (stable-API ADR gate). Unreleased.
+## Unreleased
+
+- `pgHarness`, `defineSeeds`/`runSeeds` (deterministic),
+  `k6ScenarioBuilder`, `keyboardMode`.

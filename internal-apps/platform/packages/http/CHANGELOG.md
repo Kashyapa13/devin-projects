@@ -1,3 +1,6 @@
 # @company/http — changelog
 
-Required before publishing (stable-API ADR gate). Unreleased.
+## Unreleased
+
+- `httpPlugin` (envelope + req-id + rate-limit + healthz/readyz),
+  `ApiError`, `errorCodeRegistry`, `rateLimitPresets`.

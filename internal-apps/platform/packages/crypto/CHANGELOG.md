@@ -1,3 +1,6 @@
 # @company/crypto — changelog
 
-Required before publishing (stable-API ADR gate). Unreleased.
+## Unreleased
+
+- `fieldCipher` AES-256-GCM envelope, `KmsProvider` iface,
+  `AwsKmsProvider`, `InMemoryKMS`, `rotateTo`.

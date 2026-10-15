@@ -1,3 +1,6 @@
 # @company/auth — changelog
 
-Required before publishing (stable-API ADR gate). Unreleased.
+## Unreleased
+
+- `verifyIdToken`, `sessionPlugin` (8h), `requireRole`, `rolesMatrix`,
+  `bearerAuth`.

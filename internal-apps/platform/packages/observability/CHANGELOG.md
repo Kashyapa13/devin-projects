@@ -1,3 +1,5 @@
 # @company/observability — changelog
 
-Required before publishing (stable-API ADR gate). Unreleased.
+## Unreleased
+
+- `metricsRegistry`, TypeBox JSON log schema + `log`, `alertManifest`.

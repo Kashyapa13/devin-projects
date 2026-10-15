@@ -1,3 +1,5 @@
 # @company/audit — changelog
 
-Required before publishing (stable-API ADR gate). Unreleased.
+## Unreleased
+
+- `auditWriter`, `audited` same-tx helper, `toSiemLine(s)` SIEM export.

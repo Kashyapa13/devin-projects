@@ -15,9 +15,18 @@
     "build": "turbo run build --affected",
     "test": "turbo run test --affected",
     "lint": "turbo run lint --affected",
-    "drift": "scripts/ci/schema-drift.sh && scripts/ci/api-drift.sh && scripts/ci/docs-lint.sh && scripts/ci/adr-check.sh"
+    "import-lint": "tsx scripts/ci/import-lint.ts",
+    "drift": "scripts/ci/schema-drift.sh && scripts/ci/api-drift.sh && scripts/ci/docs-lint.sh && scripts/ci/adr-check.sh",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "publish-packages": "changeset publish"
   },
   "devDependencies": {
-    "turbo": "^2.0.0"
+    "@changesets/cli": "^2.27.9",
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "turbo": "^2.0.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
   }
 }

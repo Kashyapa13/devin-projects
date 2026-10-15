@@ -1,3 +1,6 @@
 # @company/ui — changelog
 
-Required before publishing (stable-API ADR gate). Unreleased.
+## Unreleased
+
+- `tailwindPreset`, `QueueTable`, `useKeyboardNav` (j/k/c/a/r),
+  `initI18n` hard-gate wrapper.

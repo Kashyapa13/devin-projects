@@ -1,4 +1,4 @@
-# justfile — bootstrap / seed / test / drift stubs.
+# justfile — bootstrap / seed / test / drift / lint.
 
 bootstrap:
     ./scripts/bootstrap.sh
@@ -11,3 +11,6 @@ test:
 
 drift:
     pnpm drift
+
+lint:
+    pnpm import-lint
