@@ -270,7 +270,7 @@ export function QueuePage() {
           },
         ]}
         actions={[
-          { label: t("action.claim"), onSelect: (r) => void act("claim", r) },
+          { label: t("action.claim"), primary: true, onSelect: (r) => void act("claim", r) },
           {
             label: t("action.approve"),
             onSelect: (r) => void act("approve", r),
@@ -284,7 +284,7 @@ export function QueuePage() {
       />
       </div>
       {hasNextPage && (
-        <button type="button" onClick={() => void fetchNextPage()}>
+        <button type="button" className="btn btn-ghost" onClick={() => void fetchNextPage()}>
           {isFetchingNextPage ? t("loading") : t("queue.loadmore")}
         </button>
       )}

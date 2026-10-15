@@ -213,7 +213,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             <BlurMorph revealed={false}>
               <span className="masked">{t("case.pii.masked")}</span>
             </BlurMorph>{" "}
-            <button type="button" onClick={() => void doReveal()}>
+            <button type="button" className="btn btn-ghost" onClick={() => void doReveal()}>
               {t("case.pii.reveal")}
             </button>
           </p>
@@ -229,19 +229,19 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <section className="panel" aria-labelledby="dec-h">
         <h2 id="dec-h">Decision</h2>
-        <button type="button" onClick={() => void act("claim")}>
+        <button type="button" className="btn btn-primary" onClick={() => void act("claim")}>
           {t("action.claim")} (c)
         </button>{" "}
-        <button type="button" onClick={() => void act("approve")}>
+        <button type="button" className="btn btn-ghost" onClick={() => void act("approve")}>
           {t("action.approve")} (a)
         </button>{" "}
-        <button type="button" onClick={() => setRejecting(true)}>
+        <button type="button" className="btn btn-ghost" onClick={() => setRejecting(true)}>
           {t("action.reject")} (r)
         </button>{" "}
-        <button type="button" onClick={() => setNoting(true)}>
+        <button type="button" className="btn btn-ghost" onClick={() => setNoting(true)}>
           {t("action.note")} (n)
         </button>{" "}
-        <button type="button" onClick={() => void act("escalate")}>
+        <button type="button" className="btn btn-ghost" onClick={() => void act("escalate")}>
           {t("action.escalate")} (e)
         </button>
       </section>
@@ -256,7 +256,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             placeholder={t("reject.placeholder")}
             autoFocus
           />
-          <button type="button" onClick={() => void submitReject()}>
+          <button type="button" className="btn btn-primary" onClick={() => void submitReject()}>
             {t("reject.submit")}
           </button>
         </section>
@@ -272,7 +272,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             placeholder={t("note.placeholder")}
             autoFocus
           />
-          <button type="button" onClick={() => void submitNote()}>
+          <button type="button" className="btn btn-primary" onClick={() => void submitNote()}>
             {t("note.submit")}
           </button>
         </section>
@@ -282,7 +282,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <h2 id="doc-h">{t("doc.title")}</h2>
         {docUrl === null || docUrl.caseId !== id ? (
           <p>
-            <button type="button" onClick={() => void doDocUrl()}>
+            <button type="button" className="btn btn-ghost" onClick={() => void doDocUrl()}>
               {t("doc.issue")} (d)
             </button>
           </p>

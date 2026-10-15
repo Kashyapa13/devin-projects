@@ -10,6 +10,8 @@ export interface QueueColumn<T> {
 
 export interface QueueAction<T> {
   label: string;
+  /** Render as the obsidian primary action (default: ghost). */
+  primary?: boolean;
   onSelect: (row: T) => void;
 }
 
@@ -74,7 +76,12 @@ const QueueRow = memo(function QueueRow<T extends { id: string | number }>({
       {actions.length > 0 && (
         <td>
           {actions.map((a) => (
-            <button key={a.label} type="button" onClick={() => a.onSelect(row)}>
+            <button
+              key={a.label}
+              type="button"
+              className={a.primary ? "btn btn-primary" : "btn btn-ghost"}
+              onClick={() => a.onSelect(row)}
+            >
               {a.label}
             </button>
           ))}
