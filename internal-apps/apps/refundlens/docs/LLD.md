@@ -137,6 +137,12 @@ AST validation, not regex: generated SQL is parsed; DDL/DML tokens
 the AST stage regardless of how they are spelled. Regex would miss
 spelling; the AST cannot.
 
+The parser validates recursively: every JOIN reference (not just the
+first) is collected, and a parenthesized SELECT inside any expression is
+parsed as a nested query whose tables and verbs face the identical
+fences — a subquery is never an escape hatch. Server-rendered widget SQL
+may legitimately emit subqueries; they are validated, not banned.
+
 ## Template renderer contract (views — typed params only)
 
 Client sends `{dim, metric, from, to, filters[]}` — never SQL, never an
