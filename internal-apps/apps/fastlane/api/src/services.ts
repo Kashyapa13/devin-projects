@@ -1,6 +1,7 @@
 import { auditWriter } from "@company/audit";
 import { ApiError } from "@company/http";
 import type { FieldCipher } from "@company/crypto";
+import type { DualRegistry } from "@company/otel";
 import { canTransition, type Status } from "./statemachine.js";
 
 export interface Queryable {
@@ -29,6 +30,7 @@ export async function withTx<T>(
 export interface Deps {
   db: Queryable;
   cipher: FieldCipher;
+  metrics: DualRegistry;
 }
 
 interface Row {
@@ -82,13 +84,24 @@ export async function transition(
         409,
       );
     }
-    const verdict = canTransition({
-      from: kase.status as Status,
-      to,
-      actor,
-      assigneeId: (kase.assignee_id as string | null) ?? null,
-      reason: opts.reason,
-    });
+    let verdict;
+    try {
+      verdict = canTransition({
+        from: kase.status as Status,
+        to,
+        actor,
+        assigneeId: (kase.assignee_id as string | null) ?? null,
+        reason: opts.reason,
+      });
+    } catch (e) {
+      // every illegal edge counted — AGENTS.md §4 mandates ok=no
+      deps.metrics.counter("transition_total").inc(1, {
+        from: String(kase.status),
+        to,
+        ok: "no",
+      });
+      throw e;
+    }
     const res = rows(
       await tx.query(
         `UPDATE kyc_cases
@@ -101,17 +114,27 @@ export async function transition(
         [caseId, to, verdict.assigns, actor.sub],
       ),
     );
-    await auditWriter(tx, {
-      actor: actor.sub,
-      action: `case.${to.toLowerCase()}`,
-      entity: "kyc_case",
-      entityId: caseId,
-      detail: {
-        from: kase.status,
-        to,
-        ...(opts.reason !== undefined ? { reason: opts.reason } : {}),
-      },
-      reqId: opts.reqId ?? "",
+    try {
+      await auditWriter(tx, {
+        actor: actor.sub,
+        action: `case.${to.toLowerCase()}`,
+        entity: "kyc_case",
+        entityId: caseId,
+        detail: {
+          from: kase.status,
+          to,
+          ...(opts.reason !== undefined ? { reason: opts.reason } : {}),
+        },
+        reqId: opts.reqId ?? "",
+      });
+    } catch (e) {
+      deps.metrics.counter("audit_write_fail_total").inc();
+      throw e;
+    }
+    deps.metrics.counter("transition_total").inc(1, {
+      from: String(kase.status),
+      to,
+      ok: "yes",
     });
     return res[0]!;
   });
@@ -161,14 +184,19 @@ export async function reveal(
   actor: Actor,
   reqId: string,
 ): Promise<{ legal_name: string }> {
-  await auditWriter(deps.db, {
-    actor: actor.sub,
-    action: "case.reveal",
-    entity: "kyc_case",
-    entityId: caseId,
-    detail: {},
-    reqId,
-  });
+  try {
+    await auditWriter(deps.db, {
+      actor: actor.sub,
+      action: "case.reveal",
+      entity: "kyc_case",
+      entityId: caseId,
+      detail: {},
+      reqId,
+    });
+  } catch (e) {
+    deps.metrics.counter("audit_write_fail_total").inc();
+    throw e;
+  }
   const res = rows(
     await deps.db.query(
       `SELECT legal_name_enc FROM kyc_cases WHERE id = $1`,
@@ -179,7 +207,9 @@ export async function reveal(
   if (typeof enc !== "string") {
     throw new ApiError("NOT_FOUND", "case not found or has no C4 field", 404);
   }
-  return { legal_name: await deps.cipher.decrypt(enc) };
+  const legal_name = await deps.cipher.decrypt(enc);
+  deps.metrics.counter("pii_reveal_total").inc();
+  return { legal_name };
 }
 
 /**
@@ -252,6 +282,7 @@ export async function listQueue(
     );
   }
   params.push(opts.limit + 1);
+  const t0 = process.hrtime.bigint();
   const res = rows(
     await deps.db.query(
       `SELECT ${MASKED_COLS}, extract(epoch from sla_due_at) AS sla_epoch
@@ -262,6 +293,9 @@ export async function listQueue(
       params,
     ),
   );
+  deps.metrics
+    .histogram("queue_load_ms")
+    .observe(Number(process.hrtime.bigint() - t0) / 1e6, { tab: opts.tab });
   const page = res.slice(0, opts.limit);
   const last = page[page.length - 1];
   const out: { rows: typeof page; next_cursor?: string } = { rows: page };

@@ -81,6 +81,16 @@ const rowsOf = (r: unknown): Record<string, unknown>[] => (r as Row).rows ?? [];
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const svcDeps: svc.Deps = { db: deps.db, cache: deps.cache, metrics: deps.metrics };
 
+  // sync_lag_s as an OTel observable gauge (ADR-0017) — age of the latest
+  // successful watermark, re-probed every OTLP collection + /metrics tick.
+  deps.metrics.observableGauge("sync_lag_s", async () => {
+    const r = (await deps.db.query(
+      `SELECT EXTRACT(EPOCH FROM now() - MAX(watermark))::float AS lag
+       FROM refundlens.sync_runs WHERE status = 'success'`,
+    )) as { rows?: { lag: number | null }[] };
+    return Math.max(0, r.rows?.[0]?.lag ?? 0);
+  });
+
   app.post(
     "/api/v1/ask",
     {

@@ -1,0 +1,44 @@
+# Local OTel stack (ADR-0017) — dev/demo only, never prod.
+#   apps → otel-collector (:4318 OTLP/HTTP) → Grafana LGTM all-in-one
+#     · Tempo :3200   traces
+#     · Mimir :9090   metrics (PromQL)
+#     · Loki  :3100   logs (LogQL)
+#     · Grafana :3000 UI (admin/admin, datasources pre-provisioned)
+# Run:  docker compose -f infra/otel/docker-compose.otel.yml up -d
+# Apps: OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC in
+      - "4318:4318" # OTLP HTTP in — point OTEL_EXPORTER_OTLP_ENDPOINT here
+    depends_on:
+      lgtm:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  lgtm:
+    image: grafana/otel-lgtm:0.36.0
+    ports:
+      - "3000:3000" # Grafana UI
+      - "3200:3200" # Tempo query API
+      - "9090:9090" # Mimir (Prometheus API) query port
+      - "3100:3100" # Loki query API
+    environment:
+      # anonymous admin so scripts/otel-monitors.ts and a browser can
+      # query without credential plumbing (dev-only image anyway)
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12

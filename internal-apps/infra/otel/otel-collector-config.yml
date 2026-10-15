@@ -1,0 +1,50 @@
+# otel-collector — fleet telemetry relay (ADR-0017).
+# Apps → OTLP (grpc :4317 / http :4318) → batch → Grafana LGTM backend.
+# The backend is swappable: change the exporter endpoint + creds, the
+# apps never know (the STANDARD is OTLP).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  # Stamp the deployment env on everything the apps didn't set.
+  resource:
+    attributes:
+      - key: deployment.environment.name
+        value: dev-local
+        action: upsert
+
+exporters:
+  otlp:
+    endpoint: lgtm:4317
+    tls:
+      insecure: true
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlp]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlp]
+    logs:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlp]

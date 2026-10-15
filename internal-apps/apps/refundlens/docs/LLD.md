@@ -158,6 +158,14 @@ rate >25% over 1h = ticket (product signal — users ask what the fence
 can't serve). Log fields: ts, level, req_id, user_id,
 surface(ask|view|export), ms, rows, cached. Banned: raw query results.
 
+Transport (ADR-0017): platform `otelRegistry("refundlens")` dual-writes
+every instrument — same names/labels — to OTel OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`;
+local → `infra/otel` collector → Grafana LGTM :4318, prod → client OTLP
+backend) AND the in-process `/metrics` exposition. `sync_lag_s` is a
+DB-probed observable gauge (was: registered-and-never-set). Logs: pino →
+OTLP with injected trace_id/span_id; stdout unchanged. Sampler:
+`OTEL_TRACES_SAMPLER_RATIO` controls ParentBased-ratio; AlwaysOn default.
+
 ## Test matrix (§7 gates)
 
 | Gate | Scope | Assertions |
@@ -180,7 +188,10 @@ revisit at 5x.
 Single-AZ app + Multi-AZ DB; ETL as a scheduled job with failure alert;
 blue/green; auto-rollback on error rate >2% (10m). Vault: REPLICA_DSN,
 DATABASE_URL, SSO_ISSUER, SLACK_ETL_ALERTS. Tier-2: 99.5% SLO, RTO 4h,
-business-hours support.
+business-hours support. Env per environment (ADR-0017):
+`OTEL_EXPORTER_OTLP_ENDPOINT` — local → `http://localhost:4318`
+(`infra/otel` compose → collector → Grafana LGTM), prod → client's
+existing OTLP backend; unset → emitter no-ops.
 
 ## Usage KPIs (= the PR promises)
 

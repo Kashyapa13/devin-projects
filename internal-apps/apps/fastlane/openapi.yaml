@@ -240,3 +240,16 @@ paths:
           description: unauthenticated
         "403":
           description: forbidden
+  /metrics:
+    get:
+      summary: Prometheus text exposition (ops)
+      x-roles: []
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
