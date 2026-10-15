@@ -1,4 +1,5 @@
 import { initI18n, MotionProvider } from "@company/ui";
+import "@company/ui/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRoot } from "react-dom/client";
 import { AskPage } from "./AskPage.js";

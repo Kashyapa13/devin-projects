@@ -4,8 +4,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  AppHeader,
+  CommandDock,
   Morph,
   QueueTable,
+  Segmented,
+  Skeleton,
   Toast,
   springs,
   useKeyboardNav,
@@ -168,24 +172,21 @@ export function QueuePage() {
     KEYMAP,
   );
 
-  if (isLoading) return <p>{t("loading")}</p>;
   return (
-    <main>
-      <h1>{t("app.title")}</h1>
-      <nav aria-label="queue tabs">
-        {(["mine", "team", "breaching"] as const).map((x) => (
-          <button
-            key={x}
-            type="button"
-            aria-pressed={tab === x}
-            onClick={() => {
-              setTab(x);
-              setSel(0);
-            }}
-          >
-            {t(`queue.tab.${x}`)}
-          </button>
-        ))}
+    <>
+      <AppHeader eyebrow={t("app.eyebrow")} title={t("app.title")}>
+        <Segmented
+          ariaLabel={t("queue.tabs")}
+          value={tab}
+          onChange={(x) => {
+            setTab(x);
+            setSel(0);
+          }}
+          options={(["mine", "team", "breaching"] as const).map((x) => ({
+            value: x,
+            label: t(`queue.tab.${x}`),
+          }))}
+        />
         <label>
           {t("queue.filter.risk")}{" "}
           <select
@@ -202,33 +203,53 @@ export function QueuePage() {
             ))}
           </select>
         </label>
-      </nav>
-      <p className="keys" aria-hidden="true">
-        {t("keys.hint")}
-      </p>
-      {error && (
-        <p role="alert" className="error">
-          {t("error.title")}: {error}
-        </p>
-      )}
-      <QueueTable<CaseRow>
-        caption={t("queue.caption")}
-        emptyMessage={t("queue.empty")}
-        selectedId={current?.id}
-        glideId="queue"
-        rows={rows}
-        rowMotion={(r) => ({
-          drag: "x",
-          dragConstraints: { left: 0, right: 0 },
-          dragElastic: 0.35,
-          transition: springs.gentle,
-          onDragEnd: (_, info) => {
-            if (info.offset.x > 96) void act("approve", r);
-            else if (info.offset.x < -96)
-              location.hash = `#/case/${r.id}?reject=1`;
-          },
-        })}
-        columns={[
+        <CommandDock
+          label={t("keys.hint")}
+          items={[
+            { keys: "J/K", label: t("dock.navigate") },
+            { keys: "⏎", label: t("dock.open") },
+            { keys: "C", label: t("action.claim") },
+            { keys: "A", label: t("action.approve") },
+            { keys: "R", label: t("action.reject") },
+          ]}
+        />
+      </AppHeader>
+      <main className="shell">
+        {error && (
+          <p role="alert" className="error">
+            {t("error.title")}: {error}
+          </p>
+        )}
+        {isLoading ? (
+          <section className="table-card" aria-busy="true">
+            <div className="skel-rows">
+              {["62%", "84%", "71%", "90%", "58%", "79%", "66%", "88%"].map(
+                (w, i) => (
+                  <Skeleton key={i} width={w} />
+                ),
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="table-card">
+            <QueueTable<CaseRow>
+              caption={t("queue.caption")}
+              emptyMessage={t("queue.empty")}
+              selectedId={current?.id}
+              glideId="queue"
+              rows={rows}
+              rowMotion={(r) => ({
+                drag: "x",
+                dragConstraints: { left: 0, right: 0 },
+                dragElastic: 0.35,
+                transition: springs.gentle,
+                onDragEnd: (_, info) => {
+                  if (info.offset.x > 96) void act("approve", r);
+                  else if (info.offset.x < -96)
+                    location.hash = `#/case/${r.id}?reject=1`;
+                },
+              })}
+              columns={[
           {
             key: "ref",
             header: t("col.ref"),
@@ -264,12 +285,19 @@ export function QueuePage() {
           },
           { label: t("action.open"), onSelect: (r) => openCase(r) },
         ]}
-      />
-      {hasNextPage && (
-        <button type="button" onClick={() => void fetchNextPage()}>
-          {isFetchingNextPage ? t("loading") : t("queue.loadmore")}
-        </button>
-      )}
+            />
+          </section>
+        )}
+        {hasNextPage && (
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => void fetchNextPage()}
+          >
+            {isFetchingNextPage ? t("loading") : t("queue.loadmore")}
+          </button>
+        )}
+      </main>
       <div className="toasts">
         {toasts.map((x) => (
           <Toast key={x.id} id={x.id} onUndo={x.undo}>
@@ -277,6 +305,6 @@ export function QueuePage() {
           </Toast>
         ))}
       </div>
-    </main>
+    </>
   );
 }

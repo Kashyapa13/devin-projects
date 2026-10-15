@@ -6,57 +6,6 @@
     <title>FastLane</title>
     <meta name="description" content="KYC review queue" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <style>
-      /* Visual tokens — semantic colors, dark-mode-ready (materials law). */
-      :root {
-        font-family: system-ui, sans-serif; color-scheme: light dark;
-        --c-ok: #1f7a2a; --c-bad: #b42318; --c-warn: #92560a; --c-muted: #6b7280;
-        --shadow-1: 0 1px 2px #0001, 0 2px 8px #0002;
-        --shadow-2: 0 2px 4px #0002, 0 8px 24px #0003;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root { --c-muted: #9ca3af; }
-      }
-      body { margin: 0 auto; max-width: 64rem; padding: 1rem; }
-      button { transition: transform .12s ease; }
-      button:hover { filter: brightness(1.06); }  /* ambient hover */
-      button:active { transform: scale(.97); }   /* press state */
-      nav button[aria-pressed="true"] { font-weight: 700; text-decoration: underline; }
-      .queue-table { border-collapse: collapse; width: 100%; }
-      .queue-table th, .queue-table td { border-bottom: 1px solid #9994; padding: .4rem .6rem; text-align: left; }
-      .queue-table tr[data-selected="true"] { outline: 2px solid CanvasText; background: #8882; }
-      .pill, .badge, .chip { border-radius: 999px; padding: .1rem .55rem; font-size: .78em; font-weight: 600; }
-      .pill-pending { background: transparent; color: #fff; } .pill-in_review { background: transparent; color: #fff; }
-      .pill-approved { background: transparent; color: #fff; } .pill-rejected { background: transparent; color: #fff; }
-      .pill-escalated { background: transparent; color: #fff; }
-      .badge-high { background: var(--c-bad); color: #fff; } .badge-med { background: var(--c-warn); color: #fff; }
-      .badge-low { background: #4b5563; color: #fff; }
-      .chip-breach { background: #c33; color: #fff; } .chip-soon { background: #d80; color: #fff; }
-      .chip-ok { background: #9994; }
-      .panel { border: 1px solid #9996; border-radius: .5rem; padding: .8rem; margin: .8rem 0;
-        box-shadow: var(--shadow-1); backdrop-filter: blur(8px); }
-      .focus-glide { position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-        background: var(--c-warn); border-radius: 2px; }
-      .queue-table td:first-child { position: relative; }
-      .toasts { position: fixed; bottom: 1rem; right: 1rem; display: flex;
-        flex-direction: column; gap: .5rem; z-index: 10; }
-      .toast { background: Canvas; border: 1px solid #9996; border-radius: .5rem;
-        padding: .6rem .9rem; box-shadow: var(--shadow-2);
-        backdrop-filter: blur(12px); }
-      .toast-undo { margin-left: .8rem; }
-      .skeleton { display: inline-block; height: .9em; border-radius: .3rem;
-        background: #9994; }
-      @media (prefers-reduced-motion: reduce) {
-        button { transition: none; } button:active { transform: none; }
-      }
-      .masked { font-family: ui-monospace, monospace; letter-spacing: .2em; }
-      .error { color: #c33; font-weight: 600; }
-      .keys { font-size: .8em; opacity: .7; }
-      textarea { display: block; width: 100%; min-height: 4rem; margin: .4rem 0; }
-      .timeline li { margin: .25rem 0; }
-      dl.case-fields { display: grid; grid-template-columns: 10rem 1fr; row-gap: .3rem; }
-      dl.case-fields dt { font-weight: 600; opacity: .8; }
-    </style>
   </head>
   <body>
     <div id="root"></div>

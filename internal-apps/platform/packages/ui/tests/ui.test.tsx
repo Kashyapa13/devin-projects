@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { run } from "axe-core";
 import { describe, expect, it, vi } from "vitest";
+import { AppHeader, CommandDock, Segmented } from "../src/chrome.js";
 import { initI18n } from "../src/i18n.js";
 import { QueueTable } from "../src/QueueTable.js";
 import { useKeyboardNav } from "../src/useKeyboardNav.js";
@@ -98,6 +99,55 @@ describe("useKeyboardNav", () => {
     const input = screen.getByLabelText("note");
     fireEvent.keyDown(input, { key: "j" });
     expect(handlers.next).not.toHaveBeenCalled();
+  });
+});
+
+describe("fleet chrome (ADR-0016)", () => {
+  it("AppHeader renders eyebrow + title + action slot, axe-clean", async () => {
+    const { container } = render(
+      <AppHeader eyebrow="KYC" title="FastLane">
+        <CommandDock items={[{ keys: "J/K", label: "navigate" }]} />
+      </AppHeader>,
+    );
+    expect(screen.getByRole("heading", { name: "FastLane" })).toBeTruthy();
+    expect(screen.getByText("KYC")).toBeTruthy();
+    const results = await run(container, {
+      rules: { region: { enabled: false } },
+    });
+    expect(results.violations).toEqual([]);
+  });
+
+  it("CommandDock lists every shortcut with a key cap", () => {
+    render(
+      <CommandDock
+        items={[
+          { keys: "J/K", label: "navigate" },
+          { keys: "C", label: "claim" },
+        ]}
+      />,
+    );
+    expect(screen.getByText("J/K")).toBeTruthy();
+    expect(screen.getByText("navigate")).toBeTruthy();
+    expect(screen.getByText("claim")).toBeTruthy();
+  });
+
+  it("Segmented exposes aria-pressed and fires onChange", () => {
+    const onChange = vi.fn();
+    render(
+      <Segmented
+        ariaLabel="queue tabs"
+        value="team"
+        onChange={onChange}
+        options={[
+          { value: "mine", label: "Mine" },
+          { value: "team", label: "Team" },
+        ]}
+      />,
+    );
+    const team = screen.getByRole("button", { name: "Team" });
+    expect(team.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Mine" }));
+    expect(onChange).toHaveBeenCalledWith("mine");
   });
 });
 

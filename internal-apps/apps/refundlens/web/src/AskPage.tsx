@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import {
+  AppHeader,
+  CommandDock,
   CountUp,
   Reveal,
   Shake,
@@ -76,9 +78,19 @@ export function AskPage() {
   }, []);
 
   return (
-    <main>
-      <h1>{t("app.title")}</h1>
-      <p>{t("app.caption")}</p>
+    <>
+      <AppHeader narrow eyebrow={t("app.eyebrow")} title={t("app.title")}>
+        <CommandDock
+          label={t("keys.hint")}
+          items={[
+            { keys: "/", label: t("dock.focus") },
+            { keys: "⏎", label: t("dock.ask") },
+            { keys: "Esc", label: t("dock.clear") },
+          ]}
+        />
+      </AppHeader>
+      <main className="shell shell-narrow">
+      <p className="lede">{t("app.caption")}</p>
       <form
         className="askbar"
         onSubmit={(e) => {
@@ -94,7 +106,7 @@ export function AskPage() {
           placeholder={t("ask.placeholder")}
           aria-label={t("ask.placeholder")}
         />
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="btn-primary" disabled={busy}>
           {busy ? t("loading") : t("ask.submit")}
         </button>
       </form>
@@ -197,7 +209,8 @@ export function AskPage() {
         </Reveal>
       )}
       {!ans && !err && <p className="examples">{t("empty")}</p>}
-    </main>
+      </main>
+    </>
   );
 }
 

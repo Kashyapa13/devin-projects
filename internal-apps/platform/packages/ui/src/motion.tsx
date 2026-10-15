@@ -327,8 +327,23 @@ export function focusGlide(el: Element | null | undefined, reduced: boolean): vo
 }
 
 /** Skeleton — no spinners, ever (feel law). */
-export function Skeleton({ width = "100%" }: { width?: string }): ReactElement {
-  return <motion.span className="skeleton" style={{ width }} animate={{ opacity: [0.5, 0.85, 0.5] }} transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }} />;
+export function Skeleton({
+  width = "100%",
+  height,
+  className,
+}: {
+  width?: string;
+  height?: string | undefined;
+  className?: string | undefined;
+}): ReactElement {
+  return (
+    <motion.span
+      className={className ? `skeleton ${className}` : "skeleton"}
+      style={{ width, ...(height !== undefined ? { height } : {}) }}
+      animate={{ opacity: [0.5, 0.85, 0.5] }}
+      transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
+    />
+  );
 }
 
 /** Toast with undo — settles from the trigger side on gentle spring. */

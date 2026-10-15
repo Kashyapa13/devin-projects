@@ -3,6 +3,10 @@ export const resources = {
   en: {
     translation: {
       "app.title": "RefundLens",
+      "app.eyebrow": "Refunds",
+      "dock.focus": "focus",
+      "dock.ask": "ask",
+      "dock.clear": "clear",
       "app.caption": "Ask anything about refunds — answers with receipts",
       "ask.placeholder": "e.g. how many refunds by channel last 30 days",
       "ask.submit": "Ask",

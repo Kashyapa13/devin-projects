@@ -1,7 +1,8 @@
 # @company/ui
 
 Shared UI: Tailwind preset, accessible queue table, keyboard-mode nav,
-i18next wrapper.
+i18next wrapper, motion primitives (ADR-0014), and the fleet visual
+language (ADR-0016).
 
 ## API
 
@@ -16,6 +17,12 @@ i18next wrapper.
 - `initI18n({resources, lng?, fallbackLng?, onMissingKey?})` — i18next +
   react-i18next instance enforcing the all-strings-externalized gate:
   missing keys warn and render the raw key. `useTranslation` re-exported.
+- `@company/ui/styles.css` — the fleet visual language (ADR-0016):
+  tokens + glass appbar, soft badges, borderless tables, buttons, dock.
+  Import once in `main.tsx`.
+- `<AppHeader title eyebrow? narrow?>` — sticky frosted header.
+- `<CommandDock items={[{keys,label}]}/>` — shortcut pill for the header.
+- `<Segmented options value onChange ariaLabel/>` — tab pill group.
 
 ## Usage
 

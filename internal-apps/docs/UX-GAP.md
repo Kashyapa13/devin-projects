@@ -116,3 +116,16 @@ Notes: memoized `QueueRow` (re-render = 2 rows, not 50) + conditional
 `morphId` + manual-FLIP `FocusGlide` — layoutId group measure removed from
 the key path. RefundLens/flags moments: primitives shipped (Stagger,
 CountUp, Morph hero) — wiring stays with their owning sessions.
+
+---
+
+## PHASE D — visual language (2026-10-15, ADR-0016)
+
+The motion layer landed first; the *visual* layer followed on the same
+branch family: one `@company/ui/styles.css` (tokens, ambient canvas,
+glass appbar, soft-tone badges with dots, borderless tables + indigo
+focus rail, mono numerics, skeleton loads — item 17's "Loading…"
+remainder now closed) plus chrome components (`AppHeader`,
+`CommandDock`, `Segmented`). Applied to FastLane queue/case and the
+RefundLens ask console; flags demo inherits it when its owning session
+builds the replica.

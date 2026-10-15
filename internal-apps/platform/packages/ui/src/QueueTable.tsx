@@ -74,7 +74,12 @@ const QueueRow = memo(function QueueRow<T extends { id: string | number }>({
       {actions.length > 0 && (
         <td>
           {actions.map((a) => (
-            <button key={a.label} type="button" onClick={() => a.onSelect(row)}>
+            <button
+              key={a.label}
+              type="button"
+              className="btn-ghost"
+              onClick={() => a.onSelect(row)}
+            >
               {a.label}
             </button>
           ))}
