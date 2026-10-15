@@ -239,9 +239,27 @@ export function DashboardPage() {
 
   const detailRows = (detail.data?.series ?? []) as Record<string, unknown>[];
   const monRows = (monitors.data?.series ?? []) as Record<string, unknown>[];
+  // Explicit error surface — a failed widget fetch must never render as
+  // empty "—" placeholders (verifier UX #13).
+  const widgetError = [kpi, ts, heat, donut, topn, scatter, detail, monitors, syncHealth].some(
+    (w) => w.isError,
+  );
+  // Sync-lag law (AGENTS.md §4): lag > 90min -> amber banner on all pages.
+  const lagS = beat?.lag_s ?? null;
+  const lagExceeded = lagS !== null && lagS > 5400;
 
   return (
     <main className="dash">
+      {widgetError && (
+        <p role="alert" className="error-card" data-testid="dash-error">
+          {t("dash.load_error")}
+        </p>
+      )}
+      {lagExceeded && (
+        <p role="status" className="lag-banner" data-testid="lag-banner">
+          {t("dash.lag_banner")}
+        </p>
+      )}
       {/* F-09 global bar — presets · compare · filters · shareable params */}
       <header className="dashbar">
         <div className="dashbar-row">

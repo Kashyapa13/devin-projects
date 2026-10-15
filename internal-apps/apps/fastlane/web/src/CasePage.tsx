@@ -39,7 +39,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
   const [revealed, setRevealed] = useState<string | null>(null);
   const reduced = useReducedMotion();
 
-  const { data: kase, isLoading } = useQuery({
+  const { data: kase, isLoading, isError } = useQuery({
     queryKey: ["case", id],
     queryFn: () => api(`/api/v1/cases/${id}`) as Promise<CaseRow>,
   });
@@ -120,7 +120,15 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     if (autoReject) setRejecting(true);
   }, [autoReject]);
 
-  if (isLoading || !kase) return <p>{t("loading")}</p>;
+  if (isError || (!isLoading && !kase))
+    return (
+      <main>
+        <p role="alert" className="error">
+          {t("error.title")}: {t("case.load_error")}
+        </p>
+      </main>
+    );
+  if (isLoading) return <p>{t("loading")}</p>;
   return (
     <main>
       {/* shared-element morph: the queue row's ref cell MORPHS into this

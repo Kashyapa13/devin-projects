@@ -149,6 +149,10 @@ identifier matching `pg_*`, `dblink*`, or `lo_*` is rejected outright —
 they are engine machinery, never refund data. Named bans additionally
 cover `set_config` and the `query_to_xml`/`database_to_xml` family,
 which re-parse a SQL string at runtime and would smuggle unfenced inner
+queries. Scope note (verifier residual): metadata getters — `version()`,
+`current_setting()`, `to_regclass()` — intentionally pass: they expose
+server config only, never table data; the family rule targets functions
+that reach the server's data/filesystem surface.
 SQL through as one opaque string token.
 
 ## Template renderer contract (views — typed params only)

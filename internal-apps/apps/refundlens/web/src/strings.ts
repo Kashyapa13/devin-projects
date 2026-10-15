@@ -41,6 +41,8 @@ export const resources = {
       "dash.live": "live",
       "dash.degraded": "degraded",
       "dash.empty": "no refunds match — filters too narrow?",
+      "dash.load_error": "Dashboard failed to load — sign-in expired or API unreachable",
+      "dash.lag_banner": "Refund data is stale — last sync is over 90 minutes old; figures may lag reality",
       "dash.export": "export csv",
       "dash.heuristic": "heuristic",
       "dash.stacked": "stacked",

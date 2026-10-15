@@ -45,7 +45,7 @@ export function QueuePage() {
     toastTimer.current = setTimeout(() => setToast(null), 4000);
   }, []);
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: ["queue", tab],
       queryFn: ({ pageParam }) =>
@@ -138,6 +138,14 @@ export function QueuePage() {
     KEYMAP,
   );
 
+  if (isError)
+    return (
+      <main>
+        <p role="alert" className="error">
+          {t("error.title")}: {t("queue.load_error")}
+        </p>
+      </main>
+    );
   if (isLoading) return <p>{t("loading")}</p>;
   return (
     <main>
