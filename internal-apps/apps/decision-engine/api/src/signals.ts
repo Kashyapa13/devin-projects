@@ -1,4 +1,4 @@
-/** case_signals v1 — versioned contract (ADR-0018). Unknown major versions
+/** case_signals v1 — versioned contract (ADR-0015). Unknown major versions
     are REJECTED cleanly — the engine never guesses. */
 export const SIGNAL_CONTRACT_VERSION = 1;
 

@@ -1,4 +1,4 @@
--- decision_db init (ADR-0018): engine's OWN database, per-app isolation.
+-- decision_db init (ADR-0015): engine's OWN database, per-app isolation.
 CREATE TABLE shadow_decisions (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   case_id       text NOT NULL,

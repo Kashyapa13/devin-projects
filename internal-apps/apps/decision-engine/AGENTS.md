@@ -1,6 +1,6 @@
 # decision-engine — AGENTS.md
 
-Tier-2 · C2 signals in / decisions out (no C4 — engine reads signals, not PII) · own `decision_db` · SHADOW rung only (ADR-0018).
+Tier-2 · C2 signals in / decisions out (no C4 — engine reads signals, not PII) · own `decision_db` · SHADOW rung only (ADR-0015).
 
 Start here: root AGENTS.md → this file → docs/HLD.md → docs/LLD.md → docs/OPEN-QUESTIONS.md → plan.
 
@@ -8,7 +8,7 @@ Start here: root AGENTS.md → this file → docs/HLD.md → docs/LLD.md → doc
 - SHADOW rung ONLY — the engine decides nothing in reality; every case stays human until a promotion ADR on measured data.
 - Strategy writer of record: **Vaibhav**. Threshold changes = PR + writer review; pack changes = ADR; pack stale >90d → alert.
 - Deterministic core only — rule evaluation over `case_signals` v1; LLM only upstream for doc signal extraction, never in the decision path.
-- Every decision row carries inputs + pack version + fired rule + confidence + reason, mirrored to FastLane's audit via the ADR-0018 API-only contract.
+- Every decision row carries inputs + pack version + fired rule + confidence + reason, mirrored to FastLane's audit via the ADR-0015 API-only contract.
 - Kill switch is sacred: one click → all-human + in-flight frozen.
 
 ## Layout

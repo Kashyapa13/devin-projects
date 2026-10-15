@@ -3,7 +3,7 @@ import type { ShadowDecision } from "./engine.js";
 
 /** Every shadow decision logs: inputs, pack version, fired rule, confidence,
     would-be decision + reason code — and mirrors to FastLane's audit via the
-    ADR-0018 API-only contract. */
+    ADR-0015 API-only contract. */
 export async function record(db: Db, d: ShadowDecision) {
   await db.query(
     `INSERT INTO shadow_decisions

@@ -1,7 +1,7 @@
 # DECISION-ENGINE-GAP — PHASE A discovery (2026-10-15)
 
 Discovery on the live FastLane queue before any engine build. Per the
-spec's hard gate this doc + ADR-0018 + a named strategy writer precede
+spec's hard gate this doc + ADR-0015 + a named strategy writer precede
 all code.
 
 ## 1. What exists today (mapped)
@@ -61,12 +61,12 @@ as labeled placeholders until producers land.
 Engine decision rows (inputs + pack version + fired rule + confidence
 + reason code) live in `decision_db`; ASSIST/AUTO actions that touch a
 case mirror to FastLane `audit_events` via the API-only integration
-ADR-0018 authorizes — same write-ahead shape (`actor` = engine
+ADR-0015 authorizes — same write-ahead shape (`actor` = engine
 principal, `action` = `case.engine_decision`).
 
 ## 5. Open items before build
 
 - **Named strategy writer** — required owner, blocks everything.
-- ADR-0018 approval.
+- ADR-0015 approval.
 - Golden set: synthetic adjudicated 200+ by the strategy writers
   (fallback path — no real history yet).

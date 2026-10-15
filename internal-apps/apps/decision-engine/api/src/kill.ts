@@ -1,4 +1,4 @@
-/** One-click kill switch (ADR-0018): every case → humans; in-flight
+/** One-click kill switch (ADR-0015): every case → humans; in-flight
     auto-decisions frozen for supervisor review. */
 export async function setKillSwitch(db: Db, on: boolean) {
   await db.query(

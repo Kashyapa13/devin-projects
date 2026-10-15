@@ -1,6 +1,6 @@
 import type { MlScore } from "./signals.js";
 
-/** Real scoring service slots in later without rearchitecting (ADR-0018). */
+/** Real scoring service slots in later without rearchitecting (ADR-0015). */
 export interface ModelScoreProvider {
   name: string;
   scoresFor(caseId: string): Promise<MlScore[]>;

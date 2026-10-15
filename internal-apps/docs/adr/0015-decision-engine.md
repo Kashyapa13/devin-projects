@@ -1,4 +1,4 @@
-# ADR-0018 — Decision engine as a new app (SHADOW rung only)
+# ADR-0015 — Decision engine as a new app (SHADOW rung only)
 
 Status: **approved — strategy writer: Vaibhav** (merged via PR #9)
 

@@ -6,7 +6,7 @@
 FROM node:22-slim AS build
 WORKDIR /app
 ENV NODE_ENV=production
-ARG PKG_NAME=@app/template
+ARG PKG_NAME=@app/decision-engine
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY . .
 RUN corepack enable && pnpm install --frozen-lockfile --prod=false \

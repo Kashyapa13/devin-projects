@@ -1,4 +1,4 @@
-/** SEED STRATEGY PACKS — starting vocabulary (ADR-0018).
+/** SEED STRATEGY PACKS — starting vocabulary (ADR-0015).
     Thresholds are TUNE-ME placeholders the strategy writer (Vaibhav)
     calibrates from shadow history. Threshold change = PR + writer review;
     pack change = ADR. A pack stale >90d → stale-pack alert. */

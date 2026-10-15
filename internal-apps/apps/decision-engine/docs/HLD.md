@@ -1,7 +1,7 @@
-# decision-engine — HLD (ADR-0018)
+# decision-engine — HLD (ADR-0015)
 
 New app, own deployment unit + own `decision_db`. API-only integration with
-FastLane (reads case signals, mirrors audit rows — authorized by ADR-0018).
+FastLane (reads case signals, mirrors audit rows — authorized by ADR-0015).
 
 Pipeline (SHADOW): pull PENDING/IN_REVIEW kyc_cases → map to case_signals v1
 (+ MockModelScoreProvider ml_scores) → `evaluate()` across packs in declared
