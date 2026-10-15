@@ -16,7 +16,7 @@ project.
 ## The solution
 
 FastLane is a queue-first review console: one screen, real keys (j/k move,
-a approve, r reject, c complete), no mouse required. Case evidence renders
+a approve, r reject, c claim), no mouse required. Case evidence renders
 inline; C4 identifiers are encrypted at rest with envelope crypto and are
 masked by default — an unmask click writes an audit row before the value
 returns. Decisions are state-machine transitions, not edits: each carries

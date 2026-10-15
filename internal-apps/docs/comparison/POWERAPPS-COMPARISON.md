@@ -29,7 +29,7 @@ Power Apps list pricing ([pricing page](https://www.microsoft.com/en-us/power-pl
 [licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-flow-licensing-faq)):
 Premium $20/user/mo paid yearly; $12 at 2,000-seat minimum;
 $22/$14 effective Jan 1 2027 ([price update notice](https://www.microsoft.com/en-us/licensing/news/power-apps-premium-price-update)).
-Dataverse add-on $40/GB/mo. Per-app plan ended for new customers Jan 2026 ([end-of-sale notice](https://www.microsoft.com/en-us/licensing/news/power-app-per-app-end-of-sale)).
+Dataverse add-on $40/GB/mo (commercial SKU CFQ7TTC0LHRL-2-P1Y, [capacity model](https://learn.microsoft.com/en-us/power-platform/admin/capacity-storage) — price published in the Power Platform Licensing Guide Aug-2024). Per-app plan ended for new customers Jan 2026 ([end-of-sale notice](https://www.microsoft.com/en-us/licensing/news/power-app-per-app-end-of-sale)).
 
 ```
 PA_annual(app)   = seats × $240  (+ Dataverse GB × $480)

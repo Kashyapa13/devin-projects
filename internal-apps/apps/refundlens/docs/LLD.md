@@ -16,7 +16,7 @@ adds a row here in the same diff.
 | F-06 | Sync health surface `/health/sync` | service (ops) | poll watermark + lag | returns `{watermark, lag_s, last_run_status}`; lag >5400s → ticket, >10800s → page | ops truth for the freshness claim |
 | F-07 | Hourly ETL sync | etl (job) | scheduled: replica → raw UPSERT → one-tx agg rebuild → sync_runs row | re-running the same window produces zero delta (idempotent); a `sync_runs` row exists for every run incl. failures | hourly freshness behind every answer |
 | F-08 | Fork report | service (job) | weekly `scripts/fork_report.ts` reads `ask_log` | emits ask-vs-filter session split; runs weekly until the dated fork decision lands (OPEN-1 #askbox-keep-retire) | the falsifier itself |
-| F-09 | Dashboard global bar `/dashboard` | analyst · ops viewer | date-range presets (24h/7d/30d/90d/12M/custom) · compare-to-previous toggle · global filters (channel, segment, reason, state) · saved views as shareable query-param state | changing range/filter re-binds every widget server-side; a saved-view URL reproduces the exact dashboard | THE Power BI replacement surface (ADR-0015) |
+| F-09 | Dashboard global bar `/dashboard` | analyst · ops viewer | date-range presets (24h/7d/30d/90d/12M/custom) · compare-to-previous toggle · global filters (channel, segment, reason, state) · saved views as shareable query-param state | changing range/filter re-binds every widget server-side; a saved-view URL reproduces the exact dashboard | THE Power BI replacement surface (ADR-0019) |
 | F-10 | Live heartbeat | all dashboard roles | pulsing dot — green <2min · amber 2–5 · red beyond; tooltip = watermark + last-event age; auto refresh on SSE events; last-24h live tail (minute grain) | beat → SSE → widgets re-bind WITHOUT reload; stalled beat flips the dot amber/red | ADR-0016 · never silently stale |
 | F-11 | Monitors panel + `/monitors` (admin) | analyst (view) · admin (manage) | monitor-status widget (state, last fired, owner, severity); versioned monitors-as-code evaluated per beat; firing → Slack + `monitor_events` | a seeded spike fires a monitor → Slack stub + events row; heartbeat-age monitor ships by default | ADR-0016 · monitoring is code |
 | F-12 | KPI stat row (8 cards) | analyst · ops viewer | refunds today · refund rate · total refunded · pending-approval count+amount · avg+p95 latency · top reason · at-risk count — each with sparkline + delta + click-through | every card = a server-computed series via the fenced layer; delta = period-over-period | BI bar (§4.2) |
@@ -57,7 +57,7 @@ CREATE TABLE ask_log (            -- the fork's evidence + shows-its-work histor
   rendered_sql text, ms int, rows int, success bool NOT NULL,
   fence_reason text, req_id text, created_at timestamptz DEFAULT now()
 );
-CREATE TABLE agg_hourly (          -- heatmap grain: hour × day-of-week (ADR-0015)
+CREATE TABLE agg_hourly (          -- heatmap grain: hour × day-of-week (ADR-0019)
   day date, hour smallint, channel text, reason_code text,
   cnt bigint, amount bigint,
   PRIMARY KEY (day, hour, channel, reason_code)

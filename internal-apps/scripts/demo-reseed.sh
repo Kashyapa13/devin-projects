@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PGC="docker exec fastlane-pg psql -U postgres -v ON_ERROR_STOP=1"
+PGC="docker exec -i fastlane-pg psql -U postgres -v ON_ERROR_STOP=1"
 # Maintenance DSNs (migrate/seed need DDL + bulk writes) stay superuser;
 # the RUNNING APIs must use the non-superuser app roles created below —
 # audit_events is insert-only and the tables' PUBLIC revoke binds them.
@@ -37,17 +37,18 @@ $PGC -d fastlane -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rol
 
 echo "== fastlane: demo fixtures (breacher + mid-review) =="
 $PGC -d fastlane <<'SQL'
--- D4: a case already breaching its 48h SLA — the chip glows on open
-INSERT INTO kyc_cases (customer_id, jurisdiction, risk_score, country,
+-- D4: a case already breaching its 48h SLA — the chip glows on open.
+-- (legal_name_enc stays NULL: the demo reveal path uses a seeded CUST-* row.)
+INSERT INTO kyc_cases (customer_ref, country, risk_score, doc_type,
       status, priority, assignee_id, sla_due_at)
-VALUES ('DEMO-BREACH', 'UK', 82, 'GB', 'PENDING', 'high', NULL,
+VALUES ('DEMO-BREACH', 'GB', 82, 'PASSPORT', 'PENDING', 'HIGH', NULL,
         now() - interval '6 hours')
 ON CONFLICT DO NOTHING;
--- D1: a mid-review case claimed by the demo operator for the keyboard day
-INSERT INTO kyc_cases (customer_id, jurisdiction, risk_score, country,
+-- D1: a mid-review case claimed by the seeded reviewer for the keyboard day
+INSERT INTO kyc_cases (customer_ref, country, risk_score, doc_type,
       status, priority, assignee_id, sla_due_at)
-VALUES ('DEMO-INREVIEW', 'DE', 41, 'DE', 'IN_REVIEW', 'normal',
-        (SELECT id FROM app_users WHERE role = 'operator' LIMIT 1),
+VALUES ('DEMO-INREVIEW', 'DE', 41, 'NATIONAL_ID', 'IN_REVIEW', 'MED',
+        (SELECT id FROM users WHERE 'reviewer' = ANY(roles) LIMIT 1),
         now() + interval '30 hours')
 ON CONFLICT DO NOTHING;
 SQL

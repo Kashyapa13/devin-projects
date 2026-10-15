@@ -4,7 +4,7 @@ Status: accepted · Immutable once merged; amend by new ADR.
 
 ## Context
 
-The dashboard retrofit (ADR-0015/0016) surfaced three facts the original
+The dashboard retrofit (ADR-0019/0016) surfaced three facts the original
 designs did not name:
 
 1. **The fence's table law is path-shaped, not global.** ADR-0011 banned

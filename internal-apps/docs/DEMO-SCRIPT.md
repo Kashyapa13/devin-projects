@@ -24,7 +24,7 @@ state below (deterministic, re-runnable). Then the three tabs:
 
 | Tab | App | URL | Pre-state |
 |---|---|---|---|
-| 1 | FastLane | http://localhost:5173 | operator token in `fastlane_token` |
+| 1 | FastLane | http://localhost:5173 | reviewer token in `fastlane_token` |
 | 2 | RefundLens | http://localhost:5174 | seeded refund data, ask box ready |
 | 3 | flags | http://localhost:5175 | `demo-hero` positioned OFF → flips live |
 
@@ -153,7 +153,7 @@ Synthetic data only — no C4 `legal_name` ever appears on screen.
   (without it D5 answers "no refunds in that window").
 - Answer cache is 60s TTL: after a reseed the first ask may serve a cached
   empty result — ask once, wait a beat, ask again.
-- Mint the operator token matching the seeded user's `sub` — the keyboard
+- Mint the reviewer token matching the seeded user's `sub` — the keyboard
   day's claim/approve paths require the assignee to be you.
 - flags web runs on :5175 (vite proxy → :8082); refundlens on :5174
   (proxy → :8083); fastlane :5173 (proxy → :8080); engine API :8081.
