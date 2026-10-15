@@ -1,8 +1,23 @@
-import { useTranslation } from "@company/ui";
+import { PulseOnDanger, StatusSpring, useTranslation } from "@company/ui";
+
+const PILL_COLORS: Record<string, string> = {
+  pending: "#1d4ed8",
+  in_review: "#b45309",
+  approved: "#15803d",
+  rejected: "#b91c1c",
+  escalated: "#7c3aed",
+};
 
 export function StatusPill({ status }: { status: string }) {
+  // Status-pill color-spring: the pill's color springs to the new state
+  // (ADR-0014 §3), never snaps — even on optimistic-then-rollback flashes.
   return (
-    <span className={`pill pill-${status.toLowerCase()}`}>{status}</span>
+    <StatusSpring
+      color={PILL_COLORS[status.toLowerCase()] ?? "#475569"}
+      className={`pill pill-${status.toLowerCase()}`}
+    >
+      {status}
+    </StatusSpring>
   );
 }
 
@@ -15,10 +30,11 @@ export function SlaChip({ dueAt }: { dueAt: string }) {
   const { t } = useTranslation();
   const ms = new Date(dueAt).getTime() - Date.now();
   const kind = ms < 0 ? "breach" : ms < 24 * 3600e3 ? "soon" : "ok";
+  // SLA chip: exactly one pulse on the crossing into red (ADR-0014 §3).
   return (
-    <span className={`chip chip-${kind}`}>
+    <PulseOnDanger danger={kind === "breach"} className={`chip chip-${kind}`}>
       {dueAt.slice(0, 10)} · {t(`sla.${kind === "breach" ? "breaching" : kind}`)}
-    </span>
+    </PulseOnDanger>
   );
 }
 

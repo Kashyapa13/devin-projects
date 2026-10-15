@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Morph,
+  Pressable,
+  Reveal,
+  Shake,
   useKeyboardNav,
   useTranslation,
   type KeyMap,
@@ -158,8 +162,13 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
   if (isLoading || !kase) return <p>{t("loading")}</p>;
   return (
     <main>
+      {/* shared-element morph: the queue row's ref cell MORPHS into this
+          header (same layoutId under the root LayoutGroup) — ADR-0014 §1 */}
       <h1>
-        {t("app.title")} — {kase.customer_ref}
+        {t("app.title")} —{" "}
+        <Morph layoutId={`case-${kase.id}`} style={{ display: "inline-block" }}>
+          {kase.customer_ref}
+        </Morph>
       </h1>
       <p className="keys" aria-hidden="true">
         {t("case.keys")}
@@ -173,9 +182,11 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         ← {t("case.back")}
       </button>
       {error && (
-        <p role="alert" className="error">
-          {t("error.title")}: {error}
-        </p>
+        <Shake trigger={error}>
+          <p role="alert" className="error">
+            {t("error.title")}: {error}
+          </p>
+        </Shake>
       )}
 
       <dl className="case-fields">
@@ -214,7 +225,12 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
           </p>
         ) : (
           <p>
-            <strong>{revealed}</strong>{" "}
+            {/* masked→reveal blur-out morph (ADR-0014 §3): the masked
+                placeholder exits as the revealed value arrives already
+                de-blurring in on the snappy spring. */}
+            <Reveal spring="snappyUI" style={{ display: "inline-block" }}>
+              <strong>{revealed}</strong>
+            </Reveal>{" "}
             <span className="keys">({t("case.pii.revealed")})</span>
           </p>
         )}

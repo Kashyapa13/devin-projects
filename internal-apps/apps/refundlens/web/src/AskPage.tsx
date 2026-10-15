@@ -1,5 +1,15 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
+import {
+  CountUp,
+  Reveal,
+  Shake,
+  staggerChild,
+  StaggerTbody,
+  StaggerTr,
+  staggerParent,
+  useReducedMotion,
+} from "@company/ui";
 import { api } from "./api.js";
 
 interface Answer {
@@ -26,6 +36,7 @@ export function AskPage() {
   const [ans, setAns] = useState<Answer | null>(null);
   const [err, setErr] = useState<FencedErr | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const reduced = useReducedMotion();
 
   const submit = async (question: string) => {
     if (!question.trim() || busy) return;
@@ -113,7 +124,9 @@ export function AskPage() {
       </p>
       <p className="keys">{t("keys.hint")}</p>
 
+      {/* fenced-rejection: shake + inline guidance (ADR-0014 §3) */}
       {err && (
+        <Shake trigger={err} className="error-wrap">
         <section className="card error-card" role="alert" data-testid="fenced-error">
           <div className="code">{err.code}</div>
           <h2>{err.code === "FENCED_QUERY_REJECTED" ? t("fenced.title") : t("error.title")}</h2>
@@ -125,11 +138,16 @@ export function AskPage() {
           )}
           {err.detail?.guidance && <p className="guidance">{err.detail.guidance}</p>}
         </section>
+        </Shake>
       )}
 
       {ans && (
+        <Reveal className="card-wrap" key={`${ans.took_ms}-${ans.cached}`}>
         <section className="card" data-testid="answer-card">
-          <div className="answer">{ans.answer}</div>
+          <div className="answer">
+            {/* count-up on springy curves (ADR-0014 §3) */}
+            <AnswerText text={ans.answer} />
+          </div>
           <div className="meta">
             <span className={ans.cached ? "badge badge-cache" : "badge badge-live"}>
               {ans.cached ? t("answer.cached") : t("answer.live")}
@@ -158,20 +176,42 @@ export function AskPage() {
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              {/* staggered draw-in — rows re-bind with transition,
+                  never re-mount (ADR-0014 §3) */}
+              <StaggerTbody
+                variants={staggerParent}
+                initial="hidden"
+                animate="show"
+              >
                 {ans.rows.slice(0, 20).map((r, i) => (
-                  <tr key={i}>
+                  <StaggerTr key={i} variants={staggerChild(reduced === true)}>
                     {Object.values(r).map((v, j) => (
                       <td key={j}>{String(v)}</td>
                     ))}
-                  </tr>
+                  </StaggerTr>
                 ))}
-              </tbody>
+              </StaggerTbody>
             </table>
           )}
         </section>
+        </Reveal>
       )}
       {!ans && !err && <p className="examples">{t("empty")}</p>}
     </main>
+  );
+}
+
+/** Answer string is "<number> — <rest>": the number counts up on a
+ *  springy curve; the rest renders verbatim (ADR-0014 §3). */
+function AnswerText({ text }: { text: string }) {
+  const m = /^(\d[\d,]*)/.exec(text);
+  if (!m?.[1]) return <>{text}</>;
+  const n = Number(m[1].replaceAll(",", ""));
+  if (!Number.isFinite(n)) return <>{text}</>;
+  return (
+    <>
+      <CountUp value={n} format={(v) => Math.round(v).toLocaleString("en-US")} />
+      {text.slice(m[1].length)}
+    </>
   );
 }

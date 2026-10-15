@@ -1,4 +1,4 @@
-import { initI18n } from "@company/ui";
+import { initI18n, LayoutGroup, MotionProvider } from "@company/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRoot } from "react-dom/client";
 import { useEffect, useState } from "react";
@@ -34,7 +34,11 @@ const el = document.getElementById("root");
 if (el) {
   createRoot(el).render(
     <QueryClientProvider client={qc}>
-      <App />
+      <MotionProvider>
+        <LayoutGroup>
+          <App />
+        </LayoutGroup>
+      </MotionProvider>
     </QueryClientProvider>,
   );
 }
