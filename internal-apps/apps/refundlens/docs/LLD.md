@@ -15,11 +15,21 @@ adds a row here in the same diff.
 | F-05 | Staleness banner (all pages) | analyst | passive | sync lag >90m → amber banner on every surface + `#refundlens_sync_lag` alert; banner clears when lag recovers | never silently stale |
 | F-06 | Sync health surface `/health/sync` | service (ops) | poll watermark + lag | returns `{watermark, lag_s, last_run_status}`; lag >5400s → ticket, >10800s → page | ops truth for the freshness claim |
 | F-07 | Hourly ETL sync | etl (job) | scheduled: replica → raw UPSERT → one-tx agg rebuild → sync_runs row | re-running the same window produces zero delta (idempotent); a `sync_runs` row exists for every run incl. failures | hourly freshness behind every answer |
-| F-08 | Fork report | service (job) | weekly `scripts/fork_report.ts` reads `ask_log` | emits ask-vs-filter session split; runs weekly until the dated fork decision lands (OPEN-1) | the falsifier itself |
+| F-08 | Fork report | service (job) | weekly `scripts/fork_report.ts` reads `ask_log` | emits ask-vs-filter session split; runs weekly until the dated fork decision lands (OPEN-1 #askbox-keep-retire) | the falsifier itself |
+| F-09 | Dashboard global bar `/dashboard` | analyst · ops viewer | date-range presets (24h/7d/30d/90d/12M/custom) · compare-to-previous toggle · global filters (channel, segment, reason, state) · saved views as shareable query-param state | changing range/filter re-binds every widget server-side; a saved-view URL reproduces the exact dashboard | THE Power BI replacement surface (ADR-0015) |
+| F-10 | Live heartbeat | all dashboard roles | pulsing dot — green <2min · amber 2–5 · red beyond; tooltip = watermark + last-event age; auto refresh on SSE events; last-24h live tail (minute grain) | beat → SSE → widgets re-bind WITHOUT reload; stalled beat flips the dot amber/red | ADR-0016 · never silently stale |
+| F-11 | Monitors panel + `/monitors` (admin) | analyst (view) · admin (manage) | monitor-status widget (state, last fired, owner, severity); versioned monitors-as-code evaluated per beat; firing → Slack + `monitor_events` | a seeded spike fires a monitor → Slack stub + events row; heartbeat-age monitor ships by default | ADR-0016 · monitoring is code |
+| F-12 | KPI stat row (8 cards) | analyst · ops viewer | refunds today · refund rate · total refunded · pending-approval count+amount · avg+p95 latency · top reason · at-risk count — each with sparkline + delta + click-through | every card = a server-computed series via the fenced layer; delta = period-over-period | BI bar (§4.2) |
+| F-13 | Time series widgets | analyst · ops viewer | volume + amount over time (multi-series by channel/segment, stacked option) · refund-rate trend with threshold band · z-score anomaly markers labeled "heuristic" | series rendered server-side; anomaly markers carry the heuristic label | BI bar (§4.2) |
+| F-14 | Heatmap: refunds hour × day-of-week | analyst · ops viewer | signature widget on agg_hourly grain | heatmap renders 7×24 cells server-computed; empty cells render as empty, not error | BI bar (§4.2) |
+| F-15 | Breakdowns + scatter | analyst · ops viewer | donut by reason code · top-N bars by merchant/segment (count/amount/rate, sortable) · latency-vs-amount scatter (density shading) | sort changes re-query server-side; no client-side aggregation | BI bar (§4.2) |
+| F-16 | Cross-filter + detail table + export | analyst | click any chart point/segment → filters the detail table (and vice versa — drill is one click everywhere) · CSV export (exact counts, watermark header, bypasses cache) | one click on a series constrains every dependent widget; export footer count == rows | BI bar (§4.2) · exact-count law |
+| F-17 | Sync admin surface `/sync` | admin | watermark, lag, last-run rows, alert status | returns sync_runs history + heartbeat age; admin role only | ops truth for the freshness claim |
 
-Roles: `analyst` (SSO, all read surfaces + export) · `etl` (sync job's DB
-role — INSERT/UPDATE only, no app login) · `service` (health/report
-callers). There is no admin surface — FORBIDDEN by AGENTS §9.
+Roles: `analyst` (SSO — ask / dashboard / export) · `ops viewer`
+(dashboard only) · `admin` (sync health + monitors management) · `etl`
+(sync job's DB role — INSERT/UPDATE only, no app login) · `service`
+(health/report callers). No debug/SQL console — FORBIDDEN by AGENTS §9.
 
 ## Core DDL (commentary — schema truth lives in db/migrations)
 
@@ -47,8 +57,23 @@ CREATE TABLE ask_log (            -- the fork's evidence + shows-its-work histor
   rendered_sql text, ms int, rows int, success bool NOT NULL,
   fence_reason text, req_id text, created_at timestamptz DEFAULT now()
 );
--- roles: app = SELECT only on refund_events_raw, agg_daily, sync_runs.
+CREATE TABLE agg_hourly (          -- heatmap grain: hour × day-of-week (ADR-0015)
+  day date, hour smallint, channel text, reason_code text,
+  cnt bigint, amount bigint,
+  PRIMARY KEY (day, hour, channel, reason_code)
+);
+CREATE TABLE monitors (         -- monitors-as-code definitions, versioned (ADR-0016)
+  id uuid PRIMARY KEY, name text, metric text, window text,
+  condition text, threshold jsonb, severity text, owner text,
+  channel text, enabled bool DEFAULT true, version int NOT NULL DEFAULT 1
+);
+CREATE TABLE monitor_events (   -- firing history — the monitoring audit trail
+  id bigserial PRIMARY KEY, monitor_id uuid REFERENCES monitors(id),
+  fired_at timestamptz DEFAULT now(), value jsonb, state text
+);
+-- roles: app = SELECT only on refund_events_raw, agg_daily, agg_hourly, sync_runs.
 -- etl = separate role, INSERT/UPDATE only, no login path.
+-- monitors/monitor_events: app = SELECT; evaluator role writes events.
 ```
 
 ## API registry
@@ -58,6 +83,10 @@ POST `/ask` {question} → `{answer, sql, rows, watermark, took_ms}`
 (typed params → shareable state) · GET `/ask/:id` · GET `/ask/me/history`
 · GET `/export.csv` (exact counts, watermark in header comment, bypasses
 cache) · GET `/health/sync` (watermark + lag + last run status) ·
+GET `/api/stream/heartbeat` (SSE — heartbeat events; ADR-0016) ·
+GET/POST `/monitors` (admin — monitors-as-code definitions) ·
+GET `/api/widgets/:name` (typed params → server-computed series via the
+SAME fenced template layer — the WIDGET LAW; §4.2) ·
 platform `/healthz` `/readyz`.
 
 Error envelope per platform-http: `{error:{code,message,detail?,req_id}}`.
