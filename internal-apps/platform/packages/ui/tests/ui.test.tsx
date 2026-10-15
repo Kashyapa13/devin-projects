@@ -102,7 +102,7 @@ describe("useKeyboardNav", () => {
   });
 });
 
-describe("fleet chrome (ADR-0016)", () => {
+describe("fleet chrome (ADR-0018)", () => {
   it("AppHeader renders eyebrow + title + action slot, axe-clean", async () => {
     const { container } = render(
       <AppHeader eyebrow="KYC" title="FastLane">

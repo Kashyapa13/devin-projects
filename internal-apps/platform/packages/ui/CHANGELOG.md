@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Fleet visual language (ADR-0016): `styles.css` export — tokens,
+- Fleet visual language (ADR-0018): `styles.css` export — tokens,
   ambient canvas, glass `.appbar`, `.dock`, `.seg`, `.btn-*`, tone-mapped
   `.pill/.badge/.chip` with indicator dots, borderless `.queue-table`
   with indigo focus rail, `.table-card`/`.panel`/`.card`, `.timeline`,

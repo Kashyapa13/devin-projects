@@ -1,5 +1,5 @@
 /**
- * @company/ui — the fleet visual language (ADR-0016).
+ * @company/ui — the fleet visual language (ADR-0018).
  *
  * ONE stylesheet every app imports (`import "@company/ui/styles.css"`):
  * canvas + ambient depth, glassmorphism, layered elevation, soft status

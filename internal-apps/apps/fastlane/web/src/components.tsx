@@ -2,7 +2,7 @@ import { ColorSpring, Pulse, useTranslation } from "@company/ui";
 
 // Soft tone washes — the color-spring animates the pill's tint on status
 // transitions (ADR-0014 moment); the badge/dot come from the tone map in
-// @company/ui/styles.css (ADR-0016).
+// @company/ui/styles.css (ADR-0018).
 const PILL_COLOR: Record<string, string> = {
   pending: "rgba(79, 70, 229, 0.14)", // indigo
   in_review: "rgba(180, 83, 9, 0.14)", // amber

@@ -1,5 +1,5 @@
 /**
- * Fleet chrome — the shared app frame (ADR-0016): a sticky frosted
+ * Fleet chrome — the shared app frame (ADR-0018): a sticky frosted
  * header, the pill-styled keyboard command dock, and the segmented
  * tab control. Presentational only; all labels arrive i18n'd from
  * the app. Styling lives in styles.css — components emit the class
