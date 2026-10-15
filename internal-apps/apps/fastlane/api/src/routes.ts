@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { ApiError } from "@company/http";
+import { ApiError, rateLimitPresets } from "@company/http";
 import { requireRole } from "@company/auth";
 import * as svc from "./services.js";
 
@@ -69,7 +69,10 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
   app.get(
     "/api/v1/queue",
-    { preHandler: roleGate(["reviewer", "supervisor", "admin"]) },
+    {
+      config: { rateLimit: rateLimitPresets.read },
+      preHandler: roleGate(["reviewer", "supervisor", "admin"]),
+    },
     async (req) => {
       const q = req.query as { tab?: string; cursor?: string; limit?: string };
       return svc.listQueue(deps, {
@@ -83,7 +86,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
   app.get(
     "/api/v1/cases/:id",
-    { preHandler: roleGate(["reviewer", "supervisor", "admin"]) },
+    { config: { rateLimit: rateLimitPresets.read }, preHandler: roleGate(["reviewer", "supervisor", "admin"]) },
     async (req) => svc.getCase(deps, (req.params as { id: string }).id),
   );
 
@@ -96,6 +99,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       path,
       {
         ...(body === undefined ? {} : { schema: { body } }),
+        config: { rateLimit: rateLimitPresets.mutation },
         preHandler: roleGate(["reviewer", "supervisor"]),
       },
       async (req, reply) => {
@@ -109,11 +113,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     );
 
   mutation("/api/v1/cases/:id/claim", (req) =>
-    svc.transition(deps, (req.params as { id: string }).id, "IN_REVIEW", userOf(req), { reqId: reqId(req) }),
+    svc.transition(deps, (req.params as { id: string }).id, "IN_REVIEW", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
   );
 
   mutation("/api/v1/cases/:id/approve", (req) =>
-    svc.transition(deps, (req.params as { id: string }).id, "APPROVED", userOf(req), { reqId: reqId(req) }),
+    svc.transition(deps, (req.params as { id: string }).id, "APPROVED", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
   );
 
   mutation(
@@ -127,7 +131,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   );
 
   mutation("/api/v1/cases/:id/escalate", (req) =>
-    svc.transition(deps, (req.params as { id: string }).id, "ESCALATED", userOf(req), { reqId: reqId(req) }),
+    svc.transition(deps, (req.params as { id: string }).id, "ESCALATED", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
   );
 
   mutation(
@@ -143,25 +147,25 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
   app.get(
     "/api/v1/cases/:id/audit",
-    { preHandler: roleGate(["reviewer", "supervisor", "admin"]) },
+    { config: { rateLimit: rateLimitPresets.read }, preHandler: roleGate(["reviewer", "supervisor", "admin"]) },
     async (req) =>
       svc.caseAudit(deps, (req.params as { id: string }).id),
   );
 
   app.get(
     "/api/v1/audit",
-    { preHandler: roleGate(["supervisor", "admin"]) },
+    { config: { rateLimit: rateLimitPresets.read }, preHandler: roleGate(["supervisor", "admin"]) },
     async () => svc.allAudit(deps),
   );
 
   app.get(
     "/api/v1/cases/:id/doc-url",
-    { preHandler: roleGate(["reviewer", "supervisor"]) },
+    { config: { rateLimit: rateLimitPresets.read }, preHandler: roleGate(["reviewer", "supervisor"]) },
     async (req) =>
       svc.docUrl(deps, (req.params as { id: string }).id, userOf(req), reqId(req)),
   );
 
-  app.post("/api/v1/cron/sla-digest", async (req, reply) => {
+  app.post("/api/v1/cron/sla-digest", { config: { rateLimit: rateLimitPresets.mutation } }, async (req, reply) => {
     if (req.headers["x-cron-secret"] !== deps.cronSecret) {
       return reply.status(403).send({
         error: { code: "FORBIDDEN", message: "invalid cron credential" },

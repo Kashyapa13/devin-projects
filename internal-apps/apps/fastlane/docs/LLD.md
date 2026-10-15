@@ -23,7 +23,13 @@ CREATE INDEX queue_active ON kyc_cases (status, sla_due_at)
   WHERE status NOT IN ('APPROVED','REJECTED');
 CREATE INDEX queue_mine ON kyc_cases (assignee_id, status) WHERE status='IN_REVIEW';
 
--- users + case_notes tables: defined in migration 0002 per the §3.2 field rules
+CREATE TABLE users (id uuid PRIMARY KEY, email text UNIQUE NOT NULL,
+  display_name text NOT NULL, roles text[] NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE case_notes (id bigserial PRIMARY KEY, case_id uuid REFERENCES kyc_cases(id),
+  author_id uuid REFERENCES users(id), body text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE idempotency_keys (key text, actor text, response jsonb, status_code int,
+  created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (key, actor));
+
 CREATE TABLE state_transitions (from_status text, to_status text, roles text[]);
 
 CREATE TABLE audit_events (

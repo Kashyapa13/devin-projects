@@ -80,7 +80,7 @@ if (isMain) {
     const casesArg = process.argv.find((a) => a.startsWith("--cases="));
     const cases = casesArg ? Number(casesArg.split("=")[1]) : 40;
     await runSeeds(pool, makeRegistry(cipherFromEnv(), cases), "kyc-seed-v1");
-    console.log(`seeded: kyc-seed-v1 (${cases} cases, ${USERS.length} users)`);
+    console.log(`seeded: kyc-seed-v1 (${cases} cases, 4 users)`);
   } finally {
     await pool.end();
   }

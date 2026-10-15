@@ -271,6 +271,53 @@ describe("routes + RBAC matrix (gate: §7.3 integration)", () => {
     }
   });
 
+  it("read surfaces: case detail masked, case+global audit, doc-url expiry", async () => {
+    const id = await pendingCaseId();
+    const detail = await get(`/api/v1/cases/${id}`);
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json()).not.toHaveProperty("legal_name_enc");
+    await post(`/api/v1/cases/${id}/claim`, ["reviewer"], {}, "read-clm1");
+    const trail = await get(`/api/v1/cases/${id}/audit`);
+    expect(trail.json().length).toBeGreaterThan(0);
+    const all = await get("/api/v1/audit", ["supervisor"]);
+    expect(all.statusCode).toBe(200);
+    expect(Array.isArray(all.json())).toBe(true);
+    const doc = await get(`/api/v1/cases/${id}/doc-url`);
+    expect(doc.statusCode).toBe(200);
+    const body = doc.json();
+    expect(body.url).toContain("expires=");
+    expect(Date.parse(body.expires_at)).toBeGreaterThan(Date.now());
+    // doc-url read is audited too
+    const trail2 = await get(`/api/v1/cases/${id}/audit`);
+    expect(trail2.json().length).toBeGreaterThan(trail.json().length);
+  });
+
+  it("edge surfaces: 404 case, stale version, unknown tab, breaching tab", async () => {
+    const missing = await get(`/api/v1/cases/00000000-0000-0000-0000-000000000000`);
+    expect(missing.statusCode).toBe(404);
+    const id = await pendingCaseId();
+    await post(`/api/v1/cases/${id}/claim`, ["reviewer"], { expected_version: 1 }, "edge-clm1");
+    const stale = await post(`/api/v1/cases/${id}/approve`, ["reviewer"], { expected_version: 99 }, "edge-stale");
+    expect(stale.statusCode).toBe(409);
+    expect(stale.json().error.code).toBe("STALE_VERSION");
+    expect((await get("/api/v1/queue?tab=nope")).statusCode).toBe(400);
+    const breaching = await get("/api/v1/queue?tab=breaching&limit=5");
+    expect(breaching.statusCode).toBe(200);
+    for (const r of breaching.json().rows as { sla_due_at: string }[]) {
+      expect(new Date(r.sla_due_at).getTime()).toBeLessThan(Date.now());
+    }
+  });
+
+  it("note surface: empty 400, ok note audited", async () => {
+    const id = await pendingCaseId();
+    const empty = await post(`/api/v1/cases/${id}/note`, ["reviewer"], { body: "   " }, "note-emp1");
+    expect(empty.statusCode).toBe(400);
+    const ok = await post(`/api/v1/cases/${id}/note`, ["reviewer"], { body: "call logged with entity" }, "note-ok01");
+    expect(ok.statusCode).toBe(200);
+    const trail = await get(`/api/v1/cases/${id}/audit`);
+    expect((trail.json() as { action: string }[]).some((a) => a.action === "case.note")).toBe(true);
+  });
+
   it("supervisor reopen: reviewer escalates, supervisor claims back to IN_REVIEW", async () => {
     const id = await pendingCaseId();
     await post(`/api/v1/cases/${id}/claim`, ["reviewer"], {}, "esc-claim");
