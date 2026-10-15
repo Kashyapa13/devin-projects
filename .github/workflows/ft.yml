@@ -1,21 +1,16 @@
 name: ft
 
-# Functional tests on PR. `ft` needs `ft-unit` (self-contained chain —
+# Functional tests on PR. `ft-app` needs `ft-unit` (self-contained chain —
 # workflow_run can't order across files pre-merge). Per affected app:
 # docker compose up (<app>-pg) → db:setup (migrate + seed) → Playwright
 # keyboard-mode suites. Traces + recordings upload on failure (14-day).
 # Apps without a playwright.config are skipped by affected-apps' ft list.
+# The `ft` job aggregates the matrix into one stable required check; it
+# passes trivially when internal-apps or FT-enabled apps are untouched
+# (workflow-level paths: filters would leave required checks unreported).
 
 on:
   pull_request:
-    paths:
-      - "internal-apps/apps/**"
-      - "internal-apps/platform/**"
-      - "internal-apps/scripts/**"
-      - "internal-apps/package.json"
-      - "internal-apps/pnpm-lock.yaml"
-      - "internal-apps/docker-compose.yml"
-      - ".github/workflows/ft.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -33,52 +28,72 @@ defaults:
     working-directory: internal-apps
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      hit: ${{ steps.d.outputs.hit }}
+      ft: ${{ steps.d.outputs.hit == 'true' && steps.ftapps.outputs.ft || '[]' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - id: d
+        run: |
+          if git diff --name-only "$TURBO_SCM_BASE...$TURBO_SCM_HEAD" | grep -q '^internal-apps/'; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+        working-directory: .
+      - id: ftapps
+        if: steps.d.outputs.hit == 'true'
+        run: echo "ft=$(pnpm -s affected-apps | jq -c '.ft')" >> "$GITHUB_OUTPUT"
+      - run: echo "ft=[]" >> "$GITHUB_OUTPUT"
+        if: steps.d.outputs.hit != 'true'
+
   ft-unit:
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        if: needs.changes.outputs.hit == 'true'
         with:
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.hit == 'true'
         with:
           package_json_file: internal-apps/package.json
       - uses: actions/setup-node@v4
+        if: needs.changes.outputs.hit == 'true'
         with:
           node-version-file: internal-apps/.nvmrc
           cache: pnpm
           cache-dependency-path: internal-apps/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+        if: needs.changes.outputs.hit == 'true'
       - run: pnpm turbo run test --affected
+        if: needs.changes.outputs.hit == 'true'
+      - run: echo "internal-apps untouched — gate passes trivially"
+        if: needs.changes.outputs.hit != 'true'
 
-  affected:
-    needs: ft-unit
-    runs-on: ubuntu-latest
-    outputs:
-      apps: ${{ steps.m.outputs.apps }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-        with:
-          package_json_file: internal-apps/package.json
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: internal-apps/.nvmrc
-          cache: pnpm
-          cache-dependency-path: internal-apps/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - id: m
-        run: echo "apps=$(pnpm -s affected-apps | jq -c '.ft')" >> "$GITHUB_OUTPUT"
-
-  ft:
-    needs: affected
-    if: ${{ needs.affected.outputs.apps != '[]' }}
+  ft-app:
+    needs: changes
+    if: ${{ needs.changes.outputs.ft != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        app: ${{ fromJSON(needs.affected.outputs.apps) }}
+        app: ${{ fromJSON(needs.changes.outputs.ft) }}
     runs-on: ubuntu-latest
     timeout-minutes: 14
     steps:
@@ -133,3 +148,18 @@ jobs:
             internal-apps/apps/${{ matrix.app }}/blob-report/
           retention-days: 14
           if-no-files-found: ignore
+
+  ft:
+    # Stable required-check context: fails when any FT work failed, passes
+    # when suites ran green or there was nothing to run.
+    needs: [changes, ft-unit, ft-app]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: |
+          echo "changes=${{ needs.changes.result }} ft-unit=${{ needs.ft-unit.result }} ft-app=${{ needs.ft-app.result }}"
+          for r in ${{ needs.changes.result }} ${{ needs.ft-unit.result }} ${{ needs.ft-app.result }}; do
+            case "$r" in success|skipped) ;; *) exit 1;; esac
+          done
+          echo "ft: all functional tests green (or not affected)"
