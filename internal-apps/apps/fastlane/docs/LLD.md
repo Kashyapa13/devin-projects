@@ -37,6 +37,10 @@ CREATE TABLE audit_events (
   actor_id uuid NOT NULL, action text NOT NULL, diff jsonb, req_id text,
   created_at timestamptz NOT NULL DEFAULT now()
 );  REVOKE UPDATE, DELETE ON audit_events FROM PUBLIC;  -- append-only, enforced
+-- Runtime binds NOLOGIN group role fastlane_app (migration 0002): CRUD on
+-- the app tables, SELECT+INSERT only on audit_events. The API must never
+-- connect as a superuser — a superuser DSN bypasses the PUBLIC revoke
+-- (verifier breach: audit rows rewritten as postgres).
 CREATE INDEX audit_entity ON audit_events (entity, entity_id);
 ```
 
@@ -44,7 +48,9 @@ CREATE INDEX audit_entity ON audit_events (entity, entity_id);
 
 GET /queue?tab=mine|team|breaching + filters (partial indexes) · GET /cases/:id
 · POST claim|approve|reject|escalate|note|reveal (reveal = audited unmask —
-masked by default; allow-table validation; reject requires reason → 400;
+every call is a real disclosure: no idempotency-cache replay, each request
+re-executes and writes its own audit row; masked by default; allow-table
+validation; reject requires reason → 400;
 optimistic lock on version) · GET /cases/:id/audit + GET /audit (exportable)
 · GET doc-url (signed, never bytes) · POST /cron/sla-digest ·
 GET /metrics (unauthenticated; Prometheus exposition — ops scrape only).

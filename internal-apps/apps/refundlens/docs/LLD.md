@@ -143,6 +143,14 @@ parsed as a nested query whose tables and verbs face the identical
 fences — a subquery is never an escape hatch. Server-rendered widget SQL
 may legitimately emit subqueries; they are validated, not banned.
 
+Function calls face a family rule, not a denylist (verifier breach:
+`pg_read_file`/`pg_ls_dir`/`pg_sleep` walked past the named list): every
+identifier matching `pg_*`, `dblink*`, or `lo_*` is rejected outright —
+they are engine machinery, never refund data. Named bans additionally
+cover `set_config` and the `query_to_xml`/`database_to_xml` family,
+which re-parse a SQL string at runtime and would smuggle unfenced inner
+SQL through as one opaque string token.
+
 ## Template renderer contract (views — typed params only)
 
 Client sends `{dim, metric, from, to, filters[]}` — never SQL, never an

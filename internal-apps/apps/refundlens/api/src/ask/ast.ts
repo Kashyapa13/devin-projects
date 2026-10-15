@@ -75,7 +75,17 @@ export const NON_SELECT_VERBS = new Set([
 export const BANNED_EXPR_WORDS = new Set([
   "pg_terminate_backend", "pg_cancel_backend", "set_config",
   "dblink_exec", "dblink", "lo_import", "lo_export",
+  // re-parse a SQL string at runtime — smuggles unfenced inner SQL past
+  // the AST (the inner statement is one opaque string token)
+  "query_to_xml", "database_to_xml", "query_to_xmltext",
 ]);
+
+/** Function-name families banned outright — the denylist above always
+ * misses the next server-side function. Every pg_* function is engine
+ * machinery (files, processes, storage, sessions), never a refund
+ * aggregate; dblink/lo_* reach outside the statement. Identifier
+ * tokens are lowercased by the lexer, so a prefix match is exact. */
+export const BANNED_EXPR_PREFIXES = ["pg_", "dblink", "lo_"] as const;
 
 export function lex(sql: string): Token[] {
   const out: Token[] = [];
