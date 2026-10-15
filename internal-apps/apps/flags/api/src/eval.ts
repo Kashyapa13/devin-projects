@@ -12,7 +12,7 @@ export function evaluateFlag(flag: { key: string; targeting: any },
   const t = flag.targeting ?? {};
   if (t.enabled_if?.bucket_lt !== undefined)
     return { key: flag.key, enabled: bucket(userId, flag.key) < t.enabled_if.bucket_lt,
-      reason: `bucket<${t.enabled_if.bucket_lt}` };
+      reason: `bucket(${userId})<${t.enabled_if.bucket_lt}` };
   return { key: flag.key, enabled: t.default_enabled === true, reason: "default" };
 }
 /* stale-while-revalidate cache: serve last-known while refreshing in bg. */
