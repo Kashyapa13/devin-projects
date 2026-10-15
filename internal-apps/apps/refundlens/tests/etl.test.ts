@@ -22,7 +22,9 @@ const n = async (db: Pool, sql: string, p?: unknown[]): Promise<number> =>
 beforeAll(async () => {
   pg = await pgHarness("refundlens");
   rollup = new Pool({ connectionString: pg.dsn });
+  rollup.on("error", () => {});
   replica = new Pool({ connectionString: pg.dsn });
+  replica.on("error", () => {});
   const runner = migrationRunner(rollup);
   await runner.migrate(loadMigrations(MIGRATIONS));
   await runSeeds(rollup, registry, "refund-seed-v1");

@@ -34,6 +34,7 @@ async function ask(q: string, roles = ["analyst"]) {
 beforeAll(async () => {
   pg = await pgHarness("refundlens");
   pool = new Pool({ connectionString: pg.dsn });
+  pool.on("error", () => {});
   const runner = migrationRunner(pool);
   await runner.migrate(loadMigrations(MIGRATIONS));
   await runSeeds(pool, registry, "refund-seed-v1");

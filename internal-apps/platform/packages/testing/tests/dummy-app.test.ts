@@ -118,6 +118,7 @@ describe("pgHarness (docker)", () => {
     try {
       const { Pool } = await import("pg");
       const pool = new Pool({ connectionString: harness.dsn });
+      pool.on("error", () => {});
       await pool.query(
         "CREATE TABLE items (id SERIAL PRIMARY KEY, label TEXT, n INT)",
       );
