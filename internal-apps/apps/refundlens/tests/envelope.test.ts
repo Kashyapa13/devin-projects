@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { envelope } from "@company/http";
-import { buildServer } from "../api/src/server.js";
+import { buildServer } from "../api/src/app.js";
 import { AnswerCache } from "../api/src/cache.js";
 import { defaultMetrics } from "../api/src/service.js";
 import { CHEAP_PLAN, StubDb } from "./helpers/stub-db.js";
