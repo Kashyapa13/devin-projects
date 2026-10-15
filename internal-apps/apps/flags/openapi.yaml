@@ -1,0 +1,7 @@
+openapi: 3.0.3
+info: { title: flags-demo, version: 0.1.0 }
+paths:
+  /api/flags: { get: { summary: list }, post: { summary: create (flag_editor) } }
+  /api/flags/{id}: { put: { summary: update targeting }, delete: { summary: typed-confirm delete (flag_admin) } }
+  /api/flags/evaluate: { get: { summary: deterministic bucketed eval, cached SWR } }
+  /api/flags/audit: { get: { summary: audit timeline } }
