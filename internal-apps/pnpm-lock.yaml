@@ -220,6 +220,9 @@ importers:
       '@company/testing':
         specifier: workspace:*
         version: link:../../platform/packages/testing
+      '@playwright/test':
+        specifier: ^1.48.2
+        version: 1.64.1
       '@types/node':
         specifier: ^22.9.0
         version: 22.20.5
@@ -232,6 +235,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.3.0(@types/react@19.3.0)
+      '@vitest/coverage-v8':
+        specifier: ^4.0.0
+        version: 4.1.12(vitest@4.1.12)
       i18next:
         specifier: ^24.0.0
         version: 24.2.3(typescript@5.9.3)

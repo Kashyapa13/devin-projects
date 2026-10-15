@@ -74,10 +74,14 @@ export function buildApp(deps: { db?: pg.Pool } = {}) {
   app.setNotFoundHandler(async (req, reply) => {
     if (req.method !== "GET" || req.raw.url?.startsWith("/api/"))
       return reply.code(404).send({ error: { code: "NOT_FOUND", message: "route" } });
-    const urlPath = decodeURIComponent((req.raw.url ?? "/").split("?")[0] ?? "/");
+    let urlPath: string;
+    try { urlPath = decodeURIComponent((req.raw.url ?? "/").split("?")[0] ?? "/"); }
+    catch { return reply.code(400).send({ error: { code: "BAD_INPUT", message: "malformed URL escape" } }); }
     const rel = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, "");
-    let file = path.join(WEB_ROOT, rel === "/" ? "index.html" : rel);
-    if (!file.startsWith(WEB_ROOT)) file = path.join(WEB_ROOT, "index.html"); // traversal guard
+    // resolve against "." so a leading "/" can't win; the sep-terminated prefix
+    // check means even a surviving ".." lands on index.html, not a sibling dir.
+    let file = path.resolve(WEB_ROOT, "." + rel);
+    if (!file.startsWith(WEB_ROOT + path.sep)) file = path.join(WEB_ROOT, "index.html");
     try { if ((await fsp.stat(file)).isDirectory()) file = path.join(WEB_ROOT, "index.html"); }
     catch { file = path.join(WEB_ROOT, "index.html"); } // SPA fallback
     try {
