@@ -120,7 +120,8 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     if (autoReject) setRejecting(true);
   }, [autoReject]);
 
-  if (isError || (!isLoading && !kase))
+  if (isLoading) return <p>{t("loading")}</p>;
+  if (isError || !kase)
     return (
       <main>
         <p role="alert" className="error">
@@ -128,7 +129,6 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         </p>
       </main>
     );
-  if (isLoading) return <p>{t("loading")}</p>;
   return (
     <main>
       {/* shared-element morph: the queue row's ref cell MORPHS into this
