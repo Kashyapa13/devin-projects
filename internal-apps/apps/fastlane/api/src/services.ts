@@ -40,6 +40,9 @@ interface Row {
 const rows = (r: unknown): Record<string, unknown>[] =>
   (r as Row).rows ?? [];
 
+export const UUID_RE =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 const MASKED_COLS =
   "id, customer_ref, country, risk_score, doc_type, status, priority, " +
   "assignee_id, sla_due_at, version, created_at, updated_at";
@@ -319,10 +322,19 @@ export async function listQueue(
   }
   const conds: string[] = [cond];
   if (opts.cursor) {
-    const [epoch, id] = Buffer.from(opts.cursor, "base64url")
-      .toString()
-      .split("|");
-    params.push(Number(epoch), id);
+    const decoded = Buffer.from(opts.cursor, "base64url").toString();
+    const [epoch, id] = decoded.split("|");
+    const epochNum = Number(epoch);
+    // A cursor that doesn't decode to epoch|uuid is a 400, never a silent
+    // empty page ("never silently wrong") and never a 500.
+    if (
+      decoded.split("|").length !== 2 ||
+      !Number.isFinite(epochNum) ||
+      !UUID_RE.test(id ?? "")
+    ) {
+      throw new ApiError("VALIDATION", "malformed queue cursor", 400);
+    }
+    params.push(epochNum, id);
     conds.push(
       `(extract(epoch from sla_due_at), id) > ($${params.length - 1}::numeric, $${params.length}::uuid)`,
     );
