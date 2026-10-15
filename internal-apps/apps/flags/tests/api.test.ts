@@ -113,6 +113,37 @@ describe("label law — demo contract on every surface", () => {
   });
 });
 
+describe("static panel serving (setNotFoundHandler) — deployed unit serves dist-web", () => {
+  // dist-web is committed (base builds it into the repo) so inject() can read it.
+  it("GET / → index.html; GET /demo → SPA fallback to index.html", async () => {
+    const root = await call({ method: "GET", url: "/" });
+    expect(root.statusCode).toBe(200);
+    expect(root.headers["content-type"]).toContain("text/html");
+    expect(root.body).toContain("<html");
+    const demo = await call({ method: "GET", url: "/demo" });
+    expect(demo.statusCode).toBe(200);
+    expect(demo.headers["content-type"]).toContain("text/html");
+  });
+  it("GET /api/nonexistent → JSON 404 envelope (api-prefixed GETs never static-serve)", async () => {
+    const r = await call({ method: "GET", url: "/api/nope" });
+    expect(r.statusCode).toBe(404);
+    expect(r.json()).toEqual({ error: { code: "NOT_FOUND", message: "route" } });
+  });
+  it("POST /not-an-api-route → JSON 404 (static serving is GET-only)", async () => {
+    const r = await call({ method: "POST", url: "/whatever", role: "flag_admin", payload: {} });
+    expect(r.statusCode).toBe(404);
+    expect(r.json().error.code).toBe("NOT_FOUND");
+  });
+  it.each(["/../server.ts", "/%2e%2e/server.ts", "/%2e%2e%2fapi%2fsrc%2fserver.ts"])(
+    "traversal %s → cannot escape WEB_ROOT (404 or safe fallback)",
+    async (url) => {
+      const r = await call({ method: "GET", url });
+      expect([200, 404]).toContain(r.statusCode); // 200 only via SPA index.html fallback
+      if (r.statusCode === 200) expect(r.body).toContain("<html"); // never file contents
+    },
+  );
+});
+
 describe("GET /api/flags — list (F-01)", () => {
   it("lists seeded demo-* flags with per-env rows, viewer-readable", async () => {
     const r = await call({ method: "GET", url: "/api/flags" });
@@ -143,12 +174,13 @@ describe("POST /api/flags — create + RBAC (F-02, F-06)", () => {
       method: "POST",
       url: "/api/flags",
       role,
-      payload: { key: `demo-mtx-${role}-${env}`, env },
+      // DEMO_KEY law is lowercase/hyphens only — strip the flag_ prefix
+      payload: { key: `demo-mtx-${role.replace("flag_", "")}-${env}`, env },
     });
     expect(r.statusCode).toBe(want);
     if (want === 200) {
       const { rows } = await pool.query(`SELECT 1 FROM flags WHERE key=$1 AND env=$2`, [
-        `demo-mtx-${role}-${env}`,
+        `demo-mtx-${role.replace("flag_", "")}-${env}`,
         env,
       ]);
       expect(rows.length).toBe(1);
@@ -167,6 +199,22 @@ describe("POST /api/flags — create + RBAC (F-02, F-06)", () => {
     });
   });
 
+  it.each([
+    { key: "real-checkout", note: "real-looking key" },
+    { key: "Demo-Upper", note: "uppercase rejected" },
+    { key: "demo_under", note: "underscore rejected" },
+  ])("non-synthetic key → 400 BAD_INPUT demo-* law ($note)", async ({ key }) => {
+    const r = await call({
+      method: "POST", url: "/api/flags", role: "flag_editor",
+      payload: { key, env: "dev" },
+    });
+    expect(r.statusCode).toBe(400);
+    const b = r.json();
+    expect(b.error.code).toBe("BAD_INPUT");
+    expect(b.error.message).toContain("demo-*");
+    expect(b.error.message).toContain("Power Apps"); // constitutional copy
+  });
+
   it("rejects malformed targeting JSON string → 400 BAD_TARGETING with actionable copy, no write (F-08)", async () => {
     const r = await call({
       method: "POST",
@@ -180,6 +228,22 @@ describe("POST /api/flags — create + RBAC (F-02, F-06)", () => {
     expect(b.error.message).toContain("valid JSON"); // actionable copy
     const { rows } = await pool.query(`SELECT 1 FROM flags WHERE key='demo-bad-t'`);
     expect(rows.length).toBe(0);
+  });
+
+  it.each([
+    { t: { enabled_if: { bucket_lt: -1 } }, note: "bucket_lt below 0" },
+    { t: { enabled_if: { bucket_lt: 101 } }, note: "bucket_lt above 100" },
+    { t: { enabled_if: { bucket_lt: "50" } }, note: "bucket_lt not a number" },
+    { t: { enabled_if: 5 }, note: "enabled_if not an object" },
+  ])("structurally invalid targeting → 400 BAD_TARGETING ($note)", async ({ t }) => {
+    const r = await call({
+      method: "POST", url: "/api/flags", role: "flag_editor",
+      payload: { key: "demo-shape-t", env: "dev", targeting: t },
+    });
+    expect(r.statusCode).toBe(400);
+    expect(r.json().error.code).toBe("BAD_TARGETING");
+    const { rows } = await pool.query(`SELECT 1 FROM flags WHERE key='demo-shape-t'`);
+    expect(rows.length).toBe(0); // never reached the db
   });
 
   it("accepts targeting passed as a JSON object", async () => {
@@ -400,7 +464,7 @@ describe("GET /api/flags/audit — one row per mutation (F-05)", () => {
   it("create + update + delete each write an audit row with actor/action/detail/at", async () => {
     const creates = await auditRows("create");
     expect(creates.length).toBeGreaterThanOrEqual(4); // RBAC matrix + object-targeting creates
-    const mtx = creates.find((a) => a.detail?.key === "demo-mtx-flag_editor-dev");
+    const mtx = creates.find((a) => a.detail?.key === "demo-mtx-editor-dev");
     expect(mtx).toBeTruthy();
     expect(mtx.actor).toBe("ut-actor");
     expect(mtx.detail.env).toBe("dev");
