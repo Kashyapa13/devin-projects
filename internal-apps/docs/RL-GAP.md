@@ -28,46 +28,46 @@ and **WATERMARK HONESTY** (every surface shows data-as-of).
 
 | # | Item | Verdict | Work item |
 |---|---|---|---|
-| W1 | ONE charting foundation | **GAP** | `platform/packages/ui/src/charts/` — SVG primitives (Sparkline, TimeSeries, Heatmap, Donut, Bars, Scatter); zero new deps; motion primitives drive draw-in |
-| W2 | KPI stat row (8 cards: sparkline + delta + click-through) | **GAP** | widget `kpi` + cards row |
-| W3 | Multi-series time charts + threshold band + z-score markers | **GAP** | widget `timeseries` (series by channel/segment, stacked opt) + anomaly computation server-side, labeled "heuristic" |
-| W4 | Hour × day-of-week HEATMAP | **GAP** | widget `heatmap` on `agg_hourly` |
-| W5 | Donut by reason code | **GAP** | widget `donut` |
-| W6 | Top-N bars (count/amount/rate, sortable) | **GAP** | widget `topn` |
-| W7 | Latency-vs-amount scatter | **GAP** | widget `scatter` (density shading) |
-| W8 | Top-N tables (merchants, reason codes) | **GAP** | widget `table` rows |
-| W9 | CROSS-FILTER (click → filters detail + vice versa) | **GAP** | dashboard state: click sets global filter → detail table re-queries |
-| W10 | Compare-to-previous (period-over-period deltas) | **GAP** | `compare=1` → deltas on every widget (server-computed) |
-| W11 | Global bar (24h–12M ranges, filters, saved shareable views) | **GAP** | query-param state = saved views |
+| W1 | ONE charting foundation | **CLOSED** | `platform/packages/ui/src/charts/` — Sparkline, TimeSeries, Heatmap, Donut, TopBars, Scatter, KpiCard/KpiGrid, LiveDot; zero new deps; Reveal/stagger/CountUp drive draw-in |
+| W2 | KPI stat row (8 cards: sparkline + delta + click-through) | **CLOSED** | `kpi` widget + `KpiCard/KpiGrid`; delta chip on `compare=1`; pending/at-risk cards click-through to state filter |
+| W3 | Multi-series time charts + threshold band + z-score markers | **CLOSED** | `timeseries` (dim/grain/stacked toggle) + server `stats`/`anomalies` (|z|>3, cap 20) rendered as band + markers labeled "heuristic" |
+| W4 | Hour × day-of-week HEATMAP | **CLOSED** | `heatmap` widget + `Heatmap` 7×24; empty cells render as empty |
+| W5 | Donut by reason code | **CLOSED** | `donut` widget + `Donut` component; click filters `reason` |
+| W6 | Top-N bars (count/amount/rate, sortable) | **CLOSED** | `topn` widget `sort=count|amount|rate` server-side + `TopBars` |
+| W7 | Latency-vs-amount scatter | **CLOSED** | `scatter` widget + `Scatter` density-shaded |
+| W8 | Top-N tables (merchants, reason codes) | **CLOSED** | `topn` rows + `detail` table (id/txn/channel/segment/amount/reason/state/latency) |
+| W9 | CROSS-FILTER (click → filters detail + vice versa) | **CLOSED** | clicks write global filter params → all widgets + detail re-fetch; click again clears; clear-filters chip |
+| W10 | Compare-to-previous (period-over-period deltas) | **CLOSED** | `compare=1` → every widget returns a shifted `compare` series; KPI delta chips + compare rows |
+| W11 | Global bar (24h–12M ranges, filters, saved shareable views) | **CLOSED** | `#/dashboard?range&compare&channel&segment&reason&state&stacked&sort&tsdim` — saved views are links |
 
 ### (b) Live tier (ADR-0016)
 
 | # | Item | Verdict | Work item |
 |---|---|---|---|
-| L1 | 30–60s heartbeat delta sync off replica | **GAP** | `scripts/heartbeat.ts` (idempotent delta upsert + live-window recompute) |
+| L1 | 30–60s heartbeat delta sync off replica | **CLOSED** | `scripts/heartbeat.ts` every `HEARTBEAT_MS` (45s default) or `--once`: runSync → evaluate → POST beat; degraded beats recorded, never silent |
 | L2 | Hourly reconciliation | **already met** | existing `etl.ts` stays the reconciliation pass |
-| L3 | `GET /api/stream/heartbeat` SSE | **GAP** | fastify SSE route; beats push `{watermark, last_event_at, rows}` |
-| L4 | Breathing live dot (green <2m · amber 2–5 · red >5, tooltip = watermark + last-event age) | **GAP** | `LiveDot` component; state from SSE beat age |
-| L5 | Widgets re-bind on events — NEVER reload | **GAP** | SSE event → query refetch per widget (TanStack invalidate) |
-| L6 | Last-24h live tail (minute grain) | **GAP** | `timeseries` accepts `grain=minute` window 24h |
+| L3 | `GET /api/stream/heartbeat` SSE | **CLOSED** | emits `{watermark,last_event_at,beat_at,rows,lag_s}` each beat + initial snapshot; `?token=` for EventSource (ADR-0018) |
+| L4 | Breathing live dot (green <2m · amber 2–5 · red >5, tooltip = watermark + last-event age) | **CLOSED** | `LiveDot` — StatusSpring color + PulseOnDanger crossing; tooltip = watermark + event age |
+| L5 | Widgets re-bind on events — NEVER reload | **CLOSED** | SSE beat → `queryClient.invalidateQueries(['widget'])` |
+| L6 | Last-24h live tail (minute grain) | **CLOSED** | `grain=minute` accepted by `timeseries` (24h preset uses hour; minute available for the tail view) |
 
 ### (c) Monitors-as-code (ADR-0016)
 
 | # | Item | Verdict | Work item |
 |---|---|---|---|
-| M1 | Versioned monitor defs + eval per beat | **GAP** | `monitors` table (migrated) + `monitors/` evaluator; defs versioned + tested |
-| M2 | Firing → Slack stub + `monitor_events` | **GAP** | webhook stub endpoint for tests; events row per fire |
-| M3 | Seed monitors: heartbeat-age, refund-rate z-score, volume anomaly, backlog age | **GAP** | four defs shipped in migration/seed |
-| M4 | Monitor panel widget + `/monitors` admin | **GAP** | F-11 surface |
+| M1 | Versioned monitor defs + eval per beat | **CLOSED** | `monitors` (versioned, PATCH bumps version) + `monitors/evaluator.ts` per beat; firing/resolved transitions only — steady-state silent |
+| M2 | Firing → Slack stub + `monitor_events` | **CLOSED** | firing → `monitor_events` row + webhook POST (SLACK_WEBHOOK_URL/MONITOR_WEBHOOK, optional); `slackStub` injectable — tested |
+| M3 | Seed monitors: heartbeat-age, refund-rate z-score, volume anomaly, backlog age | **CLOSED** | four defs in migration 0002 |
+| M4 | Monitor panel widget + `/monitors` admin | **CLOSED** | `monitors_panel` widget on the dashboard + GET/PATCH `/api/monitors` (admin) |
 
 ### (d) Data
 
 | # | Item | Verdict | Work item |
 |---|---|---|---|
-| D1 | `agg_hourly` grain | **GAP** | migration 0002 + etl/heartbeat recompute |
-| D2 | Seed hour-of-day + day-of-week patterns | **GAP** | extend seed.ts (keep 5,432 exact count — redistribute occurred_at, don't change total) |
-| D3 | `monitors`/`monitor_events` DDL | **GAP** | migration 0002 |
-| D4 | Widget endpoint `/api/widgets/:name` via SAME fenced layer | **GAP** | typed params → template render → read-only exec (fence already exists — widgets reuse `ask/executor` path verbatim) |
+| D1 | `agg_hourly` grain | **CLOSED** | migration 0002; rebuilt in the sync tx; sums to 5,432 (tested) |
+| D2 | Seed hour-of-day + day-of-week patterns | **CLOSED** | landed in 15f4d34 — 5,432 exact |
+| D3 | `monitors`/`monitor_events` DDL | **CLOSED** | migration 0002 + 0003 (monitor_events_by_monitor index — fence cost-cap fix) |
+| D4 | Widget endpoint `/api/widgets/:name` via SAME fenced layer | **CLOSED** | `runWidget` → `runFenced` under `WIDGET_SCOPE` (ADR-0018); bogus/injection-ish params → `fenced_query_rejected` (tested) |
 
 ## 3. Non-gaps (already met)
 

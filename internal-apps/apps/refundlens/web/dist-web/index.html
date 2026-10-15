@@ -30,8 +30,34 @@
       .keys { font-size: .8em; opacity: .7; }
       .examples { font-size: .85em; opacity: .8; margin-top: .2rem; }
       .examples code { background: #8882; padding: .05rem .3rem; border-radius: .3rem; cursor: pointer; }
+      /* dashboard (F-09) */
+      .dash { max-width: none; }
+      body:has(.dash) { max-width: 80rem; }
+      .dashbar { display: flex; flex-direction: column; gap: .4rem; margin-bottom: .8rem; }
+      .dashbar-row { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+      .dashbar-row.filters { font-size: .85em; }
+      .chip { border: 1px solid #9996; border-radius: 999px; padding: .15rem .7rem; font-size: .85em; background: none; color: CanvasText; cursor: pointer; }
+      .chip-on { background: #2563eb; border-color: #2563eb; color: #fff; }
+      .flabel { opacity: .7; }
+      .spacer { flex: 1; }
+      .wm-chip { font-size: .82em; border: 1px solid #9995; border-radius: 999px; padding: .2rem .7rem; display: inline-flex; gap: .4rem; align-items: center; }
+      .beat-ok { color: #16a34a; font-weight: 700; }
+      .beat-degraded { color: #d97706; font-weight: 700; }
+      .kpi-wrap { margin: .6rem 0 .9rem; }
+      .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: .8rem; }
+      .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .8rem; }
+      .card h2 { font-size: .85em; margin: 0 0 .5rem; display: flex; gap: .35rem; align-items: center; flex-wrap: wrap; }
+      .empty-hint { font-size: .85em; opacity: .7; font-style: italic; }
+      .monitors { list-style: none; margin: 0; padding: 0; font-size: .85em; display: grid; gap: .25rem; }
+      .monitors .pill { border-radius: 999px; padding: 0 .5rem; font-size: .8em; background: #9994; }
+      .monitors .mon-ok { background: #16a34a; color: #fff; }
+      .monitors .mon-firing { background: #dc2626; color: #fff; }
+      .monitors .mon-off { background: #9994; }
+      .mono { font-family: ui-monospace, monospace; font-size: .85em; opacity: .8; }
+      .linkcell { border: none; background: none; padding: 0; color: #2563eb; cursor: pointer; font: inherit; }
+      input[type="date"] { font: inherit; padding: .1rem .4rem; border: 1px solid #9996; border-radius: .35rem; background: Canvas; color: CanvasText; }
     </style>
-    <script type="module" crossorigin src="/assets/index-DlMUK_hj.js"></script>
+    <script type="module" crossorigin src="/assets/index-CIbwQX_u.js"></script>
   </head>
   <body>
     <div id="root"></div>

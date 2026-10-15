@@ -40,6 +40,41 @@ export const BANNED_TABLES = ["ask_log", "sync_runs"] as const;
 /** Fence #2 — generated SQL may only read inside this schema, from these. */
 export const SCHEMA_ALLOWLIST = "refundlens";
 export const TABLE_ALLOWLIST = ["refund_events_raw", "agg_daily"] as const;
+
+/**
+ * Fence scope (ADR-0018): WHICH tables a path may read. The ask box keeps
+ * the tightest scope — NL-generated SQL touches the two data surfaces
+ * only, and sync internals stay banned. Server-rendered SQL (widgets,
+ * monitor evaluation) runs a wider scope: the app role legitimately
+ * SELECTs agg_hourly, monitors, monitor_events and sync_runs, so those
+ * read back through the SAME fences (AST, LIMIT cap, cost cap, timeout).
+ * ask_log stays banned in EVERY scope — user evidence is never a read
+ * surface.
+ */
+export const WIDGET_TABLES = [
+  "refund_events_raw",
+  "agg_daily",
+  "agg_hourly",
+  "monitors",
+  "monitor_events",
+  "sync_runs",
+] as const;
+export const WIDGET_BANNED = ["ask_log"] as const;
+
+export interface FenceScope {
+  /** allowlisted table names (schema stays pinned to refundlens) */
+  tables?: readonly string[];
+  /** unconditionally banned table names, even if allowlisted */
+  banned?: readonly string[];
+}
+
+/** The ask path's scope — the tightest one. */
+export const ASK_SCOPE: FenceScope = {};
+/** Server-rendered widget/monitor scope (ADR-0018). */
+export const WIDGET_SCOPE: FenceScope = {
+  tables: WIDGET_TABLES,
+  banned: WIDGET_BANNED,
+};
 /** Fence #3 — every statement carries a LIMIT ≤ cap. */
 export const LIMIT_DEFAULT = 500;
 export const LIMIT_MAX = 5000;
@@ -50,7 +85,9 @@ const VERB_IN_VERBS = (verbs: string[], set: Set<string>): string | null =>
   verbs.find((v) => set.has(v)) ?? null;
 
 /** AST validation of generated SQL — throws FencedRejection on any violation. */
-export function validateSql(sql: string): SelectAst {
+export function validateSql(sql: string, scope: FenceScope = {}): SelectAst {
+  const allowlist = scope.tables ?? TABLE_ALLOWLIST;
+  const banned = scope.banned ?? BANNED_TABLES;
   let ast: Ast;
   try {
     ast = parseSql(sql);
@@ -88,18 +125,18 @@ export function validateSql(sql: string): SelectAst {
         "only refund events and daily aggregates are queryable",
       );
     }
-    if ((BANNED_TABLES as readonly string[]).includes(t.table)) {
+    if (banned.includes(t.table)) {
       throw new FencedRejection(
         "banned_table",
         `table ${t.table} is not queryable through the ask box`,
         "usage history and sync internals are not data you can ask about",
       );
     }
-    if (!(TABLE_ALLOWLIST as readonly string[]).includes(t.table)) {
+    if (!allowlist.includes(t.table)) {
       throw new FencedRejection(
         "cross_schema",
         `table ${t.table} is outside the allowlist`,
-        "only refund_events_raw and agg_daily are queryable",
+        `only ${allowlist.join(", ")} are queryable`,
       );
     }
   }

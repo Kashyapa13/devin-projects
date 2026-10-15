@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import { COST_CAP, FencedRejection, validateSql } from "./fence.js";
+import {
+  COST_CAP,
+  FencedRejection,
+  validateSql,
+  type FenceScope,
+} from "./fence.js";
 
 export interface Queryable {
   query(text: string, params?: readonly unknown[]): Promise<unknown>;
@@ -15,6 +20,9 @@ export interface FenceExecutorOptions {
   timeoutMs?: number;
   /** fence #5 — EXPLAIN total-cost ceiling */
   costCap?: number;
+  /** table scope — ask path keeps the default (tightest); widgets/monitor
+   *  evaluation pass WIDGET_SCOPE (ADR-0018) */
+  scope?: FenceScope;
 }
 
 /**
@@ -30,7 +38,7 @@ export async function runFenced(
   params: readonly unknown[],
   opts: FenceExecutorOptions = {},
 ): Promise<{ rows: Record<string, unknown>[]; ms: number }> {
-  validateSql(sql); // fences 2/3/6 + AST (throws FencedRejection)
+  validateSql(sql, opts.scope ?? {}); // fences 2/3/6 + AST (throws FencedRejection)
 
   const timeoutMs = opts.timeoutMs ?? 5000;
   const costCap = opts.costCap ?? COST_CAP;

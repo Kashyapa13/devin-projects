@@ -103,13 +103,41 @@ metrics + Loki logs + Grafana UI + built-in OTLP intake).
 Filled in as work items land. Each row links the evidence pasted in the
 final report.
 
-- [ ] WI-1 — pending
-- [ ] WI-2 — pending
-- [ ] WI-3 — pending
-- [ ] WI-4 — pending
-- [ ] WI-5 — pending
-- [ ] WI-6 — pending
-- [ ] WI-7 — pending
-- [ ] WI-8 — pending
-- [ ] WI-9 — pending
-- [ ] WI-10 — pending
+- [x] WI-1 — `platform/packages/otel` landed: `startOtel` (NodeSDK +
+  `OTEL_EXPORTER_OTLP_ENDPOINT` no-op, `OTEL_SDK_DISABLED`, ParentBased
+  ratio via `OTEL_TRACES_SAMPLER_RATIO`), `otelRegistry` dual registry,
+  `otelFastifyPlugin` (@fastify/otel), `seededStream`/`seedIdGenerator`.
+  16 vitest cases green (no-op, dual-render byte-identical, determinism).
+- [x] WI-2 — `infra/otel/docker-compose.otel.yml` + `otel-collector-config.yml`
+  running: collector-contrib:0.162.0 (:4317/:4318) → grafana/otel-lgtm:0.36.0
+  (Grafana :3000 anonymous admin, Tempo :3200, Mimir API :9090, Loki :3100).
+- [x] WI-3 — `scripts/otel-seeder.ts` (`pnpm otel:seed`): planHash
+  `a2ad7e63…` identical across runs; 15 spans / 427 metric obs / 20 logs;
+  KYC claim→approve + refunds ask journeys; `fastlane_queue_load_ms` spike
+  (24 obs in 1000–2500ms buckets); correlated logs. Note: span timeline is
+  compressed into the last 90s on emit — Tempo drops older-timestamped
+  spans at ingest (verified); metric/log streams keep the full window.
+- [x] WI-4 — fastlane: `api/src/metrics.ts` constitutional names via
+  `otelRegistry("fastlane")`; `transition_total{ok=no}` on illegal edges,
+  `queue_load_ms{tab}` on queue path, `pii_reveal_total` post-audit,
+  `audit_write_fail_total` on auditWriter failure; observable
+  `cases_active{status}` + `sla_breach_count`; `/metrics` + REGISTRY +
+  openapi.yaml + LLD row.
+- [x] WI-5 — refundlens: `defaultMetrics()` → `otelRegistry("refundlens")`;
+  `/metrics` exposition byte-identical (dual registry).
+- [x] WI-6 — `sync_lag_s` as observable gauge probing `sync_runs`
+  watermark age per collection (was registered-never-set); shows
+  `refundlens_sync_lag_s` in Mimir. ETL span: deferred — ETL runs as a
+  separate process; wiring it is a small follow-up (noted).
+- [x] WI-7 — `api/src/telemetry.ts` side-effect + launcher split
+  (`server.ts` → dynamic `import("./app.js")`) both apps; request +
+  `pg` spans in Tempo for both services.
+- [x] WI-8 — instrumentation-pino ships log records to OTLP and injects
+  `trace_id`/`span_id`/`trace_flags` into the pino JSON line; Loki stream
+  `service_name=fastlane|refundlens|otel-seed` carries trace_ids matching
+  Tempo traces. stdout format unchanged.
+- [x] WI-9 — `scripts/otel-monitors.ts` (`pnpm otel:monitors`): PromQL
+  evaluation of the six LLD alert rules against Mimir :9090; seeded spike
+  trips `fastlane.queue_load_p95` (FIRING) + `refundlens.sync_lag_ticket`.
+- [x] WI-10 — LLD §Observability + README/env sections updated both apps;
+  this file closed per item.

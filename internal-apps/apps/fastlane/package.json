@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "FastLane \u2014 Tier-1 KYC review queue (C4). See AGENTS.md.",
+  "description": "FastLane — Tier-1 KYC review queue (C4). See AGENTS.md.",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && vite build web",
     "lint": "tsc -p tsconfig.json --noEmit",
@@ -20,6 +20,8 @@
     "@company/crypto": "workspace:*",
     "@company/db": "workspace:*",
     "@company/http": "workspace:*",
+    "@company/observability": "workspace:*",
+    "@company/otel": "workspace:*",
     "@company/ui": "workspace:*",
     "@fastify/type-provider-typebox": "^4.1.0",
     "@sinclair/typebox": "^0.33.7",

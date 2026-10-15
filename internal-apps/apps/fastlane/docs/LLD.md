@@ -46,7 +46,8 @@ GET /queue?tab=mine|team|breaching + filters (partial indexes) · GET /cases/:id
 · POST claim|approve|reject|escalate|note|reveal (reveal = audited unmask —
 masked by default; allow-table validation; reject requires reason → 400;
 optimistic lock on version) · GET /cases/:id/audit + GET /audit (exportable)
-· GET doc-url (signed, never bytes) · POST /cron/sla-digest.
+· GET doc-url (signed, never bytes) · POST /cron/sla-digest ·
+GET /metrics (unauthenticated; Prometheus exposition — ops scrape only).
 
 RBAC: reviewer (claim, act on own) · supervisor (+ reopen ESCALATED, team
 views) · admin (config) — server-side only.
@@ -66,6 +67,7 @@ views) · admin (config) — server-side only.
 | GET /cases/:id/audit · GET /audit | ✓ | ✓ | ✓ |
 | GET /doc-url | assignee | ✓ | — |
 | POST /cron/sla-digest | — | — | service |
+| GET /metrics | ops scrape (unauthenticated) | — | — |
 | config | — | — | ✓ |
 
 ### Observability (§3.2 §6 — exact names)
@@ -78,6 +80,15 @@ Alerts: audit_write_fail >0 PAGE · queue_load p95 >1000ms/10m PAGE ·
 sla_breach +20%/h PAGE · p95 >300ms/30m ticket. Log fields: ts, level,
 req_id, actor_id, case_id, action, ms, outcome. Banned: legal_name, doc
 contents, assignee PII.
+
+Transport (ADR-0017): platform `otelRegistry("fastlane")` dual-writes
+every instrument — same names/labels — to OTel OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`;
+local → `infra/otel` collector → Grafana LGTM :4318, prod → client OTLP
+backend) AND the in-process `/metrics` exposition. `cases_active` /
+`sla_breach_count` are DB-probed observable gauges. Logs: pino → OTLP
+with injected trace_id/span_id; stdout unchanged. Sampler: AlwaysOn
+default, `OTEL_TRACES_SAMPLER_RATIO` for ParentBased-ratio (keeps p95
+overhead <5%).
 
 ### Testing gates (§3.2 §7)
 

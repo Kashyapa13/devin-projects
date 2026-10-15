@@ -1,4 +1,4 @@
-import { metricsRegistry, type MetricsRegistry } from "@company/observability";
+import { otelRegistry, type DualRegistry } from "@company/otel";
 import { ApiError } from "@company/http";
 import { AnswerCache } from "./cache.js";
 import { currentWatermark } from "./watermark.js";
@@ -10,7 +10,7 @@ import { renderAggQuery, type Dim, type Metric } from "./ask/templates.js";
 export interface Deps {
   db: Queryable;
   cache: AnswerCache;
-  metrics: MetricsRegistry;
+  metrics: DualRegistry;
 }
 
 export interface Actor {
@@ -23,12 +23,13 @@ interface Rows {
 }
 const rowsOf = (r: unknown): Record<string, unknown>[] => (r as Rows).rows ?? [];
 
-export function defaultMetrics(): MetricsRegistry {
-  const m = metricsRegistry("refundlens");
+export function defaultMetrics(): DualRegistry {
+  // dual registry (ADR-0017): same names/labels as OTel instruments,
+  // alongside — not replacing — the in-process /metrics exposition.
+  const m = otelRegistry("refundlens");
   m.histogram("ask_ms");
   m.counter("ask_success");
   m.counter("fence_rejected_total");
-  m.gauge("sync_lag_s");
   m.counter("cache_hit");
   m.counter("export_total");
   return m;
