@@ -10,7 +10,7 @@ ARG PKG_NAME=@app/template
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY . .
 RUN corepack enable && pnpm install --frozen-lockfile --prod=false \
- && pnpm --filter "${PKG_NAME}" build
+ && pnpm --filter "${PKG_NAME}..." build
 
 # ---- runtime ----
 FROM node:22-slim AS runtime

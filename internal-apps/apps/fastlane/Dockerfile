@@ -11,7 +11,7 @@ ARG PKG_NAME=@app/fastlane
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY . .
 RUN corepack enable && pnpm install --frozen-lockfile --prod=false \
- && pnpm --filter "${PKG_NAME}" build
+ && pnpm --filter "${PKG_NAME}..." build
 
 # ---- runtime ----
 FROM ${NODE_IMAGE} AS runtime
