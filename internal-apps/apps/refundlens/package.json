@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "RefundLens \u2014 Tier-2 refunds answer service (C3, read-only). See AGENTS.md.",
+  "description": "RefundLens — Tier-2 refunds answer service (C3, read-only). See AGENTS.md.",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && vite build web",
     "lint": "tsc -p tsconfig.json --noEmit",
@@ -15,13 +15,15 @@
     "migrate": "tsx scripts/migrate.ts",
     "etl": "tsx scripts/etl.ts",
     "fork-report": "tsx scripts/fork_report.ts",
-    "dev-token": "tsx scripts/dev-token.ts"
+    "dev-token": "tsx scripts/dev-token.ts",
+    "heartbeat": "tsx scripts/heartbeat.ts"
   },
   "dependencies": {
     "@company/auth": "workspace:*",
     "@company/db": "workspace:*",
     "@company/http": "workspace:*",
     "@company/observability": "workspace:*",
+    "@company/otel": "workspace:*",
     "@company/ui": "workspace:*",
     "@fastify/type-provider-typebox": "^4.1.0",
     "@sinclair/typebox": "^0.33.7",

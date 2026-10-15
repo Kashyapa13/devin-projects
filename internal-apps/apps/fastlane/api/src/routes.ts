@@ -22,6 +22,7 @@ export const REGISTRY = [
   { method: "GET", path: "/api/v1/audit", roles: ["supervisor", "admin"], summary: "Audit export (latest 500)" },
   { method: "GET", path: "/api/v1/cases/:id/doc-url", roles: ["reviewer", "supervisor"], summary: "Signed doc URL, 15-min expiry" },
   { method: "POST", path: "/api/v1/cron/sla-digest", roles: [], cron: true, summary: "SLA breach digest (service)" },
+  { method: "GET", path: "/metrics", roles: [], summary: "Prometheus text exposition (ops)" },
 ] as const;
 
 const userOf = (req: FastifyRequest): svc.Actor => {
@@ -66,6 +67,26 @@ async function idempotent<T>(
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const roleGate = (roles: readonly string[]) =>
     requireRole(...(roles as ("reviewer" | "supervisor" | "admin")[]));
+
+  // Observable gauges (ADR-0017): per-status active-case counts and the
+  // SLA breach count, re-probed every OTLP collection + /metrics tick.
+  deps.metrics.observableGaugeSeries("cases_active", async () => {
+    const res = await deps.db.query(
+      `SELECT status, COUNT(*)::float AS n FROM kyc_cases GROUP BY status`,
+    );
+    const rows = (res as { rows?: { status: string; n: number }[] }).rows ?? [];
+    return rows.map((r) => ({ value: Number(r.n), labels: { status: r.status } }));
+  });
+  deps.metrics.observableGauge("sla_breach_count", async () => {
+    const res = await deps.db.query(
+      `SELECT COUNT(*)::float AS n FROM kyc_cases
+       WHERE status IN ('PENDING','IN_REVIEW','ESCALATED') AND sla_due_at < now()`,
+    );
+    const rows = (res as { rows?: { n: number }[] }).rows ?? [];
+    return Number(rows[0]?.n ?? 0);
+  });
+
+  app.get("/metrics", async () => deps.metrics.render());
 
   app.get(
     "/api/v1/queue",

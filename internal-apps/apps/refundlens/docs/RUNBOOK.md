@@ -34,3 +34,25 @@ TODO: top plays —
   loosen the fence.
 - Missing watermark on a surface = P1 → find which surface dropped the
   envelope field; treat as data-integrity bug, not a UI nit.
+
+## Heartbeat / live tier (ADR-0016)
+
+- Deploy: run `pnpm heartbeat` next to the API (env: REPLICA_DSN,
+  DATABASE_URL, SESSION_SECRET, API_BASE, HEARTBEAT_MS). `--once` for a
+  single beat (smoke check: `pnpm heartbeat --once` → JSON outcome).
+- LiveDot amber (>2m no beat) → heartbeat process down or replica
+  unreachable → `docker logs`/proc check → restart heartbeat. Degraded
+  beats appear in `sync_runs` with `status='error'` — never silent.
+- LiveDot red (>5m) → heartbeat-age monitor will be `firing`; check
+  `monitor_events` for the firing row + Slack ping (if webhook set).
+- Monitor firing play: read `monitor_events.value` (z/mean/stddev or
+  age) → check the widget that maps to it (rate trend for z-score,
+  backlog for age) → resolve → next beat writes `state='resolved'`.
+- Monitor def change: `PATCH /api/monitors/:id` (admin) — bumps
+  `version`; edits in the monitors table are audit-relevant, do them
+  via the API not SQL.
+- SLACK_WEBHOOK_URL unset = events still recorded in `monitor_events`;
+  the webhook is a notifier, never the source of truth.
+- If the API restarts, the beat registry is empty until the next beat;
+  the SSE snapshot falls back to last sync_runs state labeled
+  `degraded` — expected, clears on the next beat.

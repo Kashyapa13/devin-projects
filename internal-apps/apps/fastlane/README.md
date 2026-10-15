@@ -22,6 +22,15 @@ pnpm exec vite web --port 5173     # web :5173 (proxies /api)
 `pnpm seed --cases=10000` for the perf fixture. `pnpm test` runs the
 §7 gates (statemachine matrix, kill-tests, RBAC, contract drift, anchor FT).
 
+## Telemetry (ADR-0017)
+`OTEL_EXPORTER_OTLP_ENDPOINT` — OTLP/HTTP base for the emitter
+(`api/src/telemetry.ts`, `@company/otel`). Local: `http://localhost:4318`
+(`internal-apps/infra/otel` compose → collector → Grafana LGTM;
+Grafana :3000 anonymous admin). Prod: client's existing OTLP backend.
+Unset → emitter no-ops (tests, collector-less runs). Optional:
+`OTEL_TRACES_SAMPLER_RATIO` (0–1, ParentBased root ratio; default 1),
+`APP_ENV` (deployment.environment.name), `OTEL_SDK_DISABLED=true`.
+
 ## Data class
 C4 (legal_name) — AES-256-GCM envelope via platform-crypto; masked in every
 read; reveal is an audited, rate-limited endpoint. Synthetic fixtures only.
