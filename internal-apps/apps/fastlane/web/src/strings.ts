@@ -47,7 +47,6 @@ export const resources = {
       "audit.close": "Close",
       "error.title": "Could not complete",
       "queue.load_error": "Queue failed to load — check your sign-in, then retry",
-      "case.load_error": "Case could not be loaded — it may not exist or your sign-in expired",
       "loading": "Loading…",
       "action.claim": "Claim",
       "action.approve": "Approve",
