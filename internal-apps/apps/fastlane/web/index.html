@@ -87,7 +87,7 @@
       /* — masterpiece table — */
       .table-card { border: 1px solid var(--line); border-radius: var(--r-xl);
         background: var(--card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-        box-shadow: var(--shadow-lg); overflow: hidden; }
+        box-shadow: var(--shadow-lg); overflow-x: auto; overflow-y: hidden; }
       .queue-table { border-collapse: collapse; width: 100%; }
       .queue-table caption { text-align: left; padding: 1rem 1.25rem .25rem;
         font-size: .95rem; font-weight: 650; letter-spacing: -.01em; }
@@ -167,6 +167,8 @@
       dl.case-fields dt { font-weight: 600; color: var(--ink-2); }
       a { color: var(--indigo); }
       h1, h2, h3 { letter-spacing: -.02em; }
+      html[data-motion="off"] .status-dot,
+      html[data-motion="off"] .chip i.pulse { animation: none; }
       @media (prefers-reduced-motion: reduce) {
         .status-dot, .chip i.pulse { animation: none; }
         button { transition: none; } button:active { transform: none; }
