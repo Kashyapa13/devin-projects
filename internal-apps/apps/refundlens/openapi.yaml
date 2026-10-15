@@ -33,6 +33,35 @@ paths:
           description: unauthenticated
         "403":
           description: forbidden
+  /api/v1/widgets/:name:
+    get:
+      summary: Typed params → server-computed series through the same fenced layer
+        (WIDGET LAW §4.2)
+      x-roles:
+        - analyst
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
+  /api/v1/health/sync:
+    get:
+      summary: Watermark + lag + last run status — the freshness claim on every surface
+      x-roles:
+        - analyst
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: envelope error
+        "401":
+          description: unauthenticated
+        "403":
+          description: forbidden
   /api/v1/export.csv:
     get:
       summary: Exact-count CSV export — watermark header, bypasses cache

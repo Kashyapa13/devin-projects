@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   AppHeader,
   CommandDock,
   CountUp,
   Reveal,
   Shake,
+  Skeleton,
   staggerChild,
   StaggerTbody,
   StaggerTr,
@@ -14,6 +15,17 @@ import {
 } from "@company/ui";
 import { api } from "./api.js";
 
+interface SyncHealth {
+  watermark: string | null;
+  lag_s: number | null;
+  last_run_status: string | null;
+}
+interface WidgetResult {
+  widget: string;
+  series: Record<string, unknown>[];
+  watermark: string | null;
+  took_ms: number;
+}
 interface Answer {
   answer: string;
   understood?: string;
@@ -80,6 +92,7 @@ export function AskPage() {
   return (
     <>
       <AppHeader narrow eyebrow={t("app.eyebrow")} title={t("app.title")}>
+        <SyncPill />
         <CommandDock
           label={t("keys.hint")}
           items={[
@@ -90,6 +103,7 @@ export function AskPage() {
         />
       </AppHeader>
       <main className="shell shell-narrow">
+      <KpiGrid />
       <p className="lede">{t("app.caption")}</p>
       <form
         className="askbar"
@@ -176,7 +190,10 @@ export function AskPage() {
           </div>
           {ans.understood && <p className="examples">{ans.understood}</p>}
           <details className="sql">
-            <summary>{t("answer.sql")}</summary>
+            <summary>
+              {t("answer.sql")}{" "}
+              <span className="badge fenced-badge">{t("fenced.badge")}</span>
+            </summary>
             <pre>{ans.sql}</pre>
           </details>
           {ans.rows.length > 0 && (
@@ -209,8 +226,198 @@ export function AskPage() {
         </Reveal>
       )}
       {!ans && !err && <p className="examples">{t("empty")}</p>}
+
+      <RollupTable />
       </main>
     </>
+  );
+}
+
+/** Lag in seconds → "40s" / "7m" / "2h 13m" — mono freshness readout. */
+function lagLabel(lag: number): string {
+  if (lag < 60) return `${lag}s`;
+  const m = Math.floor(lag / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+/** Watermark banner — live freshness pill in the header; amber >90 min
+ *  (AGENTS §4 staleness law). Polls /health/sync every 30s. */
+function SyncPill() {
+  const { t } = useTranslation();
+  const [wm, setWm] = useState<SyncHealth | "err" | null>(null);
+  useEffect(() => {
+    let on = true;
+    const poll = () => {
+      api("/api/v1/health/sync")
+        .then((r) => {
+          if (on) setWm(r as SyncHealth);
+        })
+        .catch(() => {
+          if (on) setWm("err");
+        });
+    };
+    poll();
+    const id = setInterval(poll, 30_000);
+    return () => {
+      on = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  const stale = wm !== null && wm !== "err" && (wm.lag_s ?? Infinity) > 90 * 60;
+  const tone = wm === "err" || wm === null ? "tone-zinc" : stale ? "tone-warn" : "tone-ok";
+  const text =
+    wm === "err" || wm === null || wm.lag_s === null
+      ? t("sync.unknown")
+      : `${t("sync.live")} ${lagLabel(wm.lag_s)}${stale ? ` · ${t("sync.stale")}` : ""}`;
+  return (
+    <span className={`badge sync-pill ${tone}`} data-testid="sync-pill" title={wm !== null && wm !== "err" ? (wm.watermark ?? "") : ""}>
+      {text}
+    </span>
+  );
+}
+
+const money = (cents: unknown): string => {
+  const n = Number(cents);
+  if (!Number.isFinite(n)) return "—";
+  return (n / 100).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: n >= 100_000_00 ? 0 : 2,
+  });
+};
+
+/** Bento-grid KPI cards — every number is a server-computed series
+ *  through the same fenced layer (widget law; LLD F-12 partial). */
+function KpiGrid() {
+  const { t } = useTranslation();
+  const [kpi, setKpi] = useState<Record<string, unknown> | null>(null);
+  useEffect(() => {
+    let on = true;
+    api("/api/v1/widgets/kpi")
+      .then((r) => {
+        if (on) setKpi(((r as WidgetResult).series[0] ?? {}) as Record<string, unknown>);
+      })
+      .catch(() => {
+        if (on) setKpi({});
+      });
+    return () => {
+      on = false;
+    };
+  }, []);
+
+  const num = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const cards: { label: string; node: ReactNode; sub?: string | undefined }[] = kpi
+    ? [
+        {
+          label: t("kpi.pending"),
+          node: <CountUp value={num(kpi.pending_count)} format={(v) => Math.round(v).toLocaleString("en-US")} />,
+          sub: `${money(kpi.pending_cents)} ${t("kpi.pending_sub")}`,
+        },
+        {
+          label: t("kpi.total"),
+          node: (
+            <CountUp
+              value={num(kpi.total_refunded_cents)}
+              format={(v) => money(Math.round(v))}
+            />
+          ),
+          sub: `${t("kpi.rate")} ${Number(kpi.refund_rate_pct ?? 0)}%`,
+        },
+        {
+          label: t("kpi.p95"),
+          node: (
+            <CountUp value={num(kpi.p95_ms)} format={(v) => `${Math.round(v).toLocaleString("en-US")} ${t("kpi.ms")}`} />
+          ),
+          sub: `avg ${num(kpi.avg_ms).toLocaleString("en-US")} ${t("kpi.ms")}`,
+        },
+      ]
+    : [];
+
+  return (
+    <div className="kpi-grid" data-testid="kpi-grid">
+      {kpi === null
+        ? [0, 1, 2].map((i) => (
+            <section className="kpi" key={i}>
+              <p className="label"> </p>
+              <Skeleton width="62%" height="1.75rem" />
+              <p className="sub"> </p>
+            </section>
+          ))
+        : cards.map((c) => (
+            <section className="kpi" key={c.label}>
+              <p className="label">{c.label}</p>
+              <div className="num">{c.node}</div>
+              {c.sub && <p className="sub">{c.sub}</p>}
+            </section>
+          ))}
+    </div>
+  );
+}
+
+/** agg_daily rollup table — the pre-aggregated store surface; every
+ *  row is the same fenced widget layer, no client aggregation. */
+function RollupTable() {
+  const { t } = useTranslation();
+  const reduced = useReducedMotion();
+  const [rows, setRows] = useState<Record<string, unknown>[] | null>(null);
+  useEffect(() => {
+    let on = true;
+    api("/api/v1/widgets/daily?limit=12")
+      .then((r) => {
+        if (on) setRows((r as WidgetResult).series);
+      })
+      .catch(() => {
+        if (on) setRows([]);
+      });
+    return () => {
+      on = false;
+    };
+  }, []);
+
+  return (
+    <section className="panel" data-testid="rollup-panel">
+      <h2 className="panel-title">{t("rollup.title")}</h2>
+      <p className="panel-sub">{t("rollup.subtitle")}</p>
+      {rows === null ? (
+        <div className="skel-block">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Skeleton key={i} width={`${88 - i * 7}%`} />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="panel-sub">{t("rollup.empty")}</p>
+      ) : (
+        <table className="rows">
+          <thead>
+            <tr>
+              <th>{t("rollup.day")}</th>
+              <th>{t("rollup.channel")}</th>
+              <th>{t("rollup.segment")}</th>
+              <th>{t("rollup.reason")}</th>
+              <th>{t("rollup.count")}</th>
+              <th>{t("rollup.amount")}</th>
+              <th>{t("rollup.p95")}</th>
+            </tr>
+          </thead>
+          <StaggerTbody variants={staggerParent} initial="hidden" animate="show">
+            {rows.map((r, i) => (
+              <StaggerTr key={i} variants={staggerChild(reduced === true)}>
+                <td className="mono">{String(r.day).slice(0, 10)}</td>
+                <td>{String(r.channel)}</td>
+                <td>{String(r.merchant_segment)}</td>
+                <td>{String(r.reason_code)}</td>
+                <td className="mono">{Number(r.cnt).toLocaleString("en-US")}</td>
+                <td className="mono">{money(r.amount)}</td>
+                <td className="mono">{r.p95_ms != null ? `${r.p95_ms} ${t("kpi.ms")}` : "—"}</td>
+              </StaggerTr>
+            ))}
+          </StaggerTbody>
+        </table>
+      )}
+    </section>
   );
 }
 

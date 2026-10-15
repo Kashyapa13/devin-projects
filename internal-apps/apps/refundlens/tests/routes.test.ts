@@ -171,6 +171,76 @@ describe("GET /export.csv — exact counts, watermark header, cache bypass", () 
   });
 });
 
+describe("GET /health/sync — the freshness surface", () => {
+  it("returns watermark, lag and last run status", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/health/sync",
+      headers: { authorization: `Bearer ${await token()}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.watermark).toBeTruthy();
+    expect(typeof body.lag_s).toBe("number");
+    expect(body.lag_s).toBeGreaterThanOrEqual(0);
+    expect(body.last_run_status).toBe("success");
+  });
+
+  it("unauthenticated → 401", async () => {
+    const res = await app.inject("/api/v1/health/sync");
+    expect(res.statusCode).toBe(401);
+  });
+});
+
+describe("GET /widgets/:name — typed params through the fenced layer", () => {
+  const widget = (name: string, qs = "", roles = ["analyst"]) =>
+    token(roles).then((tok) =>
+      app.inject({
+        method: "GET",
+        url: `/api/v1/widgets/${name}${qs}`,
+        headers: { authorization: `Bearer ${tok}` },
+      }),
+    );
+
+  it("kpi returns the stat series with watermark", async () => {
+    const res = await widget("kpi");
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.widget).toBe("kpi");
+    expect(Array.isArray(body.series)).toBe(true);
+    expect(body.watermark).toBeTruthy();
+    const row = body.series[0] ?? {};
+    expect(row).toHaveProperty("refunds_today");
+    expect(row).toHaveProperty("total_refunded_cents");
+  });
+
+  it("daily reads the agg_daily rollup (not raw events)", async () => {
+    const res = await widget("daily", "?limit=12");
+    expect(res.statusCode).toBe(200);
+    const { series } = res.json();
+    expect(Array.isArray(series)).toBe(true);
+    if (series.length > 0) {
+      expect(series[0]).toHaveProperty("day");
+      expect(series[0]).toHaveProperty("cnt");
+      expect(series[0]).toHaveProperty("amount");
+    }
+  });
+
+  it("unknown widget → 400 fenced_query_rejected with guidance", async () => {
+    const res = await widget("bogus_widget");
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.code).toBe("FENCED_QUERY_REJECTED");
+    expect(res.json().error.detail.guidance).toBeTruthy();
+  });
+
+  it("bad typed param → 400 (TypeBox), wrong role → 403", async () => {
+    const res = await widget("kpi", "?grain=fortnight");
+    expect(res.statusCode).toBe(400);
+    const viewer = await widget("kpi", "", ["viewer"]);
+    expect(viewer.statusCode).toBe(403);
+  });
+});
+
 describe("platform wiring", () => {
   it("healthz/readyz + /metrics exposition", async () => {
     expect((await app.inject("/healthz")).statusCode).toBe(200);
