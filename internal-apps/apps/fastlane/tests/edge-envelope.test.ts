@@ -46,7 +46,11 @@ async function req(method: "GET" | "POST", url: string, opts: { roles?: string[]
   const headers: Record<string, string> = { ...(opts.headers ?? {}) };
   if (opts.roles) headers.authorization = `Bearer ${await token(opts.roles, opts.sub)}`;
   if (opts.idem) headers["idempotency-key"] = opts.idem;
-  return app.inject({ method, url, headers, payload: opts.body as object | undefined });
+  return app.inject(
+    opts.body === undefined
+      ? { method, url, headers }
+      : { method, url, headers, payload: opts.body as object },
+  );
 }
 const pendingId = async () => {
   const res = await req("GET", "/api/v1/queue?tab=team&limit=100", { roles: ["reviewer"] });
