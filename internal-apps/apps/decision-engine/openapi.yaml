@@ -1,0 +1,7 @@
+openapi: 3.0.3
+info: { title: decision-engine, version: 0.1.0 }
+paths:
+  /api/v1/engine/decide: { post: { summary: shadow evaluate + record } }
+  /api/v1/engine/kill-switch: { post: { summary: one-click all-human + freeze } }
+  /api/v1/engine/reports/daily: { get: { summary: daily shadow report } }
+  /api/v1/engine/stale-packs: { get: { summary: packs untouched >90d } }
