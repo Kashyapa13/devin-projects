@@ -1,18 +1,20 @@
 import { ColorSpring, Pulse, useTranslation } from "@company/ui";
 
+// ColorSpring supplies the soft tinted fill; pill classes keep
+// text/micro-border colors (the spring is the visible bg).
 const PILL_COLOR: Record<string, string> = {
-  pending: "var(--c-muted)",
-  in_review: "var(--c-warn)",
-  approved: "var(--c-ok)",
-  rejected: "var(--c-bad)",
-  escalated: "var(--c-warn)",
+  pending: "var(--line-soft)",
+  in_review: "var(--warn-soft)",
+  approved: "var(--ok-soft)",
+  rejected: "var(--bad-soft)",
+  escalated: "var(--violet-soft)",
 };
 
 export function StatusPill({ status }: { status: string }) {
   const key = status.toLowerCase();
   return (
     <ColorSpring color={PILL_COLOR[key] ?? "var(--c-muted)"}>
-      <span className={`pill pill-${key}`}>{status}</span>
+      <span className={`pill pill-${key}`}><i />{status}</span>
     </ColorSpring>
   );
 }
@@ -29,6 +31,7 @@ export function SlaChip({ dueAt }: { dueAt: string }) {
   return (
     <Pulse when={kind === "breach"}>
       <span className={`chip chip-${kind}`}>
+        <i className={kind === "breach" ? "pulse" : ""} />
         {dueAt.slice(0, 10)} · {t(`sla.${kind === "breach" ? "breaching" : kind}`)}
       </span>
     </Pulse>

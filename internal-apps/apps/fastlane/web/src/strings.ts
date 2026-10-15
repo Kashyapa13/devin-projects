@@ -3,6 +3,7 @@ export const resources = {
   en: {
     translation: {
       "app.title": "FastLane",
+      "app.meta": "KYC Review Queue • 100% Audited",
       "queue.caption": "KYC review queue",
       "queue.empty": "Queue is clear",
       "queue.tab.mine": "Mine",
@@ -18,6 +19,10 @@ export const resources = {
       "col.risk": "Risk",
       "col.priority": "Priority",
       "keys.hint": "j/k move · Enter open · c claim · a approve · r reject",
+      "keys.nav": "Navigate",
+      "keys.claim": "Claim",
+      "keys.approve": "Approve",
+      "keys.reject": "Reject",
       "case.keys": "c claim · a approve · r reject · n note · e escalate · Esc back",
       "case.back": "Back to queue",
       "case.fields.customer": "Customer ref",

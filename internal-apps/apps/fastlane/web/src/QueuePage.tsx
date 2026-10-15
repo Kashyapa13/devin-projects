@@ -170,9 +170,24 @@ export function QueuePage() {
 
   if (isLoading) return <p>{t("loading")}</p>;
   return (
-    <main>
-      <h1>{t("app.title")}</h1>
-      <nav aria-label="queue tabs">
+    <main className="shell">
+      <header className="appbar">
+        <div className="brand">
+          <span className="status-dot" aria-hidden="true" />
+          <div>
+            <h1>{t("app.title")}</h1>
+            <span className="meta">{t("app.meta")}</span>
+          </div>
+        </div>
+        <div className="keys-dock" aria-hidden="true">
+          <span className="keycap"><b>J/K</b> {t("keys.nav")}</span>
+          <span className="keycap"><b>C</b> {t("keys.claim")}</span>
+          <span className="keycap"><b>A</b> {t("keys.approve")}</span>
+          <span className="keycap"><b>R</b> {t("keys.reject")}</span>
+        </div>
+      </header>
+      <div className="toolbar">
+      <nav aria-label="queue tabs" className="seg">
         {(["mine", "team", "breaching"] as const).map((x) => (
           <button
             key={x}
@@ -186,7 +201,8 @@ export function QueuePage() {
             {t(`queue.tab.${x}`)}
           </button>
         ))}
-        <label>
+        </nav>
+        <label className="select">
           {t("queue.filter.risk")}{" "}
           <select
             aria-label={t("queue.filter.risk")}
@@ -202,7 +218,7 @@ export function QueuePage() {
             ))}
           </select>
         </label>
-      </nav>
+      </div>
       <p className="keys" aria-hidden="true">
         {t("keys.hint")}
       </p>
@@ -211,6 +227,7 @@ export function QueuePage() {
           {t("error.title")}: {error}
         </p>
       )}
+      <div className="table-card">
       <QueueTable<CaseRow>
         caption={t("queue.caption")}
         emptyMessage={t("queue.empty")}
@@ -265,6 +282,7 @@ export function QueuePage() {
           { label: t("action.open"), onSelect: (r) => openCase(r) },
         ]}
       />
+      </div>
       {hasNextPage && (
         <button type="button" onClick={() => void fetchNextPage()}>
           {isFetchingNextPage ? t("loading") : t("queue.loadmore")}
