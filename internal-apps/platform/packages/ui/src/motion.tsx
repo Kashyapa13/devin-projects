@@ -336,12 +336,16 @@ export function Skeleton({
   height?: string | undefined;
   className?: string | undefined;
 }): ReactElement {
+  // Pulse is inline Motion, not CSS — must opt out itself for both laws.
+  const still = useFreeze() || useReducedMotion();
   return (
     <motion.span
       className={className ? `skeleton ${className}` : "skeleton"}
       style={{ width, ...(height !== undefined ? { height } : {}) }}
-      animate={{ opacity: [0.5, 0.85, 0.5] }}
-      transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
+      animate={{ opacity: still ? 0.65 : [0.5, 0.85, 0.5] }}
+      transition={
+        still ? { duration: 0 } : { duration: 1.6, repeat: Infinity, ease: "linear" }
+      }
     />
   );
 }

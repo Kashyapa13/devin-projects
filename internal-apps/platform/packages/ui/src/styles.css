@@ -50,6 +50,7 @@
   --ok: #047857;                /* emerald-700 */
   --warn: #b45309;              /* amber-700 */
   --bad: #e11d48;               /* rose-600 */
+  --bad-fill: #e11d48;          /* solid danger-button fill */
   --info: #4f46e5;              /* indigo-600 */
   --note: #7c3aed;              /* violet-600 */
   --zinc: #52525b;              /* zinc-600 */
@@ -94,6 +95,7 @@
     --ok: #34d399;              /* emerald-400 */
     --warn: #fbbf24;            /* amber-400 */
     --bad: #fb7185;             /* rose-400 */
+    --bad-fill: #9f1239;        /* rose-800 — white-text fill (≥4.5:1) */
     --info: #818cf8;
     --note: #a78bfa;            /* violet-400 */
     --zinc: #a1a1aa;
@@ -312,14 +314,14 @@ button.btn-ghost {
 
 .btn-danger,
 button.btn-danger {
-  background: var(--bad);
+  background: var(--bad-fill);
   border-color: transparent;
   color: #fff;
   font-weight: 600;
 }
 .btn-danger:hover {
   opacity: 0.92;
-  background: var(--bad);
+  background: var(--bad-fill);
 }
 .btn-danger:active {
   transform: scale(0.95);
@@ -762,6 +764,8 @@ p[role="alert"],
 .skel-rows {
   display: grid;
   gap: 0.7rem;
+  align-content: space-evenly;
+  min-height: 78vh;           /* reserve the table's footprint — no jump on resolve */
   padding: 1.1rem 1.25rem;
 }
 .skel-rows .skeleton {

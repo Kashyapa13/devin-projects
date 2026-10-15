@@ -223,11 +223,9 @@ export function QueuePage() {
         {isLoading ? (
           <section className="table-card" aria-busy="true">
             <div className="skel-rows">
-              {["62%", "84%", "71%", "90%", "58%", "79%", "66%", "88%"].map(
-                (w, i) => (
-                  <Skeleton key={i} width={w} />
-                ),
-              )}
+              {Array.from({ length: 16 }, (_, i) => (
+                <Skeleton key={i} width={`${(i * 13 + 58) % 34 + 56}%`} />
+              ))}
             </div>
           </section>
         ) : (

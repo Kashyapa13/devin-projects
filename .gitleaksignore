@@ -1,0 +1,3 @@
+# Dev SSO shim token committed then dropped in 08c290a (file removed in 47a695e);
+# synthetic dev-only JWT, never valid outside local dev. History-only fingerprint.
+08c290a7434f6f041dbcffe01b360ad1d0aef149:internal-apps/apps/fastlane/web/public/settoken.html:jwt:4
