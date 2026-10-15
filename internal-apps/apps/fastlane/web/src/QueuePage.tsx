@@ -1,11 +1,13 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  focusGlide,
   QueueTable,
   useKeyboardNav,
+  useReducedMotion,
   useTranslation,
   type KeyMap,
 } from "@company/ui";
@@ -33,6 +35,15 @@ export function QueuePage() {
   const [risk, setRisk] = useState<"all" | "high" | "med" | "low">("all");
   const [sel, setSel] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const reduced = useReducedMotion();
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }, []);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
@@ -56,27 +67,62 @@ export function QueuePage() {
   }, [allRows, risk]);
   const current = rows[Math.min(sel, Math.max(rows.length - 1, 0))];
 
+  /**
+   * Optimistic decisions (ADR-0014 §4): decide first, confirm after — the
+   * row springs out instantly and focus lands on the next case already in
+   * motion (auto-advance). On error the row springs BACK (rollback) and a
+   * toast carries the reason. No transition can be undone, so the toast
+   * shows outcome only — a fake 'undo' would lie about the audit trail.
+   */
   const act = useCallback(
     async (action: string, row?: CaseRow, body?: object) => {
       if (!row) return;
+      setError(null);
+      const optimistic = action === "approve" || action === "reject";
+      if (optimistic) {
+        qc.setQueryData<{ pages: { rows: CaseRow[] }[] }>(
+          ["queue", tab],
+          (old) =>
+            old
+              ? {
+                  ...old,
+                  pages: old.pages.map((p) => ({
+                    ...p,
+                    rows: p.rows.filter((r) => r.id !== row.id),
+                  })),
+                }
+              : old,
+        );
+      }
       try {
-        setError(null);
         await api(`/api/v1/cases/${row.id}/${action}`, {
           method: "POST",
           body: body ?? {},
           idem: `${row.id}:${action}:${uuid()}`,
         });
+        showToast(`${row.customer_ref}: ${action}`);
         void qc.invalidateQueries({ queryKey: ["queue"] });
       } catch (e) {
+        // rollback: real data returns, the row springs back into place
+        void qc.invalidateQueries({ queryKey: ["queue"] });
         setError((e as Error).message);
       }
     },
-    [qc],
+    [qc, tab, showToast],
   );
 
   const openCase = useCallback((row?: CaseRow) => {
     if (row) location.hash = `#/case/${row.id}`;
   }, []);
+
+  // Focus GLIDES between rows on j/k — animation follows focus, never
+  // delays it; the keypress updates selection synchronously.
+  useEffect(() => {
+    focusGlide(
+      document.querySelector(`[data-row-id=\"${current?.id ?? ""}\"]`),
+      reduced === true,
+    );
+  }, [current?.id, reduced]);
 
   useKeyboardNav(
     {
@@ -140,6 +186,20 @@ export function QueuePage() {
         emptyMessage={t("queue.empty")}
         selectedId={current?.id}
         rows={rows}
+        morphIdPrefix="case"
+        morphKey="ref"
+        gestures={{
+          onSwipeRight: (r) => void act("approve", r),
+          onSwipeLeft: (r) => {
+            // swipe-to-reject opens the reason box — a swipe can't carry
+            // the ≥20-char reason the guard requires, so it lands there.
+            location.hash = `#/case/${r.id}?reject=1`;
+          },
+          leftHint: t("action.reject"),
+          rightHint: t("action.approve"),
+          onReassign: (r) => void act("claim", r),
+          reassignHint: t("queue.dragclaim"),
+        }}
         columns={[
           { key: "ref", header: t("col.ref"), render: (r) => r.customer_ref },
           {
@@ -171,6 +231,11 @@ export function QueuePage() {
           { label: t("action.open"), onSelect: (r) => openCase(r) },
         ]}
       />
+      {toast && (
+        <p role="status" className="toast">
+          {toast}
+        </p>
+      )}
       {hasNextPage && (
         <button type="button" onClick={() => void fetchNextPage()}>
           {isFetchingNextPage ? t("loading") : t("queue.loadmore")}

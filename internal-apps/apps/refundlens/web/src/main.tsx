@@ -1,4 +1,4 @@
-import { initI18n } from "@company/ui";
+import { initI18n, MotionProvider } from "@company/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRoot } from "react-dom/client";
 import { AskPage } from "./AskPage.js";
@@ -11,7 +11,9 @@ const el = document.getElementById("root");
 if (el) {
   createRoot(el).render(
     <QueryClientProvider client={qc}>
-      <AskPage />
+      <MotionProvider>
+        <AskPage />
+      </MotionProvider>
     </QueryClientProvider>,
   );
 }

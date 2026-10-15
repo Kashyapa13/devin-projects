@@ -11,6 +11,7 @@ export const resources = {
       "queue.filter.risk": "Risk",
       "queue.filter.all": "all",
       "queue.loadmore": "Load more",
+      "queue.dragclaim": "⇪ drop here to claim",
       "col.ref": "Customer",
       "col.status": "Status",
       "col.sla": "SLA due",
