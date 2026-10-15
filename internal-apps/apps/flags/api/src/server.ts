@@ -13,8 +13,25 @@ const flagCache = new SwrCache(30_000, async (k) => {
 const role = (h: any) => (h["x-demo-role"] as string) ?? "viewer";   // demo auth
 const actor = (h: any) => (h["x-demo-actor"] as string) ?? "anon";
 
-async function audit(flagId: string | null, actorName: string, action: string, detail = {}) {
-  await db.query(`INSERT INTO flag_audit_events (flag_id, actor, action, detail)
+/** One tx per mutation: flag write + its audit row commit together or not at all. */
+async function withTx<T>(fn: (c: pg.PoolClient) => Promise<T>): Promise<T> {
+  const c = await db.connect();
+  try {
+    await c.query("BEGIN");
+    const r = await fn(c);
+    await c.query("COMMIT");
+    return r;
+  } catch (e) {
+    await c.query("ROLLBACK").catch(() => {});
+    throw e;
+  } finally {
+    c.release();
+  }
+}
+
+async function audit(c: pg.PoolClient, flagId: string | null, actorName: string,
+                     action: string, detail = {}) {
+  await c.query(`INSERT INTO flag_audit_events (flag_id, actor, action, detail)
     VALUES ($1,$2,$3,$4)`, [flagId, actorName, action, JSON.stringify(detail)]);
 }
 
@@ -42,11 +59,23 @@ export function buildApp() {
     if (typeof targeting === "string") { try { targeting = JSON.parse(targeting); }
       catch { return reply.code(400).send({ error: { code: "BAD_TARGETING",
         message: "targeting must be valid JSON, e.g. {\"enabled_if\":{\"bucket_lt\":50}}" } }); } }
-    const { rows } = await db.query(
-      `INSERT INTO flags (key, description, env, targeting) VALUES ($1,$2,$3,$4) RETURNING id`,
-      [b.key, b.description ?? "", b.env, JSON.stringify(targeting)]);
-    await audit(rows[0].id, actor(req.headers), "create", { key: b.key, env: b.env });
-    flagCache.invalidate(); return { demo: true, id: rows[0].id };
+    const id = await withTx(async (c) => {
+      // revive a soft-deleted row for the same (key,env) instead of violating UNIQUE
+      const { rows: revived } = await c.query(
+        `UPDATE flags SET deleted=false, description=$3, targeting=$4, created_at=now()
+         WHERE key=$1 AND env=$2 AND deleted=true RETURNING id`,
+        [b.key, b.env, b.description ?? "", JSON.stringify(targeting)]);
+      let fid: string = revived[0]?.id;
+      if (!fid) {
+        const { rows } = await c.query(
+          `INSERT INTO flags (key, description, env, targeting) VALUES ($1,$2,$3,$4) RETURNING id`,
+          [b.key, b.description ?? "", b.env, JSON.stringify(targeting)]);
+        fid = rows[0].id;
+      }
+      await audit(c, fid, actor(req.headers), "create", { key: b.key, env: b.env });
+      return fid;
+    });
+    flagCache.invalidate(); return { demo: true, id };
   });
 
   app.put("/api/flags/:id", async (req, reply) => {
@@ -62,9 +91,11 @@ export function buildApp() {
     if (typeof targeting === "string") { try { targeting = JSON.parse(targeting); }
       catch { return reply.code(400).send({ error: { code: "BAD_TARGETING",
         message: "invalid targeting JSON" } }); } }
-    if (targeting !== undefined)
-      await db.query(`UPDATE flags SET targeting=$2 WHERE id=$1`, [id, JSON.stringify(targeting)]);
-    await audit(id, actor(req.headers), "update", { targeting });
+    await withTx(async (c) => {
+      if (targeting !== undefined)
+        await c.query(`UPDATE flags SET targeting=$2 WHERE id=$1`, [id, JSON.stringify(targeting)]);
+      await audit(c, id, actor(req.headers), "update", { targeting });
+    });
     flagCache.invalidate(); return { demo: true, ok: true };
   });
 
@@ -78,16 +109,19 @@ export function buildApp() {
     if (typed !== f[0].key)
       return reply.code(400).send({ error: { code: "CONFIRM_MISMATCH",
         message: `type the flag key "${f[0].key}" to confirm delete` } });
-    await db.query(`UPDATE flags SET deleted=true WHERE id=$1`, [id]);
-    await audit(id, actor(req.headers), "delete", { key: f[0].key });
+    await withTx(async (c) => {
+      await c.query(`UPDATE flags SET deleted=true WHERE id=$1`, [id]);
+      await audit(c, id, actor(req.headers), "delete", { key: f[0].key });
+    });
     flagCache.invalidate(); return { demo: true, deleted: true };
   });
 
   app.get("/api/flags/evaluate", async (req, reply) => {
     const { key, userId, env = "dev" } = req.query as { key?: string; userId?: string; env?: string };
     if (!key || !userId) return reply.code(400).send({ error: { code: "BAD_INPUT", message: "key + userId required" } });
+    if (!ENVS.includes(env as any)) return reply.code(400).send({ error: { code: "BAD_INPUT", message: "env must be dev|staging|prod" } });
     const flags = await flagCache.get(key) as any[];
-    const flag = flags.find((x) => x.env === env) ?? flags[0];
+    const flag = flags.find((x) => x.env === env);   // exact env — never another env's decision
     if (!flag) return reply.code(404).send({ error: { code: "NOT_FOUND", message: "flag" } });
     return { demo: true, ...evaluateFlag(flag, userId), env: flag.env };
   });
