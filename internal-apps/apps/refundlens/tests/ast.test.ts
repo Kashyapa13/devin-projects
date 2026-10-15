@@ -131,19 +131,19 @@ describe("parseSelect — clause tail coverage", () => {
     ]);
   });
 
-  it("captures the first JOIN ref; later JOIN targets land in verbs (OPEN-2)", () => {
+  it("captures EVERY JOIN ref as a table — OPEN-2 closed (c1a55e8)", () => {
     const ast = tables(
       "SELECT a.day FROM refundlens.agg_daily a " +
         "LEFT OUTER JOIN refundlens.refund_events_raw r ON r.channel = a.channel " +
         "JOIN refundlens.agg_daily a2 ON a2.day = a.day LIMIT 1",
     );
+    // Every JOIN target lands in ast.tables now — schema/banned checks
+    // see each ref (was: 2nd+ JOIN landed in verbs — the OPEN-2 escape).
     expect(ast.tables.map((t) => t.table)).toEqual([
       "agg_daily",
       "refund_events_raw",
+      "agg_daily",
     ]);
-    // the second JOIN's target is a verb, not a table — schema/banned
-    // checks on tables alone miss it (see fence-escape OPEN-2 corpus).
-    expect(ast.verbs).toContain("agg_daily");
   });
 
   it("JOIN without a table is a parse failure", () => {

@@ -87,10 +87,13 @@ describe("share-link determinism — same inputs → same link/signature", () =>
     const keys = new Set(
       QUESTIONS.map((q) => cacheKey(generate(q, NOW).query.sql, generate(q, NOW).query.params)),
     );
-    // 8 questions → 6 signatures today: field=value filters silently
-    // drop (OPEN-4) so filtered questions collapse onto unfiltered ones.
-    // The pin keeps collisions VISIBLE — when OPEN-4 is fixed this
-    // number must be re-asserted upward.
-    expect(keys.size).toBeGreaterThanOrEqual(6);
+    // 8 questions → 7 distinct signatures post-OPEN-4 (c1a55e8):
+    // filtered questions now bind their filters and split away from
+    // unfiltered ones. The remaining collision is a metric gap, not a
+    // filter drop: "refund rate by channel" renders byte-identical SQL
+    // to "how many refunds by channel" (rate phrasing falls back to the
+    // count template) → OPEN-7. Asserted exactly so a regression fails
+    // loudly in either direction.
+    expect(keys.size).toBe(7);
   });
 });

@@ -50,19 +50,16 @@ describe("NL generator — deterministic mapping onto typed params", () => {
     });
   }
 
-  // OPEN-4 (P1): filtersOf slices each FIELD_WORDS regex's .source
-  // wrongly — `channel=card` NEVER binds; the filter is silently
-  // dropped and the unfiltered view answers instead. Documented here
-  // as current behavior + the desired behavior pinned via it.fails.
-  it("field=value filters are currently silently dropped (OPEN-4)", () => {
-    const g = generate("refunds by channel channel=card state=pending", NOW);
-    expect(g.query.params).toEqual(["2026-09-14", "2026-10-14"]);
-    expect(g.query.sql).not.toContain("channel = $");
-  });
-  it.fails("field=value filters bind as typed eq params (OPEN-4 — unfixed)", () => {
+  // OPEN-4 (P1) — CLOSED by c1a55e8: filtersOf no longer slices the
+  // FIELD_WORDS regex \b wrappers, so field=value filters bind as typed
+  // eq params (window params first). Pinned green as regression cover.
+  it("field=value filters bind as typed eq params (OPEN-4 — closed c1a55e8)", () => {
     const g = generate("refunds by channel channel=card state=pending", NOW);
     expect(g.query.params).toContain("CARD");
     expect(g.query.params).toContain("PENDING");
+    expect(g.query.params[0]).toBe("2026-09-14");
+    expect(g.query.params[1]).toBe("2026-10-14");
+    expect(g.query.sql).toContain("channel = $");
   });
 
   it("'show me recent refunds' routes to the raw listing", () => {

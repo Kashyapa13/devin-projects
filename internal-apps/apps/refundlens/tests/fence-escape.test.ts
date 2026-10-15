@@ -76,9 +76,10 @@ const CORPUS: { label: string; sql: string; reason: FenceReason }[] = [
   { label: "unterminated literal", sql: "SELECT day FROM refundlens.agg_daily WHERE day='x", reason: "parse_failure" },
 ];
 
-/** CONFIRMED escapes (P1 — OPEN-2): parenthesized subqueries are never
- * AST-validated, so fences #2/#6 don't hold below top level. it.fails
- * flips green the day the fence closes them. */
+/** Former CONFIRMED escapes (P1 — OPEN-2, CLOSED by c1a55e8):
+ * parenthesized subqueries are now AST-validated recursively and every
+ * JOIN ref is collected — fences #2/#6 hold below top level. Kept as a
+ * permanent regression corpus; each must throw FencedRejection. */
 const CONFIRMED_ESCAPES: { label: string; sql: string }[] = [
   { label: "scalar subquery reads pg_roles", sql: "SELECT (SELECT rolname FROM pg_roles LIMIT 1) AS x FROM refundlens.agg_daily LIMIT 1" },
   { label: "EXISTS subquery reads ask_log", sql: "SELECT day FROM refundlens.agg_daily WHERE EXISTS (SELECT 1 FROM refundlens.ask_log) LIMIT 1" },
@@ -106,7 +107,7 @@ describe("attempted-escape corpus — every banned construct is fenced", () => {
   }
 
   for (const c of CONFIRMED_ESCAPES) {
-    it.fails(`rejects ${c.label} (OPEN-2 — confirmed escape, unfixed)`, () => {
+    it(`rejects ${c.label} (OPEN-2 — closed c1a55e8)`, () => {
       expect(() => validateSql(c.sql)).toThrowError(FencedRejection);
     });
   }
