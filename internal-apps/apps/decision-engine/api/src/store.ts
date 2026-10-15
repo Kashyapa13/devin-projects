@@ -63,7 +63,7 @@ export async function dailyReport(db: Db, day: string) {
      WHERE (s.created_at AT TIME ZONE 'UTC')::date = $1::date
      GROUP BY s.fired_rule, s.decision, h.outcome`, [day])).rows;
   const report = { day, rung: "SHADOW", by_outcome: rows,
-    confidence_histogram: dist.rows, human_comparison: disagreement,
+    confidence_histogram: dist, human_comparison: disagreement,
     per_rule_disagreements: perRule };
   await db.query(
     `INSERT INTO daily_reports (day, report) VALUES ($1,$2)
