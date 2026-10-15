@@ -1,5 +1,26 @@
 # RefundLens — LLD
 
+## Feature Catalog (F-NN — the §4.2 feature spec)
+
+Every feature: screen, role, interaction, the acceptance assertion a test
+can run, and the press-release promise it serves. A PR that adds behavior
+adds a row here in the same diff.
+
+| F-NN | Screen | Role | Interaction | Acceptance assertion | PR-promise trace |
+|---|---|---|---|---|---|
+| F-01 | Aggregate console `/view` | analyst | pick dim/metric/window/filters → server-rendered view; full state lives in query params → shareable URL | share link reproduces the EXACT view and numbers; watermark visible on the surface | "the same number twice" · median TTA <60s |
+| F-02 | Ask box | analyst | type a question → deterministic NL→SQL → answer + expandable SQL + row preview | envelope = `{answer, sql, rows, watermark, took_ms}`; every banned construct → `fenced_query_rejected` with guidance, never best-effort | median TTA <60s · shows-its-work |
+| F-03 | Answer history `/ask/:id`, `/ask/me/history` | analyst | reopen a past answer by id; replay its SQL | every ask lands in `ask_log` (question, rendered_sql, ms, rows, success); `/ask/:id` returns the logged answer | evidence for the fork · reproducibility |
+| F-04 | Export CSV | analyst | export current view → download | CSV header comment carries the watermark; footer row count == rows in file; exact counts only; bypasses the 60s cache | "same number twice" · exact-count law |
+| F-05 | Staleness banner (all pages) | analyst | passive | sync lag >90m → amber banner on every surface + `#refundlens_sync_lag` alert; banner clears when lag recovers | never silently stale |
+| F-06 | Sync health surface `/health/sync` | service (ops) | poll watermark + lag | returns `{watermark, lag_s, last_run_status}`; lag >5400s → ticket, >10800s → page | ops truth for the freshness claim |
+| F-07 | Hourly ETL sync | etl (job) | scheduled: replica → raw UPSERT → one-tx agg rebuild → sync_runs row | re-running the same window produces zero delta (idempotent); a `sync_runs` row exists for every run incl. failures | hourly freshness behind every answer |
+| F-08 | Fork report | service (job) | weekly `scripts/fork_report.ts` reads `ask_log` | emits ask-vs-filter session split; runs weekly until the dated fork decision lands (OPEN-1) | the falsifier itself |
+
+Roles: `analyst` (SSO, all read surfaces + export) · `etl` (sync job's DB
+role — INSERT/UPDATE only, no app login) · `service` (health/report
+callers). There is no admin surface — FORBIDDEN by AGENTS §9.
+
 ## Core DDL (commentary — schema truth lives in db/migrations)
 
 ```sql
@@ -9,33 +30,112 @@ CREATE TABLE refund_events_raw (   -- hourly full+delta, idempotent on (id, upda
   state text, latency_ms int, updated_at timestamptz NOT NULL,
   ingested_at timestamptz DEFAULT now()
 );
-CREATE TABLE agg_daily (           -- rebuilt after each sync; queries hit this
+CREATE TABLE agg_daily (           -- rebuilt in ONE tx after each sync; views hit this
   day date, channel text, merchant_segment text, reason_code text,
   cnt bigint, amount bigint, p50_ms int, p95_ms int,
   PRIMARY KEY (day, channel, merchant_segment, reason_code)
 );
 CREATE TABLE sync_runs (id bigserial, watermark timestamptz, rows int,
-  status text, finished_at timestamptz);
+  status text, finished_at timestamptz);   -- one row per run, success or failure
 CREATE TABLE ask_log (            -- the fork's evidence + shows-its-work history
   id uuid PRIMARY KEY, user_id uuid, question text, rendered_sql text,
   ms int, rows int, success bool, created_at timestamptz DEFAULT now()
 );
+-- roles: app = SELECT only on refund_events_raw, agg_daily, sync_runs.
+-- etl = separate role, INSERT/UPDATE only, no login path.
 ```
 
 ## API registry
 
-POST /ask {question} → {answer, sql, rows, watermark, took_ms} (60s
-hash-cache) · GET /view?dim&metric&from&to&filters (query-param state →
-shareable) · GET /ask/:id + /ask/me/history · GET /export.csv (exact counts,
-watermark in header comment, bypasses cache) · GET /health/sync (watermark +
-lag; amber banner past 90min).
+POST `/ask` {question} → `{answer, sql, rows, watermark, took_ms}`
+(60s normalized-hash cache) · GET `/view?dim&metric&from&to&filters`
+(typed params → shareable state) · GET `/ask/:id` · GET `/ask/me/history`
+· GET `/export.csv` (exact counts, watermark in header comment, bypasses
+cache) · GET `/health/sync` (watermark + lag + last run status) ·
+platform `/healthz` `/readyz`.
+
+Error envelope per platform-http: `{error:{code,message,detail?,req_id}}`.
+Fence rejections carry `code:"fenced_query_rejected"` + actionable
+guidance. New endpoint = a row here + contract test first (AGENTS §5
+equivalent — the registry is the drift gate's source).
+
+| Endpoint | analyst | etl | service |
+|---|---|---|---|
+| POST /ask | ✓ | — | — |
+| GET /view | ✓ | — | — |
+| GET /ask/:id · /ask/me/history | own history | — | — |
+| GET /export.csv | ✓ | — | — |
+| GET /health/sync | ✓ | ✓ | ✓ |
+| ETL sync (DB only, no HTTP) | — | ✓ | — |
+| fork_report (DB only, no HTTP) | — | — | ✓ |
+
+## The fence — spec (all six mandatory + AST)
+
+Enforcement order inside `api/ask/`: generate → parse AST → check fences
+→ EXPLAIN → execute on the read-only role. Any failure =
+`fenced_query_rejected` — the generator never retries into a best effort.
+
+| # | Fence | Mechanism | Rejection |
+|---|---|---|---|
+| 1 | Read-only DB role | connection binds a SELECT-only role on the `refundlens` schema; writes fail at the DB layer | attempt → 500 + `fence` log (should be unreachable — treated as incident) |
+| 2 | Single-schema allowlist | identifiers resolve only inside `refundlens`; any other schema ref fails AST resolution | `fenced_query_rejected` — name the allowed tables |
+| 3 | Mandatory LIMIT | statement must carry LIMIT ≤ 5000; default 500 injected by templates | missing or over-cap LIMIT → `fenced_query_rejected` |
+| 4 | statement_timeout 5s | set on the read-only role's session, not per-query client config | timeout → error envelope, counts as `error` not `fenced` |
+| 5 | EXPLAIN cost cap | EXPLAIN before execute; total cost >5000 rejected | `fenced_query_rejected` + guidance to narrow dim/window/filters |
+| 6 | Banned tables | `ask_log`, `sync_runs`, anything outside `refundlens` | `fenced_query_rejected` — evidence tables are not queryable by the ask path |
+
+AST validation, not regex: generated SQL is parsed; DDL/DML tokens
+(INSERT/UPDATE/DELETE/DDL/multiple statements) post-generation fail at
+the AST stage regardless of how they are spelled. Regex would miss
+spelling; the AST cannot.
+
+## Template renderer contract (views — typed params only)
+
+Client sends `{dim, metric, from, to, filters[]}` — never SQL, never an
+identifier. Server-side, the SAME template library the ask path emits
+through renders the statement: dims/metrics from an allowlist registry,
+filters as typed ops on allowlisted columns, all values bound as
+parameters (no identifier interpolation, ever). Rendered view SQL passes
+through the identical fence checks — a view is not a back door around
+the six fences. Param fuzzing is a unit gate (§test matrix).
+
+## Observability (§6 — exact names)
+
+Metrics: `refundlens_ask_ms` (h) · `refundlens_ask_success` (c,
+ok/fenced/error) · `refundlens_fence_rejected_total` (c, reason) ·
+`refundlens_sync_lag_s` (g) · `refundlens_cache_hit` (c) ·
+`refundlens_export_total` (c).
+Alerts: sync_lag_s >5400 = ticket · >10800 = page · ask fenced-rejection
+rate >25% over 1h = ticket (product signal — users ask what the fence
+can't serve). Log fields: ts, level, req_id, user_id,
+surface(ask|view|export), ms, rows, cached. Banned: raw query results.
+
+## Test matrix (§7 gates)
+
+| Gate | Scope | Assertions |
+|---|---|---|
+| lint+typecheck | repo | tsc clean |
+| unit: fence module | api/ask | table-driven: mutation, DDL, cross-schema, no-LIMIT, over-cap cost, timeout — every banned construct rejected; AST catches spelling variants regex would miss |
+| unit: template renderer | api/ask + views | param fuzzing: injection-shaped values stay bound parameters; unknown dims/metrics/filters rejected |
+| integration (ephemeral PG) | ETL + store | fixed seed `refund-seed-v1`: agg_daily exact numbers — assert **5,432**, not ≈5000; ETL re-run over the same window = zero delta; watermark propagates store → envelope → CSV header |
+| contract | api | OpenAPI vs this registry — drift fails |
+| e2e (recorded) | web | ask → inspect SQL → share link reproduces exact view → export row count matches footer |
+| perf (k6) | api+db | 12-month dataset, 20 VU: view p95 <800ms, ask p95 <2500ms |
+
+## Capacity envelope (§8)
+
+[EST] 12-month retention · ~5M raw rows · 50 analysts · 10 RPS —
+revisit at 5x.
 
 ## Deployment
 
-Tier-2 99.5%, single-AZ app + multi-AZ DB, RTO 4h; ETL as scheduled job with
-lag alerting.
+Single-AZ app + Multi-AZ DB; ETL as a scheduled job with failure alert;
+blue/green; auto-rollback on error rate >2% (10m). Vault: REPLICA_DSN,
+DATABASE_URL, SSO_ISSUER, SLACK_ETL_ALERTS. Tier-2: 99.5% SLO, RTO 4h,
+business-hours support.
 
-## KPIs
+## Usage KPIs (= the PR promises)
 
-median time-to-answer <60s · ask-vs-filter split (the fork trigger) ·
-export count · stale-banner incidence.
+median time-to-answer <60s · ask-vs-filter session split (the fork
+trigger, F-08) · export count · stale-banner incidence · fenced-
+rejection rate.
