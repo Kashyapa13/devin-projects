@@ -70,3 +70,50 @@ describe("kill switch drill", () => {
     expect(await isKilled(db)).toBe(true);
   });
 });
+
+import { record } from "../api/src/store.js";
+
+describe("signal contract — hostile inputs", () => {
+  it("null body → clean rejection, no throw", () => {
+    expect(parseSignals(null).ok).toBe(false);
+    expect(parseSignals([]).ok).toBe(false);
+    expect(parseSignals("x").ok).toBe(false);
+  });
+  it("negative/out-of-range numerics rejected (no false approvals)", () => {
+    const bad = sig({ risk_score: -1, watchlist_hits: -1 });
+    expect(parseSignals(bad).ok).toBe(false);
+    expect(parseSignals(sig({ risk_score: 101 })).ok).toBe(false);
+    expect(parseSignals(sig({ tenure_days: -5 })).ok).toBe(false);
+  });
+  it("unknown fields stripped — C4 cannot leak into decision_db", () => {
+    const r = parseSignals({ ...sig({}), legal_name: "SHOULD-DROP", ssn: "x" });
+    expect(r.ok).toBe(true);
+    if (r.ok) { expect((r.signals as any).legal_name).toBeUndefined();
+      expect((r.signals as any).ssn).toBeUndefined(); }
+  });
+  it("caller ml_scores preserved; malformed entries dropped", () => {
+    const r = parseSignals(sig({ ml_scores: [{ model_name: "ext", model_version: "1",
+      score: 0.4, score_type: "fraud" }, { bogus: true }] }));
+    if (r.ok) expect(r.signals.ml_scores).toHaveLength(1);
+  });
+});
+
+describe("record — kill-switch serialization", () => {
+  it("decision landing during engagement inserts FROZEN, never slips through", async () => {
+    const calls: any[] = [];
+    const db: Db = { query: async (sql, p) => {
+      calls.push(sql);
+      if (sql.includes("kill_switch") && sql.startsWith("SELECT"))
+        return { rows: [{ value: true }] };           // switch already engaged
+      if (sql.includes("INSERT INTO shadow_decisions"))
+        return { rows: [{ id: "d1" }] };
+      return { rows: [] };
+    } };
+    const d = evaluate(sig({}));
+    await record(db, d);
+    const insert = calls.find((s) => s.includes("INSERT INTO shadow_decisions"));
+    expect(calls.some((s) => s.includes("pg_advisory_xact_lock"))).toBe(true);
+    expect(insert).toContain("frozen");
+    expect(calls.some((s) => s.includes("decision_outbox"))).toBe(true);
+  });
+});

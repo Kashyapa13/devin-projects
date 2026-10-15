@@ -22,3 +22,7 @@ kill-switch/release · GET reports/daily?day= · GET stale-packs · healthz/read
 - `shadow_decisions` — one row per shadow decision: case_id, signal_version, inputs (jsonb, full case_signals v1), pack_id + pack_version (strategy version → AML trail), fired_rule, decision, reason_code, confidence, rung, frozen, created_at. Index `shadow_decisions_case_idx` on (case_id, created_at desc).
 - `engine_state` — key/value engine flags; `kill_switch` row flips the decide path to 503 all-human and freezes in-flight rows.
 - `daily_reports` — one row per day: rollup jsonb (decisions by band, confidence histogram, per-rule disagreement counts).
+- `human_outcomes` — snapshot of the human decision per case_id (the SHADOW
+  comparison source; POST /api/v1/engine/human-outcome feeds it).
+- `decision_outbox` — durable FastLane-audit mirror queue; `decision_outbox_pending_idx`
+  partial index on unsent rows; relay marks `sent_at`, retries counted in `attempts`.
