@@ -1,8 +1,19 @@
-import { useTranslation } from "@company/ui";
+import { ColorSpring, Pulse, useTranslation } from "@company/ui";
+
+const PILL_COLOR: Record<string, string> = {
+  pending: "var(--c-muted)",
+  in_review: "var(--c-warn)",
+  approved: "var(--c-ok)",
+  rejected: "var(--c-bad)",
+  escalated: "var(--c-warn)",
+};
 
 export function StatusPill({ status }: { status: string }) {
+  const key = status.toLowerCase();
   return (
-    <span className={`pill pill-${status.toLowerCase()}`}>{status}</span>
+    <ColorSpring color={PILL_COLOR[key] ?? "var(--c-muted)"}>
+      <span className={`pill pill-${key}`}>{status}</span>
+    </ColorSpring>
   );
 }
 
@@ -16,9 +27,11 @@ export function SlaChip({ dueAt }: { dueAt: string }) {
   const ms = new Date(dueAt).getTime() - Date.now();
   const kind = ms < 0 ? "breach" : ms < 24 * 3600e3 ? "soon" : "ok";
   return (
-    <span className={`chip chip-${kind}`}>
-      {dueAt.slice(0, 10)} · {t(`sla.${kind === "breach" ? "breaching" : kind}`)}
-    </span>
+    <Pulse when={kind === "breach"}>
+      <span className={`chip chip-${kind}`}>
+        {dueAt.slice(0, 10)} · {t(`sla.${kind === "breach" ? "breaching" : kind}`)}
+      </span>
+    </Pulse>
   );
 }
 

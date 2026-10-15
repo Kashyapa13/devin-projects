@@ -23,8 +23,12 @@ export interface Violation {
   file: string;
   line: number;
   specifier: string;
-  rule: "platform->apps" | "app->app";
+  rule: "platform->apps" | "app->app" | "motion-outside-ui";
 }
+
+/** ADR-0014: ONE motion library, primitives in platform-ui ONLY. */
+const UI_PKG = "platform/packages/ui/";
+const MOTION_SPECS = /^(motion|framer-motion|react-spring|@use-gesture\/)/;
 
 /** app directory names are reserved as bare specifiers */
 function appNames(root = ROOT): Set<string> {
@@ -93,6 +97,18 @@ export function checkFile(
         rule: "platform->apps",
       });
     }
+    if (
+      !rel.startsWith(UI_PKG) &&
+      !rel.startsWith("platform/packages/ui/tests/") &&
+      MOTION_SPECS.test(spec)
+    ) {
+      violations.push({
+        file: rel,
+        line,
+        specifier: spec,
+        rule: "motion-outside-ui",
+      });
+    }
     if (appMatch && resolvedRel?.startsWith("apps/")) {
       const targetApp = resolvedRel.split("/")[1];
       if (targetApp && targetApp !== appMatch[1]) {
@@ -140,7 +156,7 @@ if (isMain) {
       );
     }
     console.error(
-      `\n${violations.length} violation(s). platform → nothing app-specific; apps ↛ apps (AGENTS.md §4).`,
+      `\n${violations.length} violation(s). platform → nothing app-specific; apps ↛ apps; motion lives in @company/ui only (AGENTS.md §4, ADR-0014).`,
     );
     process.exit(1);
   }

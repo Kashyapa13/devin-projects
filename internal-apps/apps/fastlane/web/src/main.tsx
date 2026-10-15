@@ -1,4 +1,4 @@
-import { initI18n } from "@company/ui";
+import { initI18n, MotionProvider } from "@company/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRoot } from "react-dom/client";
 import { useEffect, useState } from "react";
@@ -7,6 +7,16 @@ import { CasePage } from "./CasePage.js";
 import { resources } from "./strings.js";
 
 initI18n({ resources });
+
+// Motion test-mode: ?motion=off (or localStorage.motion="off") freezes
+// every animation for FT determinism — the flag lives in the DOM so
+// Playwright/axe can also set it via prefers-reduced-motion emulation.
+if (
+  new URLSearchParams(location.search).get("motion") === "off" ||
+  localStorage.getItem("motion") === "off"
+) {
+  document.documentElement.dataset["motion"] = "off";
+}
 
 /** Minimal hash router: #/ queue · #/case/<id>[?reject=1] decision panel. */
 function route(): { page: "queue" } | { page: "case"; id: string; reject: boolean } {
@@ -34,7 +44,9 @@ const el = document.getElementById("root");
 if (el) {
   createRoot(el).render(
     <QueryClientProvider client={qc}>
-      <App />
+      <MotionProvider>
+        <App />
+      </MotionProvider>
     </QueryClientProvider>,
   );
 }

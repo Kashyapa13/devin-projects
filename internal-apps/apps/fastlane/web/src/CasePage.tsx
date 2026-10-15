@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BlurMorph,
+  Morph,
   useKeyboardNav,
   useTranslation,
   type KeyMap,
@@ -159,7 +161,8 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
   return (
     <main>
       <h1>
-        {t("app.title")} — {kase.customer_ref}
+        {t("app.title")} —{" "}
+        <Morph morphId={`case-${kase.id}`}>{kase.customer_ref}</Morph>
       </h1>
       <p className="keys" aria-hidden="true">
         {t("case.keys")}
@@ -207,14 +210,18 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <h2 id="pii-h">{t("case.pii.title")}</h2>
         {revealed === null ? (
           <p>
-            <span className="masked">{t("case.pii.masked")}</span>{" "}
+            <BlurMorph revealed={false}>
+              <span className="masked">{t("case.pii.masked")}</span>
+            </BlurMorph>{" "}
             <button type="button" onClick={() => void doReveal()}>
               {t("case.pii.reveal")}
             </button>
           </p>
         ) : (
           <p>
-            <strong>{revealed}</strong>{" "}
+            <BlurMorph revealed>
+              <strong>{revealed}</strong>
+            </BlurMorph>{" "}
             <span className="keys">({t("case.pii.revealed")})</span>
           </p>
         )}

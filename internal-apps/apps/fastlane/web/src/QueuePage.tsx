@@ -4,8 +4,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  Morph,
   QueueTable,
+  Toast,
+  springs,
   useKeyboardNav,
+  useToasts,
   useTranslation,
   type KeyMap,
 } from "@company/ui";
@@ -33,6 +37,7 @@ export function QueuePage() {
   const [risk, setRisk] = useState<"all" | "high" | "med" | "low">("all");
   const [sel, setSel] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const { toasts, push } = useToasts();
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
@@ -56,22 +61,47 @@ export function QueuePage() {
   }, [allRows, risk]);
   const current = rows[Math.min(sel, Math.max(rows.length - 1, 0))];
 
+  /** Optimistic decide: the row springs away instantly and focus lands
+   *  on the next case; on error the row rolls back with a spring. */
   const act = useCallback(
     async (action: string, row?: CaseRow, body?: object) => {
       if (!row) return;
+      setError(null);
+      const key = ["queue", tab];
+      type Page = { rows: CaseRow[]; next_cursor?: string };
+      const snap = qc.getQueryData<{ pages: Page[] }>(key);
+      const deciding = action === "approve" || action === "reject";
+      if (deciding) {
+        qc.setQueryData(key, (d: { pages: Page[] } | undefined) =>
+          d
+            ? {
+                ...d,
+                pages: d.pages.map((p) => ({
+                  ...p,
+                  rows: p.rows.filter((r) => r.id !== row.id),
+                })),
+              }
+            : d,
+        );
+        push(t(`toast.${action}`), () => {
+          qc.setQueryData(key, snap);
+          void qc.invalidateQueries({ queryKey: ["queue"] });
+        });
+      }
       try {
-        setError(null);
         await api(`/api/v1/cases/${row.id}/${action}`, {
           method: "POST",
           body: body ?? {},
           idem: `${row.id}:${action}:${uuid()}`,
         });
-        void qc.invalidateQueries({ queryKey: ["queue"] });
       } catch (e) {
+        if (deciding) qc.setQueryData(key, snap); // spring rollback
         setError((e as Error).message);
+      } finally {
+        void qc.invalidateQueries({ queryKey: ["queue"] });
       }
     },
-    [qc],
+    [qc, tab, push, t],
   );
 
   const openCase = useCallback((row?: CaseRow) => {
@@ -139,9 +169,27 @@ export function QueuePage() {
         caption={t("queue.caption")}
         emptyMessage={t("queue.empty")}
         selectedId={current?.id}
+        glideId="queue"
         rows={rows}
+        rowMotion={(r) => ({
+          drag: "x",
+          dragConstraints: { left: 0, right: 0 },
+          dragElastic: 0.35,
+          transition: springs.gentle,
+          onDragEnd: (_, info) => {
+            if (info.offset.x > 96) void act("approve", r);
+            else if (info.offset.x < -96)
+              location.hash = `#/case/${r.id}?reject=1`;
+          },
+        })}
         columns={[
-          { key: "ref", header: t("col.ref"), render: (r) => r.customer_ref },
+          {
+            key: "ref",
+            header: t("col.ref"),
+            render: (r) => (
+              <Morph morphId={r.id === current?.id ? `case-${r.id}` : undefined}>{r.customer_ref}</Morph>
+            ),
+          },
           {
             key: "status",
             header: t("col.status"),
@@ -176,6 +224,13 @@ export function QueuePage() {
           {isFetchingNextPage ? t("loading") : t("queue.loadmore")}
         </button>
       )}
+      <div className="toasts">
+        {toasts.map((x) => (
+          <Toast key={x.id} id={x.id} onUndo={x.undo}>
+            {x.node}
+          </Toast>
+        ))}
+      </div>
     </main>
   );
 }
