@@ -27,6 +27,10 @@
     "typescript": "^5.6.3",
     "vite": "^6.0.0",
     "vitest": "^4.0.0",
-    "@company/testing": "workspace:*"
+    "@company/testing": "workspace:*",
+    "i18next": "^24.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.1.0"
   }
 }

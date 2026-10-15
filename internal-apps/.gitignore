@@ -13,3 +13,4 @@ apps/*/test-results/
 apps/*/playwright-report/
 apps/*/blob-report/
 apps/fastlane/web/dist-web/
+apps/*/web/dist-web/

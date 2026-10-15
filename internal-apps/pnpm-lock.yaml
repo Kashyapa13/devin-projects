@@ -77,9 +77,21 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.3.0(@types/react@19.3.0)
+      i18next:
+        specifier: ^24.0.0
+        version: 24.2.3(typescript@5.9.3)
       pg-mem:
         specifier: ^3.0.4
         version: 3.0.14
+      react:
+        specifier: ^19.0.0
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.3.1(react@19.3.1)
+      react-i18next:
+        specifier: ^15.1.0
+        version: 15.7.4(i18next@24.2.3(typescript@5.9.3))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)
       tsx:
         specifier: ^4.19.2
         version: 4.23.15
