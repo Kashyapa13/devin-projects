@@ -15,7 +15,8 @@
     "migrate": "tsx scripts/migrate.ts",
     "etl": "tsx scripts/etl.ts",
     "fork-report": "tsx scripts/fork_report.ts",
-    "dev-token": "tsx scripts/dev-token.ts"
+    "dev-token": "tsx scripts/dev-token.ts",
+    "heartbeat": "tsx scripts/heartbeat.ts"
   },
   "dependencies": {
     "@company/auth": "workspace:*",

@@ -1,4 +1,4 @@
-import { FencedRejection } from "./ask/fence.js";
+import { FencedRejection, WIDGET_SCOPE } from "./ask/fence.js";
 import { runFenced, type Queryable } from "./ask/executor.js";
 
 /**
@@ -28,6 +28,12 @@ export interface WidgetParams {
 const DIMS = new Set(["channel", "merchant_segment", "reason_code"]);
 const METRICS = new Set(["count", "amount", "rate"]);
 
+/** The widget surface (F-12..F-16) — the whole BI bar, nothing else. */
+export const WIDGETS = [
+  "kpi", "timeseries", "heatmap", "donut", "topn",
+  "scatter", "detail", "monitors_panel", "sync_health",
+] as const;
+
 function parseDate(s: string | undefined, fallbackDays: number): Date {
   if (s) {
     const d = new Date(s);
@@ -54,8 +60,45 @@ export interface WidgetResult {
   widget: string;
   series: Record<string, unknown>[];
   compare?: Record<string, unknown>[] | undefined;
+  /** timeseries only: server-computed band + z-score anomaly markers,
+   *  labeled heuristic (F-13) — never client-side aggregation. */
+  stats?: { mean: number; stddev: number; upper: number } | undefined;
+  anomalies?: { bucket: string; z: number }[] | undefined;
   watermark: string | null;
   took_ms: number;
+}
+
+/** z-score anomaly markers over per-bucket totals (heuristic — the
+ *  marker always carries that label on the surface). |z|>3, cap 20. */
+function zAnomalies(
+  rows: Record<string, unknown>[],
+): { stats: { mean: number; stddev: number; upper: number }; anomalies: { bucket: string; z: number }[] } {
+  const totals = new Map<string, number>();
+  for (const r of rows) {
+    const b = String(r.bucket);
+    totals.set(b, (totals.get(b) ?? 0) + Number(r.v ?? 0));
+  }
+  const vals = [...totals.values()];
+  const mean = vals.reduce((s, v) => s + v, 0) / Math.max(vals.length, 1);
+  const variance =
+    vals.reduce((s, v) => s + (v - mean) * (v - mean), 0) / Math.max(vals.length, 1);
+  const stddev = Math.sqrt(variance);
+  const anomalies: { bucket: string; z: number }[] = [];
+  if (stddev > 0) {
+    for (const [bucket, v] of totals) {
+      const z = (v - mean) / stddev;
+      if (Math.abs(z) > 3) anomalies.push({ bucket, z: Math.round(z * 100) / 100 });
+    }
+  }
+  anomalies.sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+  return {
+    stats: {
+      mean: Math.round(mean * 100) / 100,
+      stddev: Math.round(stddev * 100) / 100,
+      upper: Math.round((mean + 3 * stddev) * 100) / 100,
+    },
+    anomalies: anomalies.slice(0, 20),
+  };
 }
 
 async function latestWatermark(db: Queryable): Promise<string | null> {
@@ -103,16 +146,21 @@ export async function runWidget(
     case "timeseries": {
       const dim = p.dim ?? "channel";
       if (!DIMS.has(dim)) throw new FencedRejection("cost_cap", `unknown dim ${dim}`, "use channel|merchant_segment|reason_code");
+      const metric = p.metric ?? "count";
+      if (!METRICS.has(metric)) throw new FencedRejection("cost_cap", `unknown metric ${metric}`, "use count|amount|rate");
       const bucket = p.grain === "minute"
         ? `date_trunc('minute', occurred_at)`
         : p.grain === "hour"
           ? `date_trunc('hour', occurred_at)`
           : `occurred_at::date`;
       const val = p.metric === "amount" ? "SUM(amount_cents)::bigint" : "COUNT(*)::bigint";
+      // grouped series default to the fence max — a truncated time
+      // series is a lying chart; the LIMIT stays in the SQL either way
+      const tslim = Math.min(Math.max(p.limit ?? 5000, 1), 5000);
       sql = `SELECT ${bucket} AS bucket, ${dim} AS dim, ${val} AS v,
                COUNT(*)::bigint AS n
              FROM refundlens.refund_events_raw WHERE ${W}
-             GROUP BY 1, 2 ORDER BY 1, 2 LIMIT ${lim}`;
+             GROUP BY 1, 2 ORDER BY 1, 2 LIMIT ${tslim}`;
       break;
     }
     case "heatmap": {
@@ -179,8 +227,12 @@ export async function runWidget(
       );
   }
 
+  // widgets that don't embed the shared WHERE (monitors_panel,
+  // sync_health) carry no placeholders — passing params would make the
+  // bind fail; bind only what the statement references.
+  const bound = /\$\d/.test(sql) ? params : [];
   const t0 = process.hrtime.bigint();
-  const { rows, ms } = await runFenced(db, sql, params);
+  const { rows, ms } = await runFenced(db, sql, bound, { scope: WIDGET_SCOPE });
   let compare: Record<string, unknown>[] | undefined;
   if (p.compare) {
     // period-over-period: identical query, bounds shifted back one span
@@ -188,14 +240,16 @@ export async function runWidget(
     const shifted = [...params];
     shifted[0] = new Date(from.getTime() - span).toISOString();
     shifted[1] = from.toISOString();
-    compare = (await runFenced(db, sql, shifted)).rows;
+    compare = (await runFenced(db, sql, bound.length ? shifted : [], { scope: WIDGET_SCOPE })).rows;
   }
   const watermark = await latestWatermark(db);
   const took_ms = Number(process.hrtime.bigint() - t0) / 1e6;
+  const z = name === "timeseries" ? zAnomalies(rows) : null;
   return {
     widget: name,
     series: rows,
     ...(compare ? { compare } : {}),
+    ...(z ? { stats: z.stats, anomalies: z.anomalies } : {}),
     watermark,
     took_ms: Math.round(Math.max(took_ms, ms) * 10) / 10,
   };
