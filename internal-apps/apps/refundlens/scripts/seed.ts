@@ -47,6 +47,33 @@ export const SEED_PLAN: SeedPlan[] = [
 ];
 export const SEED_TOTAL = SEED_PLAN.reduce((s, p) => s + p.count, 0); // 5432
 
+/**
+ * Deterministic hour-of-day × day-of-week distribution (heatmap truth).
+ * Events spread over ~44 weeks ending 2026-10-09; weekday-heavy DOW
+ * cycle and a business-hours weight curve — the signature widget must
+ * show a real pattern, not noise. Same id always yields the same slot.
+ */
+const HOUR_W = [1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 2, 2, 2];
+const HOUR_TOTAL = HOUR_W.reduce((a, b) => a + b, 0); // 78
+const DOW_CYCLE = [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 6, 0]; // 10/12 weekday
+function seedOccurredAt(id: number, jitterDays: number): string {
+  // hour: weighted pick via cumulative weights
+  let acc = (id * 31) % HOUR_TOTAL;
+  let hour = 0;
+  while (acc >= HOUR_W[hour]!) { acc -= HOUR_W[hour]!; hour++; }
+  // dow: weighted weekday pick; week index spreads events back ~44w
+  const dow = DOW_CYCLE[id % 12]!;
+  const weekIdx = (id * 13) % 44;
+  const end = Date.UTC(2026, 9, 9); // Friday 2026-10-09
+  const endDow = new Date(end).getUTCDay();
+  const dayMs =
+    end - weekIdx * 7 * 86_400_000 - ((endDow - dow + 7) % 7) * 86_400_000 -
+    jitterDays * 86_400_000;
+  const d = new Date(dayMs);
+  d.setUTCHours(hour, id % 60, (id * 7) % 60, 0);
+  return d.toISOString();
+}
+
 async function seedSource(db: SeedDb): Promise<void> {
   await db.query(SOURCE_DDL);
   await db.query("DELETE FROM source.refund_events");
@@ -57,9 +84,7 @@ async function seedSource(db: SeedDb): Promise<void> {
       const latency = 80 + ((id * 13) % 900);
       // deterministic, strictly increasing updated_at (the sync cursor
       // orders by (updated_at, id) — distinct values keep batches honest)
-      const occurred = new Date(
-        Date.UTC(2026, 9, 10) - p.dayOffset * 86_400_000 + id * 60_000,
-      ).toISOString();
+      const occurred = seedOccurredAt(id, p.dayOffset);
       const updated = new Date(Date.UTC(2026, 9, 9) + id * 1_000).toISOString();
       await db.query(
         `INSERT INTO source.refund_events

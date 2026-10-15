@@ -129,6 +129,20 @@ export async function runSync(
            cnt=EXCLUDED.cnt, amount=EXCLUDED.amount,
            p50_ms=EXCLUDED.p50_ms, p95_ms=EXCLUDED.p95_ms`,
       );
+      // agg_hourly (heatmap grain) rebuilt in the SAME transaction —
+      // a partial aggregate is a lie; both surfaces move together.
+      await rollup.query(
+        `INSERT INTO refundlens.agg_hourly
+           (day, hour, channel, reason_code, cnt, amount)
+         SELECT occurred_at::date,
+                EXTRACT(hour FROM occurred_at)::smallint,
+                channel, reason_code,
+                COUNT(*)::bigint, SUM(amount_cents)::bigint
+         FROM refundlens.refund_events_raw
+         GROUP BY 1,2,3,4
+         ON CONFLICT (day, hour, channel, reason_code) DO UPDATE SET
+           cnt=EXCLUDED.cnt, amount=EXCLUDED.amount`,
+      );
       const last = delta[delta.length - 1];
       const newWatermark = last
         ? new Date(last.updated_at as string | Date).toISOString()
