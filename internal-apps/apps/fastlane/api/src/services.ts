@@ -66,7 +66,10 @@ function assertAssignee(
   actor: Actor,
 ): void {
   if (actor.roles.includes("supervisor") || actor.roles.includes("admin")) return;
-  if ((kase.assignee_id as string | null) !== actor.sub) {
+  const assigned = kase.assignee_id as string | null;
+  // assignee_id is a PG UUID (canonical lowercase); actor.sub is a raw JWT
+  // string — compare case-insensitively so uppercase UUID subjects match.
+  if (assigned === null || assigned.toLowerCase() !== actor.sub.toLowerCase()) {
     throw new ApiError(
       "NOT_ASSIGNEE",
       "only the assignee can act on this case — claim it first or ask the assignee",
@@ -234,7 +237,15 @@ export async function docUrl(
   });
   const exp = new Date(Date.now() + 900_000);
   const bucket = process.env.DOC_BUCKET ?? "docs.local";
-  const secret = process.env.DOC_SIGNING_KEY ?? process.env.DEV_KMS_KEY ?? "dev";
+  // Never sign with the public 'dev' fallback outside local dev: a missing
+  // DOC_SIGNING_KEY in a configured deploy is a hard error, not a forgery
+  // opportunity (ADR-0007).
+  const secret =
+    process.env.DOC_SIGNING_KEY ??
+    (process.env.NODE_ENV === "production" ? undefined : process.env.DEV_KMS_KEY ?? "dev");
+  if (!secret) {
+    throw new ApiError("DOC_SIGNING_KEY_MISSING", "doc signing key not configured", 503);
+  }
   const sig = createHmac("sha256", secret)
     .update(`${caseId}|${exp.toISOString()}`)
     .digest("hex");
