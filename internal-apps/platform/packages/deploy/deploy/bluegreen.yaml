@@ -5,33 +5,46 @@ kind: Deployment
 metadata:
   name: ${APP}-green
   namespace: ${NAMESPACE}
-  labels: { app: ${APP}, track: green }
+  labels:
+    app: ${APP}
+    track: green
 spec:
   replicas: 2
   selector:
-    matchLabels: { app: ${APP}, track: green }
+    matchLabels:
+      app: ${APP}
+      track: green
   template:
     metadata:
-      labels: { app: ${APP}, track: green }
+      labels:
+    app: ${APP}
+    track: green
     spec:
       securityContext:
         runAsNonRoot: true
       containers:
         - name: app
           image: ${IMAGE}
-          ports: [{ containerPort: 8080 }]
-          envFrom: [{ secretRef: { name: ${APP}-env } }]
+          ports:
+            - containerPort: ${PORT}
+          envFrom:
+            - secretRef:
+                name: ${APP}-env
           readinessProbe:
-            httpGet: { path: /readyz, port: 8080 }
+            httpGet:
+              path: /readyz
+              port: ${PORT}
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            httpGet: { path: /healthz, port: 8080 }
+            httpGet:
+              path: /healthz
+              port: ${PORT}
             initialDelaySeconds: 10
             periodSeconds: 30
 ---
 # Service cutover happens by re-pointing the selector to track: green —
-# rollback = point it back to track: blue (see app RUNBOOK.md).
+# rollback = re-apply k8s/service.yaml (selector track: stable).
 apiVersion: v1
 kind: Service
 metadata:
@@ -40,7 +53,7 @@ metadata:
 spec:
   selector:
     app: ${APP}
-    track: green # flip to blue for instant rollback
+    track: green
   ports:
     - port: 80
-      targetPort: 8080
+      targetPort: ${PORT}

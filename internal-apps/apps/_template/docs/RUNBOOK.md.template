@@ -1,7 +1,11 @@
 # <APP_NAME> — RUNBOOK
 
 ## Deploy
-TODO: pipeline, migration-job step, verification commands.
+K8s manifests: `deploy/` (rendered from `platform/packages/deploy/k8s/`
+via `scripts/render-deploy.sh <APP_NAME>` — re-render on template
+change, never hand-edit). Order: sa/cm/np → migrate-job →
+deployment+service.
+TODO: pipeline, verification commands.
 
 ## Rollback
 TODO: blue/green switch + auto-rollback thresholds; how to force it.

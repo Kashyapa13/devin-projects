@@ -1,0 +1,27 @@
+# Migration job template — runs the app's raw-SQL migrations as a
+# pre-deploy step (platform/db migrationRunner), same image as the app.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: decision-engine-migrate-7dc9f85
+  namespace: internal-apps
+  labels:
+    app: decision-engine
+    job: migrate
+spec:
+  backoffLimit: 0 # migrations never auto-retry — inspect, fix, re-run (runbook)
+  ttlSecondsAfterFinished: 86400 # completed jobs self-clean — next release's job can re-apply
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: decision-engine
+      automountServiceAccountToken: false # needs the DB, not the cluster API
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: migrate
+          image: registry.internal/decision-engine:7dc9f85
+          command: ["node", "dist/api/src/migrate.js"]
+          envFrom:
+            - secretRef:
+                name: decision-engine-env

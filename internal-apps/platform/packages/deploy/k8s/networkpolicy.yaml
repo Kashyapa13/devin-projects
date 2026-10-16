@@ -1,0 +1,62 @@
+# NetworkPolicy — default-deny posture per app: the pod talks only to
+# Postgres, the OTLP collector, DNS, and ingress from the internal CIDR.
+# Tighten source ranges per environment (infra/ENVIRONMENTS.md).
+# ${APP} ${NAMESPACE}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ${APP}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP}
+spec:
+  podSelector:
+    matchLabels:
+      app: ${APP}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress
+      ports:
+        - port: ${PORT}
+          protocol: TCP
+    # same-app pods only — cross-app calls need an ADR + their own rule
+    - from:
+        - podSelector:
+            matchLabels:
+              app: ${APP}
+      ports:
+        - port: ${PORT}
+          protocol: TCP
+    # prometheus scrape of /metrics
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - port: ${PORT}
+          protocol: TCP
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Postgres (own db — app data law)
+    - to:
+        - ipBlock:
+            cidr: ${DB_CIDR} # render default is broad — set per env (infra/ENVIRONMENTS.md)
+      ports: [{ port: 5432, protocol: TCP }]
+    # OTLP collector
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports: [{ port: 4318, protocol: TCP }]

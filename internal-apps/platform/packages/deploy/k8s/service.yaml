@@ -1,0 +1,19 @@
+# Cluster-internal service — ingress policy is an app-level decision
+# (FastLane/RefundLens are intranet-internal; expose via ingress only when
+# the app's RUNBOOK says so). ${APP} ${NAMESPACE} ${PORT}
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APP}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP}
+spec:
+  type: ClusterIP
+  selector:
+    app: ${APP}
+    track: stable # the cutover track lives in deploy/bluegreen.yaml — do not apply this Service while a track-specific selector is in use
+  ports:
+    - name: http
+      port: 80
+      targetPort: ${PORT}

@@ -1,0 +1,14 @@
+# PDB — voluntary disruptions (node drains, upgrades) keep ≥1 replica.
+# ${APP} ${NAMESPACE}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ${APP}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ${APP}

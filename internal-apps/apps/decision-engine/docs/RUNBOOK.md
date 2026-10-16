@@ -1,5 +1,7 @@
 # RUNBOOK — decision-engine
 - Deploy: Dockerfile → its own unit; DATABASE_URL → own decision_db.
+  K8s manifests: `deploy/` (rendered — `scripts/render-deploy.sh
+  decision-engine`); migrate-job runs `dist/api/src/migrate.js`.
 - Kill switch drill (monthly via KEEPER): POST /api/v1/engine/kill-switch →
   verify /decide 503s + frozen rows → POST release.
 - Rotate secrets: DATABASE_URL via vault scope names only.

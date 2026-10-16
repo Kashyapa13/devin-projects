@@ -1,0 +1,27 @@
+# Migration job template — runs the app's raw-SQL migrations as a
+# pre-deploy step (platform/db migrationRunner), same image as the app.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${APP}-migrate-${REVISION}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP}
+    job: migrate
+spec:
+  backoffLimit: 0 # migrations never auto-retry — inspect, fix, re-run (runbook)
+  ttlSecondsAfterFinished: 86400 # completed jobs self-clean — next release's job can re-apply
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: ${APP}
+      automountServiceAccountToken: false # needs the DB, not the cluster API
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: migrate
+          image: ${IMAGE}
+          command: ["node", "${MIGRATE_ENTRY}"]
+          envFrom:
+            - secretRef:
+                name: ${APP}-env
