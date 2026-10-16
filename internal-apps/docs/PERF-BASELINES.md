@@ -35,8 +35,8 @@ Dataset: `refund-seed-v1` (5,432 events, 12-month span); postgres:16-alpine
 | ask p95 @ 20 VU | < 2500 ms | **4.50 ms** | PASS | 293,899 iters / 30 s, 4-question corpus |
 | cache-hit ratio (steady) | > 60 % | **100 %** | PASS | 60 s TTL + small question space saturates |
 | first paint p95 (web shell) | < 2000 ms | **23.31 ms** | PASS | `GET /` on vite dev server; hash-routed shell (#/dashboard default) |
-| widget interaction p95 | < 100 ms | **29.64 ms** | PASS | REAL surface — `/api/widgets/{kpi,timeseries,heatmap,donut,topn,recent}` cycled at 20 VU / 30 s |
-| heartbeat age e2e p95 | < 60 s | **28 s** | PASS | real e2e: `POST /api/internal/beat` (service) → `GET /api/v1/health/sync` `heartbeat.age_s`; single setup beat ages across the 30 s run — measures post→record→read pipeline freshness |
+| widget interaction p95 | < 100 ms | **29.64 ms** | PASS | measured manually against live `/api/widgets/*` at 20 VU — **no committed script reproduces this number** (r2 metrics audit); re-verified at 33.39 ms by independent re-measure. Provenance gap, not a falsified value — a `k6-widgets.js` is owed |
+| heartbeat age e2e p95 | < 60 s | **28 s** | PASS | post→record→read measured manually; **no committed script emits `heartbeat_age_p95_s`** (r2 metrics audit) — plausible vs mechanism, provenance gap |
 | SSE soak | 8 h aspirational / ≥10 min excerpt | n/a | NOT RUN | 30 s gate run only; 10 min excerpt = `DURATION=10m k6 run apps/refundlens/scripts/perf/k6-surfaces.js` (script is soak-capable via env) |
 
 ### Commands
@@ -51,8 +51,8 @@ TOKEN=$(pnpm -s dev-token) SERVICE_TOKEN=$(pnpm -s dev-token --roles=service --s
   k6 run --env TOKEN=$TOKEN --env SERVICE_TOKEN=$SERVICE_TOKEN --env VUS=20 --env DURATION=30s \
   apps/refundlens/scripts/perf/k6-surfaces.js
 # → {"first_paint_p95_ms":23.31,"budget_first_paint_ms":2000,"first_paint_ok":true,
-#    "widget_p95_ms":29.64,"budget_widget_ms":100,"widget_ok":true,
-#    "heartbeat_age_p95_s":28,"budget_heartbeat_age_s":60,"heartbeat_age_ok":true}
+#    (widget_p95_ms / heartbeat_age_p95_s shown in earlier output were measured
+#    manually — k6-surfaces.js does not emit them; see row notes above)
 ```
 
 ## fastlane — `GET /api/v1/queue` — 2026-10-15

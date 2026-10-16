@@ -45,7 +45,7 @@ flowchart LR
     end
     FL & RL & ENG & FLG --> PLAT
     PA -. stay-put decision<br/>ADR-0002 .-> FLG
-    RL -. BI replacement<br/>ADR-0015 .-> PBI
+    RL -. BI replacement<br/>ADR-0019 .-> PBI
     ENG -. audit mirror<br/>API-only .-> FL
 ```
 

@@ -11,10 +11,10 @@ their documented strength.
 | PR promise (named) | Power Apps | Devin lane | Power BI |
 |---|---|---|---|
 | fastlane: queue clear-time −40% | — | **Owns it** (keyboard console, queue p95 <1s) | — |
-| fastlane: 100% decisions audited | partial (Dataverse audit logs exist, not same-tx envelope) | **Owns it** (same-tx audit rows by construction) | — |
-| fastlane: C4 encrypted + masked-by-default | — (no app-layer AES-GCM + audited reveal) | **Owns it** | — |
-| refundlens: median time-to-answer <60s | — | **Owns it** (filters + ask box on a replica) | scheduled reports only |
-| refundlens: read-only source guarantee | — (connector permissions, not a fence) | **Owns it** (watermark fence) | — |
+| fastlane: 100% decisions audited | partial — [Dataverse auditing](https://learn.microsoft.com/en-us/power-platform/admin/manage-dataverse-auditing) exists (write-then-audit), not a same-tx envelope | **Owns it** (same-tx audit rows by construction) | — |
+| fastlane: C4 encrypted + masked-by-default | — (vendor docs cover service-level/TDE encryption; per-field app-layer AES-GCM + audited reveal is not a documented feature — analysis, verify at security review) | **Owns it** | — |
+| refundlens: median time-to-answer <60s | — | **Owns it** (filters + ask box on a replica) | interactive dashboards; report delivery = [email subscriptions](https://learn.microsoft.com/en-us/power-bi/collaborate-share/end-user-subscribe) only |
+| refundlens: read-only source guarantee | — (connector-level permissions only; no query-layer fence — analysis) | **Owns it** (watermark fence) | — |
 | flags: 100% flips attributed | **Owns it today** (stays on PA) | replica = capability demo | — |
 | template: CRUD app green <1 day | maker builds unassisted (3–6 analyst-wks per FACTS [EST]) | **Owns it** (scaffold→green, zero edits) | — |
 | forms/approvals on M365 data | **Owns it** | — | — |
@@ -74,7 +74,7 @@ $250k line shrinks mostly by contract work, not by lane choice.
 - **Maker velocity on M365 data.** Forms, approvals, and data entry
   against SharePoint/Teams/Dataverse by analysts, not engineers — that is
   the lane's design point, with the built-in connector catalog (~1,000+ marketed; ~1,600 listed in the [connector reference](https://learn.microsoft.com/en-us/connectors/connector-reference)).
-- **Bundled economics.** M365-seeded rights cover standard connectors;
+- **Bundled economics.** M365-seeded rights cover standard connectors (per the Power Platform Licensing Guide — see FACTS);
   if the org already pays, marginal app cost can be ~$0 — the strongest
   honest argument for PA-primary on forms-shaped work.
 - **Copilot authoring.** Copilot chat/form-fill GA for Dynamics 365 users;
