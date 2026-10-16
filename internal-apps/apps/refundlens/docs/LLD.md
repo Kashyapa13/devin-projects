@@ -9,8 +9,8 @@ adds a row here in the same diff.
 | F-NN | Screen | Role | Interaction | Acceptance assertion | PR-promise trace |
 |---|---|---|---|---|---|
 | F-01 | Aggregate console `/view` | analyst | pick dim/metric/window/filters → server-rendered view; full state lives in query params → shareable URL | share link reproduces the EXACT view and numbers; watermark visible on the surface | "the same number twice" · median TTA <60s |
-| F-02 | Ask box | analyst | type a question → deterministic NL→SQL → answer + expandable SQL + row preview | envelope = `{answer, sql, rows, watermark, took_ms}`; every banned construct → `fenced_query_rejected` with guidance, never best-effort | median TTA <60s · shows-its-work · **motion notes (ADR-0014):** answer card Reveal settle · leading count counts up on `gentleSettle` · rows stagger draw-in (re-bind, never re-mount) · fenced rejection shake + inline guidance · **visual language (ADR-0018):** `@company/ui/styles.css` (glass appbar, elevated answer/error cards, mono metadata, dark SQL block) · `AppHeader` + `CommandDock` shortcut pill · **dashboard shell (this PR):** header `sync-pill` (freshness readout → amber at lag >90 min per §4) · 3-card KPI bento (F-12 partial) · fenced-badge SQL drawer · agg_daily rollup panel — all data via `GET /widgets/:name` + `GET /health/sync`, the same fenced layer, never client-side aggregation |
-| F-03 | Answer history `/ask/:id`, `/ask/me/history` | analyst | reopen a past answer by id; replay its SQL | every ask lands in `ask_log` (question, rendered_sql, ms, rows, success); `/ask/:id` returns the logged answer | evidence for the fork · reproducibility |
+| F-02 | Ask box | analyst | type a question → deterministic NL→SQL → answer + expandable SQL + row preview | envelope = `{answer, sql, rows, watermark, took_ms}`; every banned construct → `fenced_query_rejected` with guidance, never best-effort | median TTA <60s · shows-its-work · **motion notes (ADR-0014):** answer card Reveal settle · leading count counts up on `gentleSettle` · rows stagger draw-in (re-bind, never re-mount) · fenced rejection shake + inline guidance · **visual language (ADR-0020):** `@company/ui/styles.css` (glass appbar, elevated answer/error cards, mono metadata, dark SQL block) · `AppHeader` + `CommandDock` shortcut pill · **dashboard shell (this PR):** header `sync-pill` (freshness readout → amber at lag >90 min per §4) · 3-card KPI bento (F-12 partial) · fenced-badge SQL drawer · agg_daily rollup panel — all data via `GET /widgets/:name` + `GET /health/sync`, the same fenced layer, never client-side aggregation |
+| F-03 | Answer history `GET /api/v1/history` | analyst | reopen a past answer by id; replay its SQL | every ask lands in `ask_log` (question, rendered_sql, ms, rows, success); `GET /api/v1/history` returns the caller's logged answers, newest first | evidence for the fork · reproducibility |
 | F-04 | Export CSV | analyst | export current view → download | CSV header comment carries the watermark; footer row count == rows in file; exact counts only; bypasses the 60s cache | "same number twice" · exact-count law |
 | F-05 | Staleness banner (all pages) | analyst | passive | sync lag >90m → amber banner on every surface + `#refundlens_sync_lag` alert; banner clears when lag recovers | never silently stale |
 | F-06 | Sync health surface `/health/sync` | service (ops) | poll watermark + lag | returns `{watermark, lag_s, last_run_status}`; lag >5400s → ticket, >10800s → page | ops truth for the freshness claim |
@@ -82,7 +82,7 @@ CREATE INDEX monitor_events_by_monitor  -- latest-event lookups (monitors_panel)
 
 POST `/ask` {question} → `{answer, sql, rows, watermark, took_ms}`
 (60s normalized-hash cache) · GET `/view?dim&metric&from&to&filters`
-(typed params → shareable state) · GET `/ask/:id` · GET `/ask/me/history`
+(typed params → shareable state) · GET `/api/v1/history`
 · GET `/export.csv` (exact counts, watermark in header comment, bypasses
 cache) · GET `/health/sync` (watermark + lag + last run status) ·
 GET `/api/stream/heartbeat` (SSE — heartbeat events; ADR-0016; bearer or
@@ -105,7 +105,7 @@ equivalent — the registry is the drift gate's source).
 |---|---|---|---|---|---|
 | POST /ask | ✓ | — | — | — | — |
 | GET /view | ✓ | — | — | — | — |
-| GET /ask/:id · /ask/me/history | own history | — | — | — | — |
+| GET /api/v1/history | own history | — | — | — | — |
 | GET /export.csv | ✓ | — | — | — | — |
 | GET /api/widgets/:name | ✓ | ✓ | — | — | — |
 | GET /api/stream/heartbeat | ✓ | ✓ | — | — | — |

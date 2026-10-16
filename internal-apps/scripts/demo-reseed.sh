@@ -23,7 +23,7 @@ RL_APP_DSN="${REFUNDLENS_APP_DSN:-postgres://refundlens_app_dev:dev@localhost:55
 echo "== demo-reseed: ensuring databases =="
 $PGC -c "SELECT 1" >/dev/null   # fails fast if fastlane-pg isn't up
 for db in fastlane refundlens flags decision_db; do
-  $PGC -tc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 \
+  [ "$($PGC -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | tr -d '[:space:]')" = "1" ] \
     || $PGC -c "CREATE DATABASE $db"
 done
 
@@ -39,6 +39,7 @@ echo "== fastlane: demo fixtures (breacher + mid-review) =="
 $PGC -d fastlane <<'SQL'
 -- D4: a case already breaching its 48h SLA — the chip glows on open.
 -- (legal_name_enc stays NULL: the demo reveal path uses a seeded CUST-* row.)
+DELETE FROM kyc_cases WHERE customer_ref IN ('DEMO-BREACH','DEMO-INREVIEW');
 INSERT INTO kyc_cases (customer_ref, country, risk_score, doc_type,
       status, priority, assignee_id, sla_due_at)
 VALUES ('DEMO-BREACH', 'GB', 82, 'PASSPORT', 'PENDING', 'HIGH', NULL,
@@ -68,7 +69,9 @@ echo "   ripe ask: 'refund total by merchant, last 90 days'"
 
 echo "== flags: migrate + position demo-hero OFF =="
 if [ -f apps/flags/db/migrations/0001_init.up.sql ]; then
-  $PGC -d flags -f apps/flags/db/migrations/0001_init.up.sql 2>/dev/null || true
+  # psql -f resolves inside the container — pipe via stdin instead
+  # (r2 claim finding: the -f path was silently dropped by || true).
+  $PGC -d flags < apps/flags/db/migrations/0001_init.up.sql
   if [ -f apps/flags/scripts/seed.ts ]; then
     (cd apps/flags && DATABASE_URL=$FLAGS_DSN pnpm exec tsx scripts/seed.ts >/dev/null)
   else

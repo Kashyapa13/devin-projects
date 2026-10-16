@@ -253,7 +253,7 @@ CountUp, Morph hero) — wiring stays with their owning sessions.
 
 ---
 
-## PHASE D — visual language (2026-10-15, ADR-0018)
+## PHASE D — visual language (2026-10-15, ADR-0020)
 
 The motion layer landed first; the *visual* layer followed on the same
 branch family: one `@company/ui/styles.css` (tokens, ambient canvas,

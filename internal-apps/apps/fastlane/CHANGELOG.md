@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Fleet visual language (ADR-0018): glass `AppHeader` + `CommandDock` +
+- Fleet visual language (ADR-0020): glass `AppHeader` + `CommandDock` +
   `Segmented` tabs, soft-tone pills/badges, borderless queue table with
   indigo focus rail, skeleton load states, obsidian/ghost buttons —
   all styling from `@company/ui/styles.css` (inline CSS removed).
