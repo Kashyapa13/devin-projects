@@ -198,6 +198,16 @@ export async function runWidget(
              ORDER BY occurred_at DESC LIMIT ${lim}`;
       break;
     }
+    case "daily": {
+      // agg_daily is a DATE grain table — bounds filter `day`, not occurred_at
+      sql = `SELECT day, channel, merchant_segment, reason_code,
+               cnt::bigint AS cnt, amount::bigint AS amount,
+               p50_ms::int AS p50_ms, p95_ms::int AS p95_ms
+             FROM refundlens.agg_daily
+             WHERE day >= $1::date AND day < $2::date
+             ORDER BY day DESC, cnt DESC LIMIT ${lim}`;
+      break;
+    }
     case "detail": {
       sql = `SELECT id, txn_ref, occurred_at, channel, merchant_segment,
                amount_cents, reason_code, state, latency_ms
@@ -223,7 +233,7 @@ export async function runWidget(
       throw new FencedRejection(
         "cost_cap",
         `unknown widget ${name}`,
-        "use kpi|timeseries|heatmap|donut|topn|scatter|detail|monitors_panel|sync_health",
+        "use kpi|timeseries|heatmap|donut|topn|scatter|daily|detail|monitors_panel|sync_health",
       );
   }
 

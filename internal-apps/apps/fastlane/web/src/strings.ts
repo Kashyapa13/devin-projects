@@ -4,6 +4,12 @@ export const resources = {
     translation: {
       "app.title": "FastLane",
       "app.meta": "KYC Review Queue • 100% Audited",
+      "app.eyebrow": "KYC review",
+      "queue.tabs": "Queue tabs",
+      "dock.navigate": "navigate",
+      "dock.open": "open",
+      "dock.back": "back",
+      "case.missing": "case not found or unavailable",
       "queue.caption": "KYC review queue",
       "queue.empty": "Queue is clear",
       "queue.tab.mine": "Mine",

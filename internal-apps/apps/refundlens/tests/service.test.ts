@@ -23,7 +23,13 @@ describe("POST /ask service — envelope + cache + evidence", () => {
     const d = deps();
     const env = await ask(d, ACTOR, "how many refunds by channel last 30 days", "req-1");
     expect(env.answer).toBe("42 — refund count by channel");
-    expect(env.understood).toBe("refund count by channel, 2026-09-14 → 2026-10-14");
+    // Window mirrors api/src/ask/nl.ts: to = yesterday (daily-fresh edge), from = to-30d.
+    const day = (d: Date) => d.toISOString().slice(0, 10);
+    const to = new Date(Date.now() - 86400e3);
+    const from = new Date(to.getTime() - 30 * 86400e3);
+    expect(env.understood).toBe(
+      `refund count by channel, ${day(from)} → ${day(to)}`,
+    );
     expect(env.sql).toContain("FROM agg_daily");
     expect(env.rows).toEqual([{ day: "2026-10-08", value: "42" }]);
     expect(env.watermark).toBe("2026-10-09T01:30:32.000Z");

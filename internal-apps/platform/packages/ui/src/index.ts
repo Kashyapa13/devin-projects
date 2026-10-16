@@ -1,5 +1,12 @@
 export { tailwindPreset } from "./tailwindPreset.js";
 export {
+  AppHeader,
+  CommandDock,
+  Segmented,
+  type DockItem,
+  type SegmentedOption,
+} from "./chrome.js";
+export {
   QueueTable,
   type QueueAction,
   type QueueColumn,
@@ -43,3 +50,4 @@ export {
 } from "./motion.js";
 export * from "./motion/index.js";
 export * from "./charts/index.js";
+// styles.css is a file export ("@company/ui/styles.css") — see exports map.

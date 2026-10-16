@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- Fleet visual language (ADR-0018): glass `AppHeader` + `CommandDock` +
+  `Segmented` tabs, soft-tone pills/badges, borderless queue table with
+  indigo focus rail, skeleton load states, obsidian/ghost buttons —
+  all styling from `@company/ui/styles.css` (inline CSS removed).
+
 ## 0.1.0 — foundation + /queue anchor
 - Foundation: migrations 0001 (up/down tested), table-driven statemachine,
   REGISTRY-driven routes (envelope, Idempotency-Key, req-id, rate-limit

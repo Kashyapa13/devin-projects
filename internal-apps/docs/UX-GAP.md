@@ -250,3 +250,27 @@ Notes: memoized `QueueRow` (re-render = 2 rows, not 50) + conditional
 `morphId` + manual-FLIP `FocusGlide` — layoutId group measure removed from
 the key path. RefundLens/flags moments: primitives shipped (Stagger,
 CountUp, Morph hero) — wiring stays with their owning sessions.
+
+---
+
+## PHASE D — visual language (2026-10-15, ADR-0018)
+
+The motion layer landed first; the *visual* layer followed on the same
+branch family: one `@company/ui/styles.css` (tokens, ambient canvas,
+glass appbar, soft-tone badges with dots, borderless tables + indigo
+focus rail, mono numerics, skeleton loads — item 17's "Loading…"
+remainder now closed) plus chrome components (`AppHeader`,
+`CommandDock`, `Segmented`). Applied to FastLane queue/case and the
+RefundLens ask console; flags demo inherits it when its owning session
+builds the replica.
+
+Dashboard phase (same branch family): RefundLens console grew into the
+specced dashboard — header `sync-pill` (live watermark readout, amber
+at lag >90 min per RefundLens §4/F-05), 3-card KPI bento (F-12 partial:
+today · total refunded · p95, remaining cards pending their owning
+session), fenced-badge SQL drawer, `agg_daily` rollup panel. Backed by
+two registry endpoints — `GET /api/v1/health/sync` (LLD F-06) and
+`GET /api/v1/widgets/:name` (WIDGET LAW §4.2 — typed params through the
+same fenced layer, including a new `daily` widget reading `agg_daily`
+directly). New classes: `.kpi-grid/.kpi`, `.sync-pill`, `.fenced-badge`,
+`.panel-title/.panel-sub`, `.skel-block`.
