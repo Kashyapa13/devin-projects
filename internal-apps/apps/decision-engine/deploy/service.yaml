@@ -1,6 +1,6 @@
 # Cluster-internal service — ingress policy is an app-level decision
 # (FastLane/RefundLens are intranet-internal; expose via ingress only when
-# the app's RUNBOOK says so). decision-engine internal-apps 8080
+# the app's RUNBOOK says so). decision-engine internal-apps 8083
 apiVersion: v1
 kind: Service
 metadata:
@@ -15,4 +15,4 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8080
+      targetPort: 8083

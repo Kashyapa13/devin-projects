@@ -16,7 +16,16 @@ export APP
 export NAMESPACE="${NAMESPACE:-internal-apps}"
 export REVISION="${REVISION:-latest}"
 export IMAGE="${IMAGE:-registry.internal/${APP}:${REVISION}}"
-export PORT="${PORT:-8080}"
+# Per-app default ports — apps share one namespace, so each gets a fixed
+# port (matches the dev stack convention); PORT= still overrides.
+case "$APP" in
+  fastlane)        DEF_PORT=8080 ;;
+  refundlens)      DEF_PORT=8081 ;;
+  flags)           DEF_PORT=8082 ;;
+  decision-engine) DEF_PORT=8083 ;;
+  *)               DEF_PORT=8080 ;;
+esac
+export PORT="${PORT:-$DEF_PORT}"
 export REPLICAS="${REPLICAS:-2}"
 export MIN_REPLICAS="${MIN_REPLICAS:-2}"
 export MAX_REPLICAS="${MAX_REPLICAS:-4}"
