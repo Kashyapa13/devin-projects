@@ -25,7 +25,7 @@ spec:
         # checksum of the config map would go here when the vault pipeline
         # renders it — forces rollout on config change.
         prometheus.io/scrape: "true"
-        prometheus.io/port: ${PORT}
+        prometheus.io/port: "${PORT}"
         prometheus.io/path: /metrics
     spec:
       serviceAccountName: ${APP}

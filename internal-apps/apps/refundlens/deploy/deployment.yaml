@@ -1,6 +1,6 @@
 # Production Deployment — the steady-state track. Blue/green cutover uses
 # deploy/bluegreen.yaml on top of this; rollback = selector flip (runbook).
-# refundlens internal-apps registry.internal/refundlens:latest latest 8081 2
+# refundlens internal-apps registry.internal/refundlens:7dc9f85 7dc9f85 8081 2
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,12 +20,12 @@ spec:
     metadata:
       labels:
         app: refundlens
-        revision: latest
+        revision: 7dc9f85
       annotations:
         # checksum of the config map would go here when the vault pipeline
         # renders it — forces rollout on config change.
         prometheus.io/scrape: "true"
-        prometheus.io/port: 8081
+        prometheus.io/port: "8081"
         prometheus.io/path: /metrics
     spec:
       serviceAccountName: refundlens
@@ -36,7 +36,7 @@ spec:
         fsGroup: 999
       containers:
         - name: app
-          image: registry.internal/refundlens:latest
+          image: registry.internal/refundlens:7dc9f85
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081

@@ -12,6 +12,7 @@ spec:
   type: ClusterIP
   selector:
     app: decision-engine
+    track: stable # the cutover track lives in deploy/bluegreen.yaml — do not apply this Service while a track-specific selector is in use
   ports:
     - name: http
       port: 80

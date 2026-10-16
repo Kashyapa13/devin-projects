@@ -1,6 +1,6 @@
 # Production Deployment — the steady-state track. Blue/green cutover uses
 # deploy/bluegreen.yaml on top of this; rollback = selector flip (runbook).
-# fastlane internal-apps registry.internal/fastlane:latest latest 8080 2
+# fastlane internal-apps registry.internal/fastlane:7dc9f85 7dc9f85 8080 2
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,12 +20,12 @@ spec:
     metadata:
       labels:
         app: fastlane
-        revision: latest
+        revision: 7dc9f85
       annotations:
         # checksum of the config map would go here when the vault pipeline
         # renders it — forces rollout on config change.
         prometheus.io/scrape: "true"
-        prometheus.io/port: 8080
+        prometheus.io/port: "8080"
         prometheus.io/path: /metrics
     spec:
       serviceAccountName: fastlane
@@ -36,7 +36,7 @@ spec:
         fsGroup: 999
       containers:
         - name: app
-          image: registry.internal/fastlane:latest
+          image: registry.internal/fastlane:7dc9f85
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

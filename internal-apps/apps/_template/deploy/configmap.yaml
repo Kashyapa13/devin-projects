@@ -10,5 +10,5 @@ metadata:
     app: myapp
 data:
   NODE_ENV: "production"
-  PORT: 8080
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4317"
+  PORT: "8080"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4318"

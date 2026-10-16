@@ -1,6 +1,6 @@
 # Production Deployment — the steady-state track. Blue/green cutover uses
 # deploy/bluegreen.yaml on top of this; rollback = selector flip (runbook).
-# myapp internal-apps registry.internal/myapp:TAG latest 8080 2
+# myapp internal-apps registry.internal/myapp:TAG TAG 8080 2
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,12 +20,12 @@ spec:
     metadata:
       labels:
         app: myapp
-        revision: latest
+        revision: TAG
       annotations:
         # checksum of the config map would go here when the vault pipeline
         # renders it — forces rollout on config change.
         prometheus.io/scrape: "true"
-        prometheus.io/port: 8080
+        prometheus.io/port: "8080"
         prometheus.io/path: /metrics
     spec:
       serviceAccountName: myapp

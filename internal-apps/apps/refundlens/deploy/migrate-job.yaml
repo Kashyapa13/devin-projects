@@ -3,21 +3,24 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: refundlens-migrate-latest
+  name: refundlens-migrate-7dc9f85
   namespace: internal-apps
   labels:
     app: refundlens
     job: migrate
 spec:
   backoffLimit: 0 # migrations never auto-retry — inspect, fix, re-run (runbook)
+  ttlSecondsAfterFinished: 86400 # completed jobs self-clean — next release's job can re-apply
   template:
     spec:
       restartPolicy: Never
+      serviceAccountName: refundlens
+      automountServiceAccountToken: false # needs the DB, not the cluster API
       securityContext:
         runAsNonRoot: true
       containers:
         - name: migrate
-          image: registry.internal/refundlens:latest
+          image: registry.internal/refundlens:7dc9f85
           command: ["node", "dist/api/src/migrate.js"]
           envFrom:
             - secretRef:

@@ -67,6 +67,7 @@ export function buildApp(deps: { db?: pg.Pool } = {}) {
   });
   const app = Fastify({ logger: true });
   app.get("/healthz", () => ({ ok: true }));
+  app.get("/readyz", async () => { await pool.query("SELECT 1"); return { ok: true }; });
   app.addHook("onSend", async (_req, reply) => { reply.header("x-demo-label", LABEL_HEADER); });
 
   /* The deployed unit serves the built web app too — / and /demo resolve

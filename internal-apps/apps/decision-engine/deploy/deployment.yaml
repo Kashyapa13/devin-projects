@@ -1,6 +1,6 @@
 # Production Deployment — the steady-state track. Blue/green cutover uses
 # deploy/bluegreen.yaml on top of this; rollback = selector flip (runbook).
-# decision-engine internal-apps registry.internal/decision-engine:latest latest 8083 2
+# decision-engine internal-apps registry.internal/decision-engine:7dc9f85 7dc9f85 8083 2
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,12 +20,12 @@ spec:
     metadata:
       labels:
         app: decision-engine
-        revision: latest
+        revision: 7dc9f85
       annotations:
         # checksum of the config map would go here when the vault pipeline
         # renders it — forces rollout on config change.
         prometheus.io/scrape: "true"
-        prometheus.io/port: 8083
+        prometheus.io/port: "8083"
         prometheus.io/path: /metrics
     spec:
       serviceAccountName: decision-engine
@@ -36,7 +36,7 @@ spec:
         fsGroup: 999
       containers:
         - name: app
-          image: registry.internal/decision-engine:latest
+          image: registry.internal/decision-engine:7dc9f85
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083

@@ -14,7 +14,10 @@ OUT="apps/$APP/deploy"
 
 export APP
 export NAMESPACE="${NAMESPACE:-internal-apps}"
-export REVISION="${REVISION:-latest}"
+# REVISION defaults to the commit sha so migrate jobs get unique names —
+# a Job's pod template is immutable, so ${APP}-migrate-<rev> must differ
+# per release. "latest" only when git is unavailable (e.g. ad-hoc render).
+export REVISION="${REVISION:-$(git rev-parse --short HEAD 2>/dev/null || echo latest)}"
 export IMAGE="${IMAGE:-registry.internal/${APP}:${REVISION}}"
 # Per-app default ports — apps share one namespace, so each gets a fixed
 # port (matches the dev stack convention); PORT= still overrides.
@@ -30,6 +33,7 @@ export REPLICAS="${REPLICAS:-2}"
 export MIN_REPLICAS="${MIN_REPLICAS:-2}"
 export MAX_REPLICAS="${MAX_REPLICAS:-4}"
 export DB_CIDR="${DB_CIDR:-10.0.0.0/8}"
+[ "$DB_CIDR" = "10.0.0.0/8" ] && echo "WARN: DB_CIDR at broad default — set the app's real Postgres CIDR per env (infra/ENVIRONMENTS.md)" >&2
 
 # Compiled entry points differ by tsconfig rootDir: "api/src" emits flat
 # dist/, "." emits dist/api/src/. The image CMD and migrate job must match.

@@ -10,5 +10,5 @@ metadata:
     app: ${APP}
 data:
   NODE_ENV: "production"
-  PORT: ${PORT}
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4317"
+  PORT: "${PORT}"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4318"

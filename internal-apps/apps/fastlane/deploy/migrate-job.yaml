@@ -3,21 +3,24 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: fastlane-migrate-latest
+  name: fastlane-migrate-7dc9f85
   namespace: internal-apps
   labels:
     app: fastlane
     job: migrate
 spec:
   backoffLimit: 0 # migrations never auto-retry — inspect, fix, re-run (runbook)
+  ttlSecondsAfterFinished: 86400 # completed jobs self-clean — next release's job can re-apply
   template:
     spec:
       restartPolicy: Never
+      serviceAccountName: fastlane
+      automountServiceAccountToken: false # needs the DB, not the cluster API
       securityContext:
         runAsNonRoot: true
       containers:
         - name: migrate
-          image: registry.internal/fastlane:latest
+          image: registry.internal/fastlane:7dc9f85
           command: ["node", "dist/migrate.js"]
           envFrom:
             - secretRef:

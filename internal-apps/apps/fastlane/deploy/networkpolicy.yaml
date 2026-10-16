@@ -15,10 +15,27 @@ spec:
       app: fastlane
   policyTypes: [Ingress, Egress]
   ingress:
+    # ingress controller
     - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: ingress
+      ports:
+        - port: 8080
+          protocol: TCP
+    # same-app pods only — cross-app calls need an ADR + their own rule
+    - from:
+        - podSelector:
+            matchLabels:
+              app: fastlane
+      ports:
+        - port: 8080
+          protocol: TCP
+    # prometheus scrape of /metrics
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
       ports:
         - port: 8080
           protocol: TCP
@@ -36,10 +53,10 @@ spec:
     # Postgres (own db — app data law)
     - to:
         - ipBlock:
-            cidr: 10.0.0.0/8
+            cidr: 10.0.0.0/8 # render default is broad — set per env (infra/ENVIRONMENTS.md)
       ports: [{ port: 5432, protocol: TCP }]
     # OTLP collector
     - to:
         - namespaceSelector:
             matchLabels: { kubernetes.io/metadata.name: observability }
-      ports: [{ port: 4317, protocol: TCP }]
+      ports: [{ port: 4318, protocol: TCP }]
