@@ -293,15 +293,22 @@ const money = (cents: unknown): string => {
  *  through the same fenced layer (widget law; LLD F-12 partial). */
 function KpiGrid() {
   const { t } = useTranslation();
-  const [kpi, setKpi] = useState<Record<string, unknown> | null>(null);
+  const [kpi, setKpi] = useState<Record<string, unknown> | "err" | null>(null);
   useEffect(() => {
     let on = true;
     api("/api/v1/widgets/kpi")
       .then((r) => {
-        if (on) setKpi(((r as WidgetResult).series[0] ?? {}) as Record<string, unknown>);
+        const row = (r as WidgetResult).series[0];
+        // success requires the expected fields — a shapeless payload never
+        // becomes a card (missing fields would render as invented zeros)
+        if (on && row && "total_refunded_cents" in row) {
+          setKpi(row as Record<string, unknown>);
+        } else if (on) {
+          setKpi("err");
+        }
       })
       .catch(() => {
-        if (on) setKpi({});
+        if (on) setKpi("err");
       });
     return () => {
       on = false;
@@ -309,7 +316,8 @@ function KpiGrid() {
   }, []);
 
   const num = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
-  const cards: { label: string; node: ReactNode; sub?: string | undefined }[] = kpi
+  const cards: { label: string; node: ReactNode; sub?: string | undefined }[] =
+    kpi !== null && kpi !== "err"
     ? [
         {
           label: t("kpi.pending"),
@@ -335,6 +343,14 @@ function KpiGrid() {
         },
       ]
     : [];
+
+  if (kpi === "err") {
+    return (
+      <p role="alert" className="error" data-testid="kpi-error">
+        {t("kpi.load_error")}
+      </p>
+    );
+  }
 
   return (
     <div className="kpi-grid" data-testid="kpi-grid">

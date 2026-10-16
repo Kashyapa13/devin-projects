@@ -40,6 +40,7 @@ export const resources = {
       "kpi.ms": "ms",
       "kpi.top_reason": "top reason",
       "kpi.rate": "refund rate",
+      "kpi.load_error": "KPIs failed to load — sign-in expired or API unreachable",
       "fenced.badge": "🛡️ Fenced & validated",
       "rollup.title": "Daily rollup",
       "rollup.subtitle": "agg_daily — rebuilt in one transaction per sync",

@@ -439,7 +439,7 @@ label {
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
   box-shadow: var(--elev-2);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 /* ---------- action rows (decision panels) ---------- */

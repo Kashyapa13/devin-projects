@@ -125,6 +125,9 @@ export async function runWidget(
   const { sql: W, params } = where(p, from, to);
   const lim = Math.min(Math.max(p.limit ?? 500, 1), 5000);
   let sql = "";
+  // widgets that render their own parameter list (daily on agg_daily)
+  // override this; undefined → the shared where() params.
+  let sqlParams: unknown[] | undefined;
 
   switch (name) {
     case "kpi": {
@@ -199,13 +202,36 @@ export async function runWidget(
       break;
     }
     case "daily": {
-      // agg_daily is a DATE grain table — bounds filter `day`, not occurred_at
+      if (p.state) {
+        // agg_daily has no state dimension — a state-filtered result can't
+        // come from the rollup. Derive the same day grain from raw rows
+        // through the shared WHERE (still fenced; app role stays read-only).
+        sql = `SELECT occurred_at::date AS day, channel, merchant_segment, reason_code,
+                 COUNT(*)::bigint AS cnt, SUM(amount_cents)::bigint AS amount,
+                 percentile_cont(0.5) WITHIN GROUP (ORDER BY latency_ms)::int AS p50_ms,
+                 percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms)::int AS p95_ms
+               FROM refundlens.refund_events_raw WHERE ${W}
+               GROUP BY 1, 2, 3, 4 ORDER BY day DESC, cnt DESC LIMIT ${lim}`;
+        break;
+      }
+      // agg_daily is a DATE grain table — bounds filter `day`, not occurred_at.
+      // `to` is the requested inclusive end: `day <= $2::date` keeps same-day
+      // rows (an exclusive bound drops today whenever `to` defaults to now).
+      const dConds = ["day >= $1::date", "day <= $2::date"];
+      const dParams: unknown[] = [from.toISOString(), to.toISOString()];
+      const dPush = (col: string, v?: string) => {
+        if (v) { dParams.push(v); dConds.push(`${col} = $${dParams.length}`); }
+      };
+      dPush("channel", p.channel);
+      dPush("merchant_segment", p.segment);
+      dPush("reason_code", p.reason);
       sql = `SELECT day, channel, merchant_segment, reason_code,
                cnt::bigint AS cnt, amount::bigint AS amount,
                p50_ms::int AS p50_ms, p95_ms::int AS p95_ms
              FROM refundlens.agg_daily
-             WHERE day >= $1::date AND day < $2::date
+             WHERE ${dConds.join(" AND ")}
              ORDER BY day DESC, cnt DESC LIMIT ${lim}`;
+      sqlParams = dParams;
       break;
     }
     case "detail": {
@@ -240,14 +266,14 @@ export async function runWidget(
   // widgets that don't embed the shared WHERE (monitors_panel,
   // sync_health) carry no placeholders — passing params would make the
   // bind fail; bind only what the statement references.
-  const bound = /\$\d/.test(sql) ? params : [];
+  const bound = /\$\d/.test(sql) ? (sqlParams ?? params) : [];
   const t0 = process.hrtime.bigint();
   const { rows, ms } = await runFenced(db, sql, bound, { scope: WIDGET_SCOPE });
   let compare: Record<string, unknown>[] | undefined;
   if (p.compare) {
     // period-over-period: identical query, bounds shifted back one span
     const span = to.getTime() - from.getTime();
-    const shifted = [...params];
+    const shifted = [...(sqlParams ?? params)];
     shifted[0] = new Date(from.getTime() - span).toISOString();
     shifted[1] = from.toISOString();
     compare = (await runFenced(db, sql, bound.length ? shifted : [], { scope: WIDGET_SCOPE })).rows;

@@ -227,6 +227,48 @@ describe("GET /widgets/:name — typed params through the fenced layer", () => {
     }
   });
 
+  it("daily honours channel/segment/reason filters against the rollup", async () => {
+    const res = await widget("daily", "?channel=CARD&segment=SMB&reason=FRAUD&limit=500");
+    expect(res.statusCode).toBe(200);
+    const { series } = res.json();
+    expect(series.length).toBeGreaterThan(0);
+    for (const r of series) {
+      expect(r.channel).toBe("CARD");
+      expect(r.merchant_segment).toBe("SMB");
+      expect(r.reason_code).toBe("FRAUD");
+    }
+    // unfiltered must be a superset — filtered rows are a subset by day+dims
+    const all = (await widget("daily", "?limit=500")).json().series;
+    expect(all.length).toBeGreaterThan(series.length);
+  });
+
+  it("daily includes rows dated today (inclusive end bound)", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await pool.query(
+      `INSERT INTO refundlens.agg_daily
+         (day, channel, merchant_segment, reason_code, cnt, amount, p50_ms, p95_ms)
+       VALUES ($1::date, 'CARD', 'SMB', 'FRAUD', 7, 12345, 10, 20)
+       ON CONFLICT (day, channel, merchant_segment, reason_code)
+       DO UPDATE SET cnt = 7`,
+      [today],
+    );
+    const res = await widget("daily", "?limit=500");
+    expect(res.statusCode).toBe(200);
+    const days = res.json().series.map((r: Record<string, unknown>) =>
+      String(r.day).slice(0, 10),
+    );
+    expect(days).toContain(today);
+  });
+
+  it("daily with a state filter derives day grain from raw (rollup has no state dim)", async () => {
+    const res = await widget("daily", "?state=PENDING&limit=500");
+    expect(res.statusCode).toBe(200);
+    const { series } = res.json();
+    expect(series.length).toBeGreaterThan(0);
+    expect(series[0]).toHaveProperty("day");
+    expect(series[0]).toHaveProperty("cnt");
+  });
+
   it("unknown widget → 400 fenced_query_rejected with guidance", async () => {
     const res = await widget("bogus_widget");
     expect(res.statusCode).toBe(400);
