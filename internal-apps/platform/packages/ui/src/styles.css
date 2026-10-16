@@ -337,6 +337,7 @@ button.btn-danger {
 /* ---------- segmented control ---------- */
 
 .seg {
+  position: relative;
   display: inline-flex;
   gap: 0.15rem;
   padding: 0.22rem;
@@ -344,7 +345,19 @@ button.btn-danger {
   background: var(--surface-2);
   border: 1px solid var(--line-soft);
 }
+.seg-thumb {
+  position: absolute;
+  top: 0.22rem;
+  bottom: 0.22rem;
+  border-radius: 999px;
+  background: var(--surface-solid);
+  box-shadow: var(--elev-1);
+  transition: left 0.22s ease, width 0.22s ease;
+  pointer-events: none;
+}
 .seg button {
+  position: relative;
+  z-index: 1;
   border: 0;
   background: transparent;
   border-radius: 999px;
@@ -358,9 +371,8 @@ button.btn-danger {
   color: var(--ink);
 }
 .seg button[aria-pressed="true"] {
-  background: var(--surface-solid);
+  background: transparent;
   color: var(--ink);
-  box-shadow: var(--elev-1);
 }
 
 /* ---------- form controls ---------- */

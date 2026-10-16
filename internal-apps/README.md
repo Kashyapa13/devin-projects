@@ -7,7 +7,7 @@ See `AGENTS.md` for the root constitution.
 ## Index
 
 - Constitution — [AGENTS.md](AGENTS.md)
-- Decisions — [docs/adr/](docs/adr/): [0001 three-lane routing](docs/adr/0001-three-lane-routing.md) · [0002 flags stay-put](docs/adr/0002-flags-stay-on-power-apps.md) · [0015 decision engine](docs/adr/0015-decision-engine.md) · [0018 fleet visual language](docs/adr/0018-fleet-visual-language.md)
+- Decisions — [docs/adr/](docs/adr/): [0001 three-lane routing](docs/adr/0001-three-lane-routing.md) · [0002 flags stay-put](docs/adr/0002-flags-stay-on-power-apps.md) · [0015 decision engine](docs/adr/0015-decision-engine.md) · [0020 fleet visual language](docs/adr/0020-fleet-visual-language.md)
 - Lane facts — [docs/comparison/FACTS.md](docs/comparison/FACTS.md)
 - Ship gate — [docs/security/PROD-READINESS-CHECKLIST.md](docs/security/PROD-READINESS-CHECKLIST.md)
 - Environments — [infra/ENVIRONMENTS.md](infra/ENVIRONMENTS.md)
@@ -84,7 +84,7 @@ flowchart LR
 flowchart LR
     SIG[case_signals v1<br/>risk_score + country real;<br/>rest via MockModelScoreProvider] --> E[engine<br/>deterministic rule eval]
     P[strategies/packs.ts<br/>5 seed packs<br/>declared precedence<br/>TUNE-ME thresholds] --> E
-    E --> D[(decision_db :8081<br/>decision + inputs + pack<br/>+ fired rule + confidence)]
+    E --> D[(decision_db — local pg<br/>decision + inputs + pack<br/>+ fired rule + confidence)]
     D --> M[audit mirror → FastLane<br/>API-only contract]
     D --> R[daily shadow report<br/>agreement vs human]
     K[kill switch<br/>ENGINE_KILLED] -->|one click: all-human,<br/>in-flight frozen| E
@@ -95,7 +95,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U[demo user] --> W[web :5183<br/>CRUD + env tabs + /demo]
+    U[demo user] --> W[web :5175<br/>CRUD + env tabs + /demo]
     W -->|/api/flags| A[api :8082]
     A --> DB[(flags-pg :5434<br/>flags key×env · audit)]
     A --> EV[eval API<br/>deterministic bucket<br/>SWR cache · p95 <50ms]
@@ -123,7 +123,7 @@ Simulate: mint a reviewer token (`pnpm --filter @app/fastlane exec tsx scripts/m
 drive `/queue` with `j/k` navigate · `Enter` open · `c` claim · `a` approve ·
 `r` reject-with-reason · `p` reveal (masked PII → audited reveal). End-to-end:
 `pnpm --filter @app/fastlane test:ft` (Playwright, keyboard-only, both motion
-modes). One-command demo state: `../scripts/demo-reseed.sh`.
+modes). One-command demo state: `./scripts/demo-reseed.sh`.
 
 ### RefundLens — ask + live dashboard
 
@@ -131,7 +131,8 @@ modes). One-command demo state: `../scripts/demo-reseed.sh`.
 export DATABASE_URL=postgres://refundlens:refundlens-dev@localhost:5433/refundlens
 pnpm --filter @app/refundlens migrate
 pnpm --filter @app/refundlens seed      # refund-seed-v1
-pnpm --filter @app/refundlens etl       # builds agg_daily — required before asking
+REPLICA_DSN=$DATABASE_URL SOURCE_TABLE=source.refund_events pnpm --filter @app/refundlens etl
+                                        # REPLICA_DSN is law (app never reads primary); SOURCE_TABLE names the seeded source
 PORT=8083 pnpm --filter @app/refundlens exec tsx api/src/server.ts &
 pnpm --filter @app/refundlens dev       # web :5173 (or :5174 alongside FastLane; vite proxies /api → :8083)
 ```
@@ -144,14 +145,15 @@ re-bind without reload, a stalled beat turns amber then red.
 ### decision-engine — SHADOW rung
 
 ```bash
-export DATABASE_URL=postgres://postgres@localhost:5432/decision_db  # own db
-pnpm --filter @app/decision-engine exec tsx scripts/seed.ts         # signals + packs
+docker exec -i fastlane-pg psql -U postgres -d decision_db -f - < apps/decision-engine/db/migrations/0001_init.up.sql
+docker exec -i fastlane-pg psql -U postgres -d decision_db -f - < apps/decision-engine/db/migrations/0002_shadow_guards.up.sql
+export DATABASE_URL=postgres://postgres@localhost:5432/decision_db  # own db on the fastlane-pg container
 pnpm --filter @app/decision-engine dev                              # api :8081 + web
 ```
 
-Simulate: `POST /api/v1/engine/evaluate` with a case_id → decision row with
-inputs, pack version, fired rule, confidence; `GET /api/v1/engine/report` is
-the daily shadow readout; the kill switch (`/api/v1/engine/kill`) freezes
+Simulate: `POST /api/v1/engine/decide` with a case_id → decision row with
+inputs, pack version, fired rule, confidence; `GET /api/v1/engine/reports/daily` is
+the daily shadow readout; the kill switch (`/api/v1/engine/kill-switch`, release via `/api/v1/engine/kill-switch/release`) freezes
 in-flight and returns all-human. The 220-case golden set + pack suites run
 in `pnpm --filter @app/decision-engine test`.
 
@@ -160,7 +162,7 @@ in `pnpm --filter @app/decision-engine test`.
 ```bash
 export DATABASE_URL=postgres://flags:flags-dev@localhost:5434/flags
 pnpm --filter @app/flags migrate && pnpm --filter @app/flags seed
-pnpm --filter @app/flags dev   # api :8082 + web :5183
+pnpm --filter @app/flags dev   # api :8082 + web :5175
 ```
 
 Simulate: create a `demo-*` flag → flip `demo-hero` dev → watch the `/demo`

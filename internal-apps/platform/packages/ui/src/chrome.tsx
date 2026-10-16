@@ -5,7 +5,7 @@
  * the app. Styling lives in styles.css — components emit the class
  * contract, never inline theme values.
  */
-import type { ReactElement, ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 
 /**
  * Sticky glass header: eyebrow + title on the brand side, whatever the
@@ -90,8 +90,26 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
   ariaLabel: string;
 }): ReactElement {
+  const navRef = useRef<HTMLElement>(null);
+  const [thumb, setThumb] = useState({ left: 4, width: 0 });
+  useLayoutEffect(() => {
+    const measure = () => {
+      const btn = navRef.current?.querySelector<HTMLElement>(
+        'button[aria-pressed="true"]',
+      );
+      if (btn) setThumb({ left: btn.offsetLeft, width: btn.offsetWidth });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [value, options]);
   return (
-    <nav className="seg" aria-label={ariaLabel}>
+    <nav className="seg" aria-label={ariaLabel} ref={navRef}>
+      <span
+        className="seg-thumb"
+        aria-hidden="true"
+        style={{ left: thumb.left, width: thumb.width }}
+      />
       {options.map((o) => (
         <button
           key={o.value}

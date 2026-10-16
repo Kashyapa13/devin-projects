@@ -30,6 +30,7 @@ export const REGISTRY = [
   { method: "POST", path: "/api/internal/beat", roles: ["service"], summary: "Heartbeat script posts each beat — records + fans out to SSE (never silent)" },
   { method: "GET", path: "/api/monitors", roles: ["admin"], summary: "Monitors-as-code definitions + latest state (admin)" },
   { method: "PATCH", path: "/api/monitors/:id", roles: ["admin"], summary: "Enable/disable/update a monitor — bumps version" },
+  { method: "GET", path: "/api/v1/history", roles: ["analyst"], summary: "Own ask history — ask_log rows for the caller (F-03)" },
   { method: "GET", path: "/api/v1/health/sync", roles: ["analyst", "ops", "service"], summary: "Watermark + lag + last run status + heartbeat age (F-06)" },
   { method: "GET", path: "/api/v1/sync", roles: ["admin"], summary: "Sync admin surface — sync_runs history + heartbeat age (F-17)" },
   { method: "GET", path: "/metrics", roles: [], summary: "Prometheus text exposition (ops)" },
@@ -103,6 +104,23 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     async (req) => {
       const { question } = req.body as { question: string };
       return svc.ask(svcDeps, userOf(req), question, reqId(req));
+    },
+  );
+
+  /** F-03 — the fork's evidence + shows-its-work history: own asks,
+   *  rendered SQL included, newest first (analyst reads only own rows). */
+  app.get(
+    "/api/v1/history",
+    { preHandler: requireRole("analyst") },
+    async (req) => {
+      const u = userOf(req);
+      const r = (await deps.db.query(
+        `SELECT id, question, rendered_sql, ms, rows, success, fence_reason, req_id, created_at
+         FROM refundlens.ask_log WHERE user_id = $1
+         ORDER BY created_at DESC LIMIT 100`,
+        [u.sub],
+      )) as { rows?: Record<string, unknown>[] };
+      return { rows: r.rows ?? [] };
     },
   );
 

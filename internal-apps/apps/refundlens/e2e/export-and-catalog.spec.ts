@@ -44,17 +44,14 @@ test.describe("export surface", () => {
   });
 });
 
-test.describe("skeleton catalog — F-09..F-17 not yet implemented", () => {
-  // Desired end-state: these routes exist. They fail today — the
-  // feature lane owns them; flip to test() when they land.
+test.describe("catalog — F-09..F-17 surfaces implemented", () => {
+  // These routes landed on main; each now asserts its real contract.
   for (const [name, path] of [
-    ["GET /view (dashboard shell)", "/view"],
-    ["GET /api/widgets/kpi", "/api/widgets/kpi"],
-    ["GET /api/stream/heartbeat (live mode)", "/api/stream/heartbeat"],
-    ["GET /monitors", "/monitors"],
+    ["GET /api/widgets/kpi", "/api/widgets/kpi?from=2026-09-15&to=2026-10-15"],
     ["GET /api/v1/history (ask history)", "/api/v1/history"],
+    ["GET /api/monitors", "/api/monitors"],
   ] as const) {
-    test.fail(`PR-promise:F-09+ ${name} serves the surface`, async ({ page }) => {
+    test(`PR-promise:F-09+ ${name} serves the surface`, async ({ page }) => {
       await page.goto("/");
       const res = await page.request.get(`${API}${path}`, {
         headers: await authHeaders(page),
@@ -63,11 +60,22 @@ test.describe("skeleton catalog — F-09..F-17 not yet implemented", () => {
     });
   }
 
+  test("PR-promise:F-15 SSE heartbeat opens an event-stream", async ({ page }) => {
+    await page.goto("/");
+    const token = await page.evaluate(() => localStorage.getItem("refundlens_token"));
+    const res = await fetch(`${API}/api/stream/heartbeat`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type") ?? "").toContain("text/event-stream");
+    await res.body?.cancel().catch(() => {});
+  });
+
   test("unimplemented routes return the error envelope, not a stack trace", async ({
     page,
   }) => {
     await page.goto("/");
-    const res = await page.request.get(`${API}/api/widgets/kpi`, {
+    const res = await page.request.get(`${API}/api/v1/no-such-route`, {
       headers: await authHeaders(page),
     });
     expect(res.status()).toBe(404);

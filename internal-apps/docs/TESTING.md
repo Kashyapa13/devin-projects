@@ -7,6 +7,12 @@ violates it is a rejected PR.
 
 Pure-logic modules (statemachine, fence, evaluators, targeting bucketing):
 **≥90% branches**. Routes/services: **≥80%**. Platform packages: **≥85%**
+
+> Coverage waiver (r2 claim audit, 2026-10-16): refundlens `api/src/routes.ts`
+> 59.57%br and `api/src/service.ts` 72.22%br — below the 80% bar. The
+> live-tier surface (heartbeat/monitors/widgets/history) grew faster than
+> its route tests; the gap is measured and open, not waived as satisfied.
+> `widgets.ts` 83.54%br meets the bar.
 (the most-reviewed code).
 
 - **Table-driven tests for EVERY matrix** — state transitions both
@@ -38,7 +44,7 @@ happy paths.
   tests + firing → Slack stub), export exact-count + watermark header,
   history.
 - **Flags demo**: CRUD, env tabs, invalid targeting JSON rejected,
-  typed-confirm delete, slider preview, /demo flip.
+  typed-confirm delete, targeting rules editor + bucketed preview chip, /demo flip.
 - Deterministic seed per suite; every FT tagged with the PR-promise it
   verifies.
 

@@ -1,4 +1,4 @@
-# ADR-0018 — Fleet visual language: one stylesheet + chrome in platform-ui
+# ADR-0020 — Fleet visual language: one stylesheet + chrome in platform-ui
 
 Status: accepted · Date: 2026-10-15 · Governs: `platform/packages/ui`
 (`src/styles.css`, `src/chrome.tsx`) + every app's look.

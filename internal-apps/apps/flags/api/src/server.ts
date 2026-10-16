@@ -170,6 +170,9 @@ export function buildApp(deps: { db?: pg.Pool } = {}) {
     if (role(req.headers) !== "flag_admin")
       return reply.code(403).send({ error: { code: "RBAC", message: "flag_admin required to delete" } });
     const { id } = req.params as { id: string };
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+      return reply.code(400).send({ error: { code: "BAD_INPUT",
+        message: "delete takes the flag id (uuid), not the key" } });
     const { rows: f } = await pool.query(`SELECT key FROM flags WHERE id=$1 AND deleted=false`, [id]);
     if (!f.length) return reply.code(404).send({ error: { code: "NOT_FOUND", message: "flag" } });
     const typed = (req.query as { confirm?: string }).confirm;

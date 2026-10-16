@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   useInfiniteQuery,
   useQueryClient,
@@ -79,25 +73,6 @@ export function QueuePage() {
     return allRows.filter((r) => band(r.risk_score) === risk);
   }, [allRows, risk]);
   const current = rows[Math.min(sel, Math.max(rows.length - 1, 0))];
-
-  /** Sliding tab indicator: measure the pressed pill and translate a
-   *  shared thumb under it — a real element that MOVES, not a per-button
-   *  background (spec: sliding indicator). Re-measure on tab + resize. */
-  const segRef = useRef<HTMLElement>(null);
-  const [thumb, setThumb] = useState({ left: 4, width: 0 });
-  useLayoutEffect(() => {
-    const measure = () => {
-      const nav = segRef.current;
-      const btn = nav?.querySelector<HTMLElement>(
-        'button[aria-pressed="true"]',
-      );
-      if (nav && btn)
-        setThumb({ left: btn.offsetLeft, width: btn.offsetWidth });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [tab]);
 
   /** Optimistic decide: the row springs away instantly and focus lands
    *  on the next case; on error the row rolls back with a spring. */
