@@ -44,7 +44,9 @@ TODO(gates): unit / integration (ephemeral PG) / contract / e2e
 
 ## 8. Deploy & rollback
 TODO(env): env matrix, vault-scoped env var NAMES (never values),
-blue/green + auto-rollback thresholds via platform-deploy, capacity
+blue/green + auto-rollback thresholds via platform-deploy; k8s manifests
+in deploy/ rendered from platform/packages/deploy/k8s (re-render via
+scripts/render-deploy.sh, never hand-edit), capacity
 envelope [EST], restore-drill cadence for Tier-1.
 
 ## 9. Devin session protocol

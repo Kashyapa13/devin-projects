@@ -1,0 +1,14 @@
+# Non-secret env ONLY. Secrets live in ${APP}-env (a Secret managed by
+# the vault pipeline — never committed, see app RUNBOOK §secrets).
+# ${APP} ${NAMESPACE} ${PORT}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${APP}-config
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP}
+data:
+  NODE_ENV: "production"
+  PORT: ${PORT}
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4317"

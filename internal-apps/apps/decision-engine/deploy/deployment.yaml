@@ -1,0 +1,73 @@
+# Production Deployment — the steady-state track. Blue/green cutover uses
+# deploy/bluegreen.yaml on top of this; rollback = selector flip (runbook).
+# decision-engine internal-apps registry.internal/decision-engine:latest latest 8080 2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decision-engine
+  namespace: internal-apps
+  labels:
+    app: decision-engine
+spec:
+  revisionHistoryLimit: 3
+  replicas: 2
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app: decision-engine
+  template:
+    metadata:
+      labels:
+        app: decision-engine
+        revision: latest
+      annotations:
+        # checksum of the config map would go here when the vault pipeline
+        # renders it — forces rollout on config change.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: 8080
+        prometheus.io/path: /metrics
+    spec:
+      serviceAccountName: decision-engine
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+      containers:
+        - name: app
+          image: registry.internal/decision-engine:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+              name: decision-engine-config
+            - secretRef:
+                name: decision-engine-env
+          readinessProbe: # gates traffic — DB+KMS probe per app law
+            httpGet: { path: /readyz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe: # liveness has no deps — a dead DB must NOT restart the pod
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          startupProbe: # cold start + first migration check budget
+            httpGet: { path: /healthz, port: http }
+            failureThreshold: 12
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}

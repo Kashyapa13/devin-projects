@@ -1,0 +1,14 @@
+# Non-secret env ONLY. Secrets live in refundlens-env (a Secret managed by
+# the vault pipeline — never committed, see app RUNBOOK §secrets).
+# refundlens internal-apps 8080
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: refundlens-config
+  namespace: internal-apps
+  labels:
+    app: refundlens
+data:
+  NODE_ENV: "production"
+  PORT: 8080
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4317"

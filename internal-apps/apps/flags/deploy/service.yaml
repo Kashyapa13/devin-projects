@@ -1,0 +1,18 @@
+# Cluster-internal service — ingress policy is an app-level decision
+# (FastLane/RefundLens are intranet-internal; expose via ingress only when
+# the app's RUNBOOK says so). flags internal-apps 8080
+apiVersion: v1
+kind: Service
+metadata:
+  name: flags
+  namespace: internal-apps
+  labels:
+    app: flags
+spec:
+  type: ClusterIP
+  selector:
+    app: flags
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

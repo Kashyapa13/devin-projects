@@ -1,0 +1,14 @@
+# PDB — voluntary disruptions (node drains, upgrades) keep ≥1 replica.
+# fastlane internal-apps
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fastlane
+  namespace: internal-apps
+  labels:
+    app: fastlane
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: fastlane

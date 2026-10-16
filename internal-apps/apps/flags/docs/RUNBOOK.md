@@ -21,6 +21,8 @@ demo notice); every UI surface shows the same label — never remove it.
 
 ## Deploy
 
+K8s manifests: `deploy/` (rendered — re-render via
+`scripts/render-deploy.sh flags`; demo-tier may skip np/hpa/pdb).
 One OCI unit: `docker build --build-arg APP_DIR=apps_flags -f apps/flags/Dockerfile -t flags-demo:<tag> .`
 (from the monorepo root). The image serves both API and the built panel —
 `/` and `/demo` resolve in the container. Env: `DATABASE_URL`, `PORT`.

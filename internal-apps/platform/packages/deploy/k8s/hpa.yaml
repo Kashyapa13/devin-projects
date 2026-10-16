@@ -1,0 +1,22 @@
+# HPA — scale on CPU. Custom p95-latency metric (e.g. queue_load_ms) can
+# extend this when the metrics adapter lands; the floor is CPU today.
+# ${APP} ${NAMESPACE} ${MIN_REPLICAS} ${MAX_REPLICAS}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${APP}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${APP}
+  minReplicas: ${MIN_REPLICAS}
+  maxReplicas: ${MAX_REPLICAS}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }

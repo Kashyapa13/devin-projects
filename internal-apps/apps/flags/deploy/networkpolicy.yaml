@@ -1,0 +1,45 @@
+# NetworkPolicy — default-deny posture per app: the pod talks only to
+# Postgres, the OTLP collector, DNS, and ingress from the internal CIDR.
+# Tighten source ranges per environment (infra/ENVIRONMENTS.md).
+# flags internal-apps
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: flags
+  namespace: internal-apps
+  labels:
+    app: flags
+spec:
+  podSelector:
+    matchLabels:
+      app: flags
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress
+      ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Postgres (own db — app data law)
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports: [{ port: 5432, protocol: TCP }]
+    # OTLP collector
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports: [{ port: 4317, protocol: TCP }]

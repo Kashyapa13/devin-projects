@@ -1,0 +1,14 @@
+# PDB — voluntary disruptions (node drains, upgrades) keep ≥1 replica.
+# flags internal-apps
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: flags
+  namespace: internal-apps
+  labels:
+    app: flags
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: flags

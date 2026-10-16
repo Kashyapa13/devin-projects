@@ -1,0 +1,24 @@
+# Migration job template — runs the app's raw-SQL migrations as a
+# pre-deploy step (platform/db migrationRunner), same image as the app.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: decision-engine-migrate-latest
+  namespace: internal-apps
+  labels:
+    app: decision-engine
+    job: migrate
+spec:
+  backoffLimit: 0 # migrations never auto-retry — inspect, fix, re-run (runbook)
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: migrate
+          image: registry.internal/decision-engine:latest
+          command: ["node", "dist/api/src/migrate.js"]
+          envFrom:
+            - secretRef:
+                name: decision-engine-env

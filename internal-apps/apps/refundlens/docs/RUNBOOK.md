@@ -4,8 +4,9 @@ Skeleton — sessions that touch these flows fill the steps (docs
 contract §6). Env matrix + thresholds live in AGENTS.md §8.
 
 ## Deploy
-TODO: pipeline order (scan → test → approval → protected env), the
-migration-job step, smoke checks that must pass before traffic swap.
+K8s manifests: `deploy/` (rendered — re-render via
+`scripts/render-deploy.sh refundlens`). Order: sa/cm/np → migrate-job →
+deployment+service. TODO: pipeline order, smoke checks before swap.
 
 ## Rollback
 Blue/green switch-back + auto-rollback trigger (error rate >2%/10m).

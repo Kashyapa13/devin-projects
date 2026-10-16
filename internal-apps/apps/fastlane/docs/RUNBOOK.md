@@ -25,8 +25,12 @@ must not appear in traces/recordings. On failure, CI uploads
 `test-results/` + `playwright-report/` (traces + videos, 14-day).
 
 ## Deploy
-TODO: pipeline order (scan → test → approval → protected env), the
-migration-job step, smoke checks that must pass before traffic swap.
+K8s manifests: `deploy/` (rendered from `platform/packages/deploy/k8s/` —
+re-render via `scripts/render-deploy.sh fastlane`, never hand-edit).
+Order: serviceaccount/configmap/networkpolicy → `migrate-job.yaml` (wait
+complete) → `deployment.yaml` + `service.yaml` → traffic swap.
+TODO: pipeline order (scan → test → approval → protected env), smoke
+checks that must pass before traffic swap.
 
 ## Rollback
 Blue/green switch-back + auto-rollback triggers (error rate >2%/5m,

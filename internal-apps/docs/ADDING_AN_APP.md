@@ -60,8 +60,17 @@ Cursor pagination only (`paginate`) — offsets race on mutating queues.
 - `Dockerfile` mirrors `platform-deploy` `Dockerfile.base`
   (`--build-arg APP_DIR=<name>`, `PKG_NAME=@app/<name>`) — multi-stage,
   non-root, `/healthz` healthcheck.
-- Blue/green via `deploy/bluegreen.yaml`; migrations run as the
-  `deploy/migration-job.yaml` job (never in-request).
+- K8s manifests: `apps/<name>/deploy/` rendered from
+  `platform/packages/deploy/k8s/` via `./scripts/render-deploy.sh <name>`
+  (serviceaccount, configmap, deployment, service, hpa, pdb,
+  networkpolicy, migrate-job — committed, never hand-edited; re-render
+  when the template changes). Blue/green cutover adds
+  `deploy/bluegreen.yaml`; migrations run as the `migrate-job.yaml` job
+  (`node dist/migrate.js` — the compiled `api/src/migrate.ts` entry,
+  never in-request, backoffLimit 0).
+- NetworkPolicy: set `DB_CIDR` per environment before first apply
+  (infra/ENVIRONMENTS.md); ingress stays ClusterIP until the runbook
+  says otherwise.
 - Env vars: names + `vault:` refs registered in `envVarRegistry` —
   values never in repo or env files. `.env.example` lists names only.
 - Pipeline: path-filtered on `apps/<name>/**`; platform changes trigger
@@ -106,9 +115,12 @@ ADR, maker-checker on cap changes > $5,000.
    drift stubs replaced by the app's real checkers as they land;
    template-smoke still green (platform untouched); PR = code + tests +
    doc sections together, pr-reviewer skill run before human review.
-6. **Live** — image via the template Dockerfile; blue/green deploy;
-   auto-rollback thresholds from AGENTS.md §8; DONE when the runbook
-   answers deploy/rollback/rotate/restore.
+6. **Live** — image via the template Dockerfile;
+   `./scripts/render-deploy.sh transaction-limits` →
+   `apps/transaction-limits/deploy/` committed; apply order: sa/cm/np →
+   migrate-job (wait complete) → deployment+service (+bluegreen for
+   cutover); auto-rollback thresholds from AGENTS.md §8; DONE when the
+   runbook answers deploy/rollback/rotate/restore.
 
 That is the <1-day shape: scaffold minutes, docs ~2h, build ~3h, gates +
 review ~1h. The platform carries auth/http/audit/crypto/db/ui/testing/
