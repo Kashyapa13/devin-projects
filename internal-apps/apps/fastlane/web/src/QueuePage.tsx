@@ -259,8 +259,9 @@ export function QueuePage() {
             {t("error.title")}: {error}
           </p>
         )}
-        {isLoading ? (
+        {isError ? null : isLoading ? (
           <section className="table-card" aria-busy="true">
+            <p className="panel-sub">{t("loading")}</p>
             <div className="skel-rows">
               {Array.from({ length: 16 }, (_, i) => (
                 <Skeleton key={i} width={`${(i * 13 + 58) % 34 + 56}%`} />
