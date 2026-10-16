@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+.env
+.env.local
+*.log
+apps/fastlane/web/dist-web/
+
+# Playwright FT
+apps/*/e2e/.auth/
+apps/*/test-results/
+apps/*/playwright-report/
+apps/*/blob-report/
+apps/fastlane/web/dist-web/
+apps/*/web/dist-web/

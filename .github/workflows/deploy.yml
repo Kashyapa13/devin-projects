@@ -1,0 +1,66 @@
+name: deploy
+
+# INTENTIONALLY STILL STUBBED — the real pipeline lands with the first
+# deployable app release. Shape per deployment law: per-app matrix, one
+# OCI image / version stream / pipeline / rollback per app; platform/**
+# changes → security wave: FastLane canary 30–60 min first, then all apps,
+# each gated on its own smoke suite. prod = protected environment.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "internal-apps/apps/**"
+      - "internal-apps/platform/**"
+  workflow_dispatch:
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.matrix.outputs.apps }}
+      wave: ${{ steps.matrix.outputs.wave }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: matrix
+        run: |
+          cd internal-apps
+          echo "apps=$(pnpm -s affected-apps --base "${{ github.event.before }}" --head "${{ github.event.after }}" 2>/dev/null | jq -c '.apps' || echo '["fastlane"]')" >> "$GITHUB_OUTPUT"
+          echo "wave=$(git diff --name-only "${{ github.event.before }}..${{ github.event.after }}" | grep -c '^internal-apps/platform/' | sed 's/.*/true/;s/^$//')" >> "$GITHUB_OUTPUT"
+
+  build-image:
+    needs: plan
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: build + push ${{ matrix.app }} image (stub)
+        run: echo "stub — build internal-apps/apps/${{ matrix.app }}/Dockerfile, tag, push"
+      - name: smoke ${{ matrix.app }} (stub)
+        run: echo "stub — per-app smoke suite gates promotion"
+
+  canary-fastlane:
+    needs: [plan, build-image]
+    if: needs.plan.outputs.wave == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: FastLane canary 30–60 min (stub)
+        run: 'echo "stub — platform wave: fastlane canary, soak 30–60 min, own smoke suite"'
+
+  deploy-prod:
+    needs: [plan, build-image, canary-fastlane]
+    if: always() && (needs.canary-fastlane.result == 'success' || needs.canary-fastlane.result == 'skipped')
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
+    runs-on: ubuntu-latest
+    environment: production # protected — manual approval required
+    steps:
+      - name: deploy ${{ matrix.app }} (stub)
+        run: echo "stub — blue/green or rollback per app; see app RUNBOOK.md"

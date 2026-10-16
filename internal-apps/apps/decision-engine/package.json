@@ -1,0 +1,36 @@
+{
+  "name": "@app/decision-engine",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && vite build web",
+    "dev": "concurrently \"tsx watch api/src/server.ts\" \"vite web\"",
+    "test": "vitest run",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "start": "node dist/api/src/server.js"
+  },
+  "dependencies": {
+    "@company/db": "workspace:*",
+    "@company/http": "workspace:*",
+    "@company/ui": "workspace:*",
+    "fastify": "^5.1.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "pg-mem": "^3.0.4",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0",
+    "vitest": "^4.0.0",
+    "@company/testing": "workspace:*",
+    "i18next": "^24.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.1.0"
+  }
+}

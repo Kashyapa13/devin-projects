@@ -1,0 +1,52 @@
+{
+  "name": "@app/fastlane",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FastLane — Tier-1 KYC review queue (C4). See AGENTS.md.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && vite build web",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:ft": "playwright test",
+    "seed": "tsx scripts/seed.ts",
+    "openapi": "tsx api/src/openapi.ts",
+    "start": "node dist/server.js",
+    "migrate": "tsx scripts/migrate.ts"
+  },
+  "dependencies": {
+    "@company/audit": "workspace:*",
+    "@company/auth": "workspace:*",
+    "@company/crypto": "workspace:*",
+    "@company/db": "workspace:*",
+    "@company/http": "workspace:*",
+    "@company/observability": "workspace:*",
+    "@company/otel": "workspace:*",
+    "@company/ui": "workspace:*",
+    "@fastify/type-provider-typebox": "^4.1.0",
+    "@sinclair/typebox": "^0.33.7",
+    "fastify": "^5.1.0",
+    "pg": "^8.13.1",
+    "yaml": "^2.6.0",
+    "motion": "14.3.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@playwright/test": "^1.48.2",
+    "@tanstack/react-query": "^5.59.0",
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "^4.0.0",
+    "i18next": "^24.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0",
+    "vitest": "^4.0.0",
+    "@company/testing": "workspace:*"
+  }
+}

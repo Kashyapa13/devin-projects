@@ -1,0 +1,37 @@
+name: keeper
+
+# Weekly dep-bump PR · monthly staging PITR drill.
+# Companion to .devin/skills/keeper. Scheduled stubs — the keeper session
+# does the real work on cadence.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Mon 09:00 — dependency bump
+    - cron: "0 9 1 * *"  # 1st of month — PITR drill
+  workflow_dispatch:
+
+jobs:
+  dep-bump:
+    if: github.event_name != 'schedule' || github.event.schedule == '0 9 * * 1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: internal-apps/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: internal-apps/.nvmrc
+          cache: pnpm
+          cache-dependency-path: internal-apps/pnpm-lock.yaml
+      - name: bump deps + open PR (stub)
+        run: echo "stub — pnpm update, run affected tests, open dep-bump PR"
+        working-directory: internal-apps
+
+  pitr-drill:
+    if: github.event_name != 'schedule' || github.event.schedule == '0 9 1 * *'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: monthly staging PITR restore drill (stub)
+        run: echo "stub — restore per-app DB from PITR on staging, record in RUNBOOK"

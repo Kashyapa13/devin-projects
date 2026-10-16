@@ -1,0 +1,50 @@
+{
+  "name": "internal-apps",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "workspaces": [
+    "platform/packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "turbo run build --affected",
+    "test": "turbo run test --affected",
+    "lint": "turbo run lint --affected",
+    "import-lint": "tsx scripts/ci/import-lint.ts",
+    "repo-lint": "tsx scripts/ci/repo-lint.ts",
+    "license-check": "tsx scripts/ci/license-check.ts",
+    "security-audit": "tsx scripts/ci/security-audit.ts",
+    "pr-semantics": "tsx scripts/ci/pr-semantics.ts",
+    "affected-apps": "tsx scripts/ci/affected-apps.ts",
+    "drift": "scripts/ci/schema-drift.sh && scripts/ci/api-drift.sh && scripts/ci/docs-lint.sh && scripts/ci/adr-check.sh",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "publish-packages": "changeset publish",
+    "otel:seed": "tsx scripts/otel-seeder.ts",
+    "otel:monitors": "tsx scripts/otel-monitors.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@changesets/cli": "^2.27.9",
+    "@company/otel": "workspace:*",
+    "@playwright/test": "^1.48.2",
+    "@types/node": "^22.9.0",
+    "playwright-core": "1.64.1",
+    "tsx": "^4.19.2",
+    "turbo": "^2.0.0",
+    "typescript": "^5.6.3",
+    "vitest": "^4.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "pacote": ">=21.5.1",
+      "picomatch": ">=4.0.4",
+      "sigstore": ">=4.1.1"
+    }
+  }
+}

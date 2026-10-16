@@ -1,0 +1,16 @@
+import { chromium } from "playwright-core";
+import { readFileSync } from "node:fs";
+const TOKEN = readFileSync("/tmp/fl-token.txt","utf8").trim();
+const b = await chromium.connectOverCDP("http://localhost:29229");
+const ctx = b.contexts()[0] ?? (await b.newContext());
+const page = await ctx.newPage();
+const errs=[];
+page.on("console",m=>{ if(m.type()==="error") errs.push(m.text().slice(0,400)); });
+page.on("pageerror",e=>errs.push("PAGEERR:"+String(e).slice(0,400)));
+await page.goto("http://localhost:5173/#/queue");
+await page.evaluate(t=>localStorage.setItem("fl_token",t),TOKEN);
+await page.reload();
+await page.waitForTimeout(4000);
+const rows=await page.evaluate(()=>document.querySelectorAll(".queue-table tbody tr").length);
+console.log("rows=",rows,"errors=",JSON.stringify(errs.slice(0,6),null,1));
+await page.close(); await b.close();

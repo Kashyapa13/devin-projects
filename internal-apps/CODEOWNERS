@@ -1,0 +1,6 @@
+# CODEOWNERS — replace @company/* handles with real teams before first PR.
+# See docs/program/ROLES.md for lane ownership (walk-out decision D7).
+
+platform/**        @company/platform-pair
+apps/fastlane/**   @company/fastlane-tier1-owners
+docs/adr/**        @company/vp-delegate

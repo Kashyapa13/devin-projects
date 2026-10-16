@@ -1,0 +1,9 @@
+# Historical dev-token helper (internal-apps/apps/fastlane/web/public/settoken.html)
+# was deleted in 47a695e — the JWT lives only in commit 08c290a (a dev-session
+# token, never a prod credential). Suppress that commit's blob only.
+title = "internal-apps gitleaks config"
+[extend]
+useDefault = true
+[allowlist]
+description = "one dead commit containing a deleted dev-token helper"
+commits = ['''08c290a7434f6f041dbcffe01b360ad1d0aef149''']

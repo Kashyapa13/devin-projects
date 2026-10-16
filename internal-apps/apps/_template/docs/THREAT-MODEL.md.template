@@ -1,0 +1,12 @@
+# <APP_NAME> — THREAT-MODEL
+
+Top-5 threats. Each mitigation MUST map to a platform package or an
+AGENTS.md rule — never a bespoke control.
+
+| # | Threat | Mitigation | Platform package / rule |
+|---|--------|-----------|--------------------------|
+| 1 | TODO | TODO | e.g. platform-auth requireRole |
+| 2 | TODO | TODO | |
+| 3 | TODO | TODO | |
+| 4 | TODO | TODO | |
+| 5 | TODO | TODO | |

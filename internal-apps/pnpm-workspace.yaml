@@ -1,0 +1,8 @@
+# Source of truth for workspace layout — package.json "workspaces" mirrors this file.
+# apps/_template is the cookiecutter, not a live app: excluded so the
+# template's package name never collides with an instantiated copy.
+packages:
+  - "platform/packages/*"
+  - "apps/*"
+  - "!apps/_template"
+

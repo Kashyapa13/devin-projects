@@ -1,0 +1,16 @@
+# justfile — bootstrap / seed / test / drift / lint.
+
+bootstrap:
+    ./scripts/bootstrap.sh
+
+seed:
+    @echo "stub: per-app seed — e.g. apps/fastlane/scripts/seed.ts (kyc-seed-v1, synthetic only)"
+
+test:
+    pnpm test
+
+drift:
+    pnpm drift
+
+lint:
+    pnpm import-lint

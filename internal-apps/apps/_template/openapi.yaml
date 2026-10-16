@@ -1,0 +1,22 @@
+openapi: 3.0.3
+info:
+  title: template-app
+  version: 0.0.0
+  description: >
+    Template app — platform-http health surface only. New endpoints =
+    LLD registry row + contract test first (API law, AGENTS.md §5).
+paths:
+  /healthz:
+    get:
+      summary: Liveness — no dependencies
+      responses:
+        "200":
+          description: Process is alive
+  /readyz:
+    get:
+      summary: Readiness — every declared dependency must answer
+      responses:
+        "200":
+          description: Ready
+        "503":
+          description: A dependency is down
