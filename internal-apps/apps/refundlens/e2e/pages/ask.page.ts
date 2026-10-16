@@ -15,7 +15,7 @@ export class AskPageObject {
   }
 
   async goto(opts?: { frozenMotion?: boolean }) {
-    await this.page.goto(opts?.frozenMotion ? "/?motion=frozen" : "/");
+    await this.page.goto(opts?.frozenMotion ? "/?motion=frozen#/ask" : "/#/ask");
     await expect(this.input).toBeVisible();
   }
 

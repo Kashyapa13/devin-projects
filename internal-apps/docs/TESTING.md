@@ -38,7 +38,7 @@ happy paths.
   tests + firing → Slack stub), export exact-count + watermark header,
   history.
 - **Flags demo**: CRUD, env tabs, invalid targeting JSON rejected,
-  typed-confirm delete, slider preview, /demo flip.
+  typed-confirm delete, targeting rules editor + bucketed preview chip, /demo flip.
 - Deterministic seed per suite; every FT tagged with the PR-promise it
   verifies.
 

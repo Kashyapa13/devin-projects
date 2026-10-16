@@ -84,7 +84,7 @@ flowchart LR
 flowchart LR
     SIG[case_signals v1<br/>risk_score + country real;<br/>rest via MockModelScoreProvider] --> E[engine<br/>deterministic rule eval]
     P[strategies/packs.ts<br/>5 seed packs<br/>declared precedence<br/>TUNE-ME thresholds] --> E
-    E --> D[(decision_db :8081<br/>decision + inputs + pack<br/>+ fired rule + confidence)]
+    E --> D[(decision_db — local pg<br/>decision + inputs + pack<br/>+ fired rule + confidence)]
     D --> M[audit mirror → FastLane<br/>API-only contract]
     D --> R[daily shadow report<br/>agreement vs human]
     K[kill switch<br/>ENGINE_KILLED] -->|one click: all-human,<br/>in-flight frozen| E
@@ -95,7 +95,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U[demo user] --> W[web :5183<br/>CRUD + env tabs + /demo]
+    U[demo user] --> W[web :5175<br/>CRUD + env tabs + /demo]
     W -->|/api/flags| A[api :8082]
     A --> DB[(flags-pg :5434<br/>flags key×env · audit)]
     A --> EV[eval API<br/>deterministic bucket<br/>SWR cache · p95 <50ms]
@@ -149,9 +149,9 @@ pnpm --filter @app/decision-engine exec tsx scripts/seed.ts         # signals + 
 pnpm --filter @app/decision-engine dev                              # api :8081 + web
 ```
 
-Simulate: `POST /api/v1/engine/evaluate` with a case_id → decision row with
-inputs, pack version, fired rule, confidence; `GET /api/v1/engine/report` is
-the daily shadow readout; the kill switch (`/api/v1/engine/kill`) freezes
+Simulate: `POST /api/v1/engine/decide` with a case_id → decision row with
+inputs, pack version, fired rule, confidence; `GET /api/v1/engine/reports/daily` is
+the daily shadow readout; the kill switch (`/api/v1/engine/kill-switch`, release via `/api/v1/engine/kill-switch/release`) freezes
 in-flight and returns all-human. The 220-case golden set + pack suites run
 in `pnpm --filter @app/decision-engine test`.
 
@@ -160,7 +160,7 @@ in `pnpm --filter @app/decision-engine test`.
 ```bash
 export DATABASE_URL=postgres://flags:flags-dev@localhost:5434/flags
 pnpm --filter @app/flags migrate && pnpm --filter @app/flags seed
-pnpm --filter @app/flags dev   # api :8082 + web :5183
+pnpm --filter @app/flags dev   # api :8082 + web :5175
 ```
 
 Simulate: create a `demo-*` flag → flip `demo-hero` dev → watch the `/demo`

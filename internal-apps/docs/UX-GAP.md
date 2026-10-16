@@ -98,7 +98,7 @@ a historical-checkout penalty. Noisy-VM caveat in §3.
 | G17 | Skeletons not spinners | **OPEN (minor)** | queue still renders `<p>loading</p>` — small follow-up; no spinner exists (spec bans spinners, not text states) |
 | G18 | Toasts settle from trigger's position | **OPEN (minor)** | toast is bottom-anchored `role=status`; trigger-anchored settle deferred — recorded honestly rather than faked |
 | G19 | Toasts with undo | **NOT DONE (by law)** | transitions are one-way legal transitions (FastLane §4) — a fake undo would lie about the audit trail; rationale in ADR-0014 consequences |
-| G20 | Flags `/demo` hero flip + slider + typed-confirm | **DEFERRED** | no `/demo` app exists (docs+shim only) — gated on the Flags FB session |
+| G20 | Flags `/demo` hero flip + preview + typed-confirm | **MET** | `/demo` flip landed with the flags capability demo; the targeting preview is the JSON rules editor + `rule · <25% bucketed` chip (no literal slider — doc updated) |
 | G21 | Momentum scrolling on lists | **ALREADY MET** | native scroll; no JS was added to the scroll path |
 | G22 | queue p95 <1s with motion on | **MET** | p95 7.2ms (n=60, vite proxy) — k6 50VU soak stays deferred to P12 per program scope |
 | G23 | axe zero-critical both modes | **MET** | live axe, ON + FROZEN; serious color-contrast = pre-existing tokens (not introduced) |

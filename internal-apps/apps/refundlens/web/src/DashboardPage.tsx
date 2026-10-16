@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AppHeader,
   Donut,
   Heatmap,
   KpiCard,
@@ -20,6 +21,7 @@ import {
   type TsSeries,
 } from "@company/ui";
 import { api } from "./api.js";
+import { SyncPill } from "./SyncPill.js";
 
 /**
  * /dashboard — the Power BI replacement surface (ADR-0015, F-09..F-16).
@@ -249,7 +251,11 @@ export function DashboardPage() {
   const lagExceeded = lagS !== null && lagS > 5400;
 
   return (
-    <main className="dash">
+    <>
+      <AppHeader narrow eyebrow={t("app.eyebrow")} title={t("app.title")}>
+        <SyncPill />
+      </AppHeader>
+      <main className="dash">
       {widgetError && (
         <p role="alert" className="error-card" data-testid="dash-error">
           {t("dash.load_error")}
@@ -527,5 +533,6 @@ export function DashboardPage() {
         </section>
       </Reveal>
     </main>
+    </>
   );
 }
