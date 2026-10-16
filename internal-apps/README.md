@@ -41,7 +41,7 @@ flowchart LR
         RL[apps/refundlens]
         ENG[apps/decision-engine]
         FLG[apps/flags<br/>capability demo]
-        PLAT[platform/packages<br/>@company/ui · auth · audit<br/>crypto · db · http · otel · testing]
+        PLAT["platform/packages<br/>@company/ui · auth · audit<br/>crypto · db · http · otel · testing"]
     end
     FL & RL & ENG & FLG --> PLAT
     PA -. stay-put decision<br/>ADR-0002 .-> FLG
@@ -53,7 +53,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U[reviewer / supervisor<br/>auditor read-only] --> W[web :5173<br/>React 19 PWA<br/>queue + case]
+    U["reviewer / supervisor<br/>auditor read-only"] --> W[web :5173<br/>React 19 PWA<br/>queue + case]
     W -->|/api/v1 proxied| A[api :8080<br/>Fastify + TypeBox<br/>RBAC + idempotency]
     A --> S[statemachine<br/>pure transitions<br/>both directions gated]
     A --> DB[(fastlane-pg :5432<br/>cases · audit_events<br/>case_notes)]
@@ -83,7 +83,7 @@ flowchart LR
 ```mermaid
 flowchart LR
     SIG[case_signals v1<br/>risk_score + country real;<br/>rest via MockModelScoreProvider] --> E[engine<br/>deterministic rule eval]
-    P[strategies/packs.ts<br/>5 seed packs<br/>declared precedence<br/>TUNE-ME thresholds] --> E
+    P["strategies/packs.ts<br/>5 seed packs<br/>declared precedence<br/>TUNE-ME thresholds"] --> E
     E --> D[(decision_db — local pg<br/>decision + inputs + pack<br/>+ fired rule + confidence)]
     D --> M[audit mirror → FastLane<br/>API-only contract]
     D --> R[daily shadow report<br/>agreement vs human]
@@ -98,7 +98,7 @@ flowchart LR
     U[demo user] --> W[web :5175<br/>CRUD + env tabs + /demo]
     W -->|/api/flags| A[api :8082]
     A --> DB[(flags-pg :5434<br/>flags key×env · audit)]
-    A --> EV[eval API<br/>deterministic bucket<br/>SWR cache · p95 <50ms]
+    A --> EV["eval API<br/>deterministic bucket<br/>SWR cache · p95 < 50ms"]
     EV -->|demo-hero| W
     RBAC[flag_editor non-prod<br/>flag_admin prod] --> A
 ```
