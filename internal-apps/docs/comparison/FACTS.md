@@ -8,12 +8,14 @@
 - Per-app plan sales to new customers ENDED Jan 2 2026
   ([end-of-sale notice](https://www.microsoft.com/en-us/licensing/news/power-app-per-app-end-of-sale))
 - Dataverse add-on $40/GB/mo
-  ([pricing](https://www.microsoft.com/en-us/power-platform/products/power-apps/pricing))
+  ([capacity model](https://learn.microsoft.com/en-us/power-platform/admin/capacity-storage);
+  price per Power Platform Licensing Guide Aug-2024, SKU CFQ7TTC0LHRL-2-P1Y)
 - Dev Plan free (3 envs, 2GB, 750 flows/mo)
   ([pricing](https://www.microsoft.com/en-us/power-platform/products/power-apps/pricing))
 - Canvas apps reach the built-in connector catalog (~1,000+ marketed, ~1,600
   listed — earlier "200+" figure stale); M365 seeded rights = standard
-  connectors only
+  connectors only (per the Licensing Guide; the two links list the catalog,
+  not the entitlement split)
   ([connector reference](https://learn.microsoft.com/en-us/connectors/connector-reference),
   [licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-flow-licensing-faq))
 - M365 Copilot chat GA model-driven / preview canvas
