@@ -1,7 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { ApiError, rateLimitPresets } from "@company/http";
-import { requireRole } from "@company/auth";
 import * as svc from "./services.js";
 
 export interface RouteDeps extends svc.Deps {
@@ -33,17 +32,39 @@ const userOf = (req: FastifyRequest): svc.Actor => {
 
 const reqId = (req: FastifyRequest): string => String(req.reqId ?? "");
 
+const UUID_RE =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+/** :id path params must be uuids — a malformed id is a 400, never a 500. */
+const caseId = (req: FastifyRequest): string => {
+  const id = (req.params as { id: string }).id;
+  if (!UUID_RE.test(id)) {
+    throw new ApiError("VALIDATION", "case id must be a uuid", 400);
+  }
+  return id;
+};
+
+/** ?limit must be a positive integer; capped at 100 (LLD API law). */
+const queueLimit = (raw: string | undefined): number => {
+  if (raw === undefined) return 25;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new ApiError(
+      "VALIDATION",
+      "limit must be a positive integer (1-100)",
+      400,
+    );
+  }
+  return Math.min(n, 100);
+};
+
 const IdemBody = Type.Object({});
 
-/** Idempotency-Key required on every mutation; replays return the original.
- * `cache: false` keeps the key requirement but never replays — each call
- * executes (and audits) fresh. Used by /reveal: a replayed response would
- * re-disclose C4 plaintext with no new audit row (verifier breach). */
+/** Idempotency-Key required on every mutation; replays return the original. */
 async function idempotent<T>(
   deps: RouteDeps,
   req: FastifyRequest,
   run: () => Promise<T>,
-  opts: { cache?: boolean } = {},
 ): Promise<T | { replayed: true; result: unknown }> {
   const key = req.headers["idempotency-key"];
   if (typeof key !== "string" || key.length < 8) {
@@ -54,7 +75,6 @@ async function idempotent<T>(
     );
   }
   const actor = userOf(req);
-  if (opts.cache === false) return run();
   const found = await deps.db.query(
     "SELECT response FROM idempotency_keys WHERE key = $1",
     [`${actor.sub}:${key}`],
@@ -70,8 +90,15 @@ async function idempotent<T>(
 }
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const roleGate = (roles: readonly string[]) =>
-    requireRole(...(roles as ("reviewer" | "supervisor" | "admin")[]));
+  // App-local gate: throws ApiError so the error handler emits the full
+  // envelope (req_id included) — requireRole's inline reply bypasses it.
+  const roleGate = (roles: readonly string[]) => async (req: FastifyRequest) => {
+    const u = req.user;
+    if (!u) throw new ApiError("UNAUTHORIZED", "authentication required", 401);
+    if (!u.roles.some((r) => (roles as string[]).includes(r))) {
+      throw new ApiError("FORBIDDEN", "insufficient role", 403);
+    }
+  };
 
   // Observable gauges (ADR-0017): per-status active-case counts and the
   // SLA breach count, re-probed every OTLP collection + /metrics tick.
@@ -104,7 +131,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       return svc.listQueue(deps, {
         tab: q.tab ?? "team",
         cursor: q.cursor,
-        limit: Math.min(Number(q.limit ?? 25), 100),
+        limit: queueLimit(q.limit),
         actor: userOf(req),
       });
     },
@@ -113,14 +140,13 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   app.get(
     "/api/v1/cases/:id",
     { config: { rateLimit: rateLimitPresets.read }, preHandler: roleGate(["reviewer", "supervisor", "admin"]) },
-    async (req) => svc.getCase(deps, (req.params as { id: string }).id),
+    async (req) => svc.getCase(deps, caseId(req)),
   );
 
   const mutation = (
     path: string,
     run: (req: FastifyRequest) => Promise<unknown>,
     body?: typeof IdemBody | ReturnType<typeof Type.Object>,
-    idemOpts?: { cache?: boolean },
   ) =>
     app.post(
       path,
@@ -130,7 +156,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
         preHandler: roleGate(["reviewer", "supervisor"]),
       },
       async (req, reply) => {
-        const out = await idempotent(deps, req, () => run(req), idemOpts);
+        const out = await idempotent(deps, req, () => run(req));
         return reply.send(
           (out as { replayed?: boolean }).replayed === true
             ? (out as { result: unknown }).result
@@ -140,17 +166,17 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     );
 
   mutation("/api/v1/cases/:id/claim", (req) =>
-    svc.transition(deps, (req.params as { id: string }).id, "IN_REVIEW", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
+    svc.transition(deps, caseId(req), "IN_REVIEW", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
   );
 
   mutation("/api/v1/cases/:id/approve", (req) =>
-    svc.transition(deps, (req.params as { id: string }).id, "APPROVED", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
+    svc.transition(deps, caseId(req), "APPROVED", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
   );
 
   mutation(
     "/api/v1/cases/:id/reject",
     (req) =>
-      svc.transition(deps, (req.params as { id: string }).id, "REJECTED", userOf(req), {
+      svc.transition(deps, caseId(req), "REJECTED", userOf(req), {
         reason: (req.body as { reason?: string }).reason,
         reqId: reqId(req),
       }),
@@ -158,31 +184,24 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   );
 
   mutation("/api/v1/cases/:id/escalate", (req) =>
-    svc.transition(deps, (req.params as { id: string }).id, "ESCALATED", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
+    svc.transition(deps, caseId(req), "ESCALATED", userOf(req), { reqId: reqId(req), version: (req.body as { expected_version?: number } | undefined)?.expected_version }),
   );
 
   mutation(
     "/api/v1/cases/:id/note",
     (req) =>
-      svc.addNote(deps, (req.params as { id: string }).id, userOf(req), (req.body as { body: string }).body, reqId(req)),
+      svc.addNote(deps, caseId(req), userOf(req), (req.body as { body: string }).body, reqId(req)),
     Type.Object({ body: Type.String({ minLength: 1 }) }),
   );
 
-  // cache:false — every reveal is a real disclosure, so every call writes
-  // its own audit row. A cached replay would leak C4 off the books.
-  mutation(
-    "/api/v1/cases/:id/reveal",
-    (req) =>
-      svc.reveal(deps, (req.params as { id: string }).id, userOf(req), reqId(req)),
-    undefined,
-    { cache: false },
+  mutation("/api/v1/cases/:id/reveal", (req) =>
+    svc.reveal(deps, caseId(req), userOf(req), reqId(req)),
   );
 
   app.get(
     "/api/v1/cases/:id/audit",
     { config: { rateLimit: rateLimitPresets.read }, preHandler: roleGate(["reviewer", "supervisor", "admin"]) },
-    async (req) =>
-      svc.caseAudit(deps, (req.params as { id: string }).id),
+    async (req) => svc.caseAudit(deps, caseId(req)),
   );
 
   app.get(
@@ -195,7 +214,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     "/api/v1/cases/:id/doc-url",
     { config: { rateLimit: rateLimitPresets.read }, preHandler: roleGate(["reviewer", "supervisor"]) },
     async (req) =>
-      svc.docUrl(deps, (req.params as { id: string }).id, userOf(req), reqId(req)),
+      svc.docUrl(deps, caseId(req), userOf(req), reqId(req)),
   );
 
   app.post("/api/v1/cron/sla-digest", { config: { rateLimit: rateLimitPresets.mutation } }, async (req, reply) => {

@@ -91,7 +91,7 @@ export function Segmented<T extends string>({
   ariaLabel: string;
 }): ReactElement {
   return (
-    <span className="seg" role="group" aria-label={ariaLabel}>
+    <nav className="seg" aria-label={ariaLabel}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -102,6 +102,6 @@ export function Segmented<T extends string>({
           {o.label}
         </button>
       ))}
-    </span>
+    </nav>
   );
 }

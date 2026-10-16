@@ -36,7 +36,6 @@ const TO = "2026-10-10T00:00:00Z";
 beforeAll(async () => {
   pg = await pgHarness("refundlens");
   pool = new Pool({ connectionString: pg.dsn });
-  pool.on("error", () => {});
   const runner = migrationRunner(pool);
   await runner.migrate(loadMigrations(MIGRATIONS));
   await runSeeds(pool, registry, "refund-seed-v1");

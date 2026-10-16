@@ -1,0 +1,28 @@
+/* RefundLens dashboard (F-09..F-16) — app-specific surface rules that have
+ * no platform equivalent. Restored verbatim from the pre-styles.css inline
+ * block: removing them silently degraded .grid2/.grid3/.chip-on/.lag-banner.
+ * Imported by main.tsx after @company/ui/styles.css so .chip-on wins. */
+
+.dash { max-width: none; }
+body:has(.dash) { max-width: 80rem; }
+.dashbar { display: flex; flex-direction: column; gap: .4rem; margin-bottom: .8rem; }
+.dashbar-row { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.dashbar-row.filters { font-size: .85em; }
+.chip-on { background: #2563eb; border-color: #2563eb; color: #fff; }
+.flabel { opacity: .7; }
+.spacer { flex: 1; }
+.wm-chip { font-size: .82em; border: 1px solid #9995; border-radius: 999px; padding: .2rem .7rem; display: inline-flex; gap: .4rem; align-items: center; }
+.beat-ok { color: #16a34a; font-weight: 700; }
+.beat-degraded { color: #d97706; font-weight: 700; }
+.kpi-wrap { margin: .6rem 0 .9rem; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: .8rem; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .8rem; }
+.empty-hint { font-size: .85em; opacity: .7; font-style: italic; }
+.monitors { list-style: none; margin: 0; padding: 0; font-size: .85em; display: grid; gap: .25rem; }
+.monitors .pill { border-radius: 999px; padding: 0 .5rem; font-size: .8em; background: #9994; }
+.monitors .mon-ok { background: #16a34a; color: #fff; }
+.monitors .mon-firing { background: #dc2626; color: #fff; }
+.monitors .mon-off { background: #9994; }
+.linkcell { border: none; background: none; padding: 0; color: #2563eb; cursor: pointer; font: inherit; }
+.lag-banner { background: #f59e0b22; border: 1px solid #f59e0b; color: inherit; border-radius: .5rem; padding: .6rem 1rem; margin: .8rem 0; }
+input[type="date"] { font: inherit; padding: .1rem .4rem; border: 1px solid #9996; border-radius: .35rem; background: Canvas; color: CanvasText; }
