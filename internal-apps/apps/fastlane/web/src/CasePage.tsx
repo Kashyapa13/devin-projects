@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AppHeader,
   BlurMorph,
+  CommandDock,
   Morph,
+  Skeleton,
   useKeyboardNav,
   useTranslation,
   type KeyMap,
@@ -41,7 +44,9 @@ function DocPanel({ docUrl, onExpire }: { docUrl: { url: string; expires_at: str
   return (
     <p>
       <a href={docUrl.url} target="_blank" rel="noreferrer">{t("action.doc")}</a>{" "}
-      <span className="keys">{t("doc.expires")} {mmss} · {t("doc.audited")}</span>
+      <span className="keys">
+        {t("doc.expires")} <span className="mono">{mmss}</span> · {t("doc.audited")}
+      </span>
     </p>
   );
 }
@@ -64,9 +69,10 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     setError(null);
   }, [id]);
 
-  const { data: kase, isLoading, isError } = useQuery({
+  const { data: kase, isLoading, error: caseError } = useQuery({
     queryKey: ["case", id],
     queryFn: () => api(`/api/v1/cases/${id}`) as Promise<CaseRow>,
+    retry: 1,
   });
   const { data: audit, isError: auditFailed } = useQuery({
     queryKey: ["audit", id],
@@ -157,42 +163,59 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
     if (autoReject) setRejecting(true);
   }, [autoReject]);
 
-  // Explicit error state — a failed fetch must not hang on "Loading…".
-  if (isError) {
-    return (
-      <main>
-        <p role="alert" className="error">
-          {t("error.title")}: {t("case.error")}
-        </p>
+  return (
+    <>
+      <AppHeader
+        eyebrow={t("app.eyebrow")}
+        title={
+          <>
+            {t("app.title")} —{" "}
+            <Morph
+              morphId={kase ? `case-${kase.id}` : undefined}
+            >
+              {kase?.customer_ref ?? t("loading")}
+            </Morph>
+          </>
+        }
+      >
         <button
           type="button"
+          className="btn-ghost"
           onClick={() => {
             location.hash = "#/";
           }}
         >
           ← {t("case.back")}
         </button>
-      </main>
-    );
-  }
-  if (isLoading || !kase) return <p>{t("loading")}</p>;
-  return (
-    <main>
-      <h1>
-        {t("app.title")} —{" "}
-        <Morph morphId={`case-${kase.id}`}>{kase.customer_ref}</Morph>
-      </h1>
-      <p className="keys" aria-hidden="true">
-        {t("case.keys")}
-      </p>
-      <button
-        type="button"
-        onClick={() => {
-          location.hash = "#/";
-        }}
-      >
-        ← {t("case.back")}
-      </button>
+        <CommandDock
+          label={t("case.keys")}
+          items={[
+            { keys: "C", label: t("action.claim") },
+            { keys: "A", label: t("action.approve") },
+            { keys: "R", label: t("action.reject") },
+            { keys: "N", label: t("action.note") },
+            { keys: "E", label: t("action.escalate") },
+            { keys: "D", label: t("action.doc") },
+            { keys: "Esc", label: t("dock.back") },
+          ]}
+        />
+      </AppHeader>
+      {isLoading ? (
+        <main className="shell" aria-busy="true">
+          <div className="skel-rows">
+            {["45%", "80%", "66%", "72%", "38%", "55%"].map((w, i) => (
+              <Skeleton key={i} width={w} />
+            ))}
+          </div>
+        </main>
+      ) : !kase ? (
+        <main className="shell">
+          <p role="alert" className="error">
+            {t("error.title")}: {caseError?.message ?? t("case.missing")}
+          </p>
+        </main>
+      ) : (
+      <main className="shell">
       {error && (
         <p role="alert" className="error">
           {t("error.title")}: {error}
@@ -201,7 +224,9 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <dl className="case-fields">
         <dt>{t("case.fields.customer")}</dt>
-        <dd>{kase.customer_ref}</dd>
+        <dd>
+          <span className="mono">{kase.customer_ref}</span>
+        </dd>
         <dt>{t("case.fields.status")}</dt>
         <dd>
           <StatusPill status={kase.status} />
@@ -219,9 +244,13 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <dt>{t("case.fields.doctype")}</dt>
         <dd>{kase.doc_type}</dd>
         <dt>{t("case.fields.assignee")}</dt>
-        <dd>{kase.assignee_id ?? "—"}</dd>
+        <dd>
+          <span className="mono">{kase.assignee_id ?? "—"}</span>
+        </dd>
         <dt>{t("case.fields.priority")}</dt>
-        <dd>{kase.priority}</dd>
+        <dd>
+          <span className="mono">{kase.priority}</span>
+        </dd>
       </dl>
 
       <section className="panel" aria-labelledby="pii-h">
@@ -231,7 +260,7 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             <BlurMorph revealed={false}>
               <span className="masked">{t("case.pii.masked")}</span>
             </BlurMorph>{" "}
-            <button type="button" className="btn btn-ghost" onClick={() => void doReveal()}>
+            <button type="button" className="btn-ghost" onClick={() => void doReveal()}>
               {t("case.pii.reveal")}
             </button>
           </p>
@@ -247,21 +276,27 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
 
       <section className="panel" aria-labelledby="dec-h">
         <h2 id="dec-h">Decision</h2>
-        <button type="button" className="btn btn-primary" onClick={() => void act("claim")}>
-          {t("action.claim")} (c)
-        </button>{" "}
-        <button type="button" className="btn btn-ghost" onClick={() => void act("approve")}>
-          {t("action.approve")} (a)
-        </button>{" "}
-        <button type="button" className="btn btn-ghost" onClick={() => setRejecting(true)}>
-          {t("action.reject")} (r)
-        </button>{" "}
-        <button type="button" className="btn btn-ghost" onClick={() => setNoting(true)}>
-          {t("action.note")} (n)
-        </button>{" "}
-        <button type="button" className="btn btn-ghost" onClick={() => void act("escalate")}>
-          {t("action.escalate")} (e)
-        </button>
+        <div className="actions">
+          <button type="button" className="btn-ghost" onClick={() => void act("claim")}>
+            {t("action.claim")} <kbd>c</kbd>
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => void act("approve")}
+          >
+            {t("action.approve")} <kbd>a</kbd>
+          </button>
+          <button type="button" className="btn-danger" onClick={() => setRejecting(true)}>
+            {t("action.reject")} <kbd>r</kbd>
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => setNoting(true)}>
+            {t("action.note")} <kbd>n</kbd>
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => void act("escalate")}>
+            {t("action.escalate")} <kbd>e</kbd>
+          </button>
+        </div>
       </section>
 
       {rejecting && (
@@ -274,7 +309,11 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             placeholder={t("reject.placeholder")}
             autoFocus
           />
-          <button type="button" className="btn btn-primary" onClick={() => void submitReject()}>
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={() => void submitReject()}
+          >
             {t("reject.submit")}
           </button>
         </section>
@@ -290,7 +329,11 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
             placeholder={t("note.placeholder")}
             autoFocus
           />
-          <button type="button" className="btn btn-primary" onClick={() => void submitNote()}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => void submitNote()}
+          >
             {t("note.submit")}
           </button>
         </section>
@@ -300,8 +343,8 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
         <h2 id="doc-h">{t("doc.title")}</h2>
         {docUrl === null || docUrl.caseId !== id ? (
           <p>
-            <button type="button" className="btn btn-ghost" onClick={() => void doDocUrl()}>
-              {t("doc.issue")} (d)
+            <button type="button" className="btn-ghost" onClick={() => void doDocUrl()}>
+              {t("doc.issue")} <kbd>d</kbd>
             </button>
           </p>
         ) : (
@@ -317,14 +360,18 @@ export function CasePage({ id, autoReject }: { id: string; autoReject?: boolean 
           </p>
         ) : (
           <ul className="timeline">
-            {(audit ?? []).map((r, i) => (
-              <li key={i}>
-                {String(r.at)} · {r.actor} · {r.action}
-              </li>
-            ))}
-          </ul>
+          {(audit ?? []).map((r, i) => (
+            <li key={i}>
+              <span className="action">{r.action}</span>{" "}
+              <span className="at">{String(r.at)}</span>{" "}
+              <span className="actor">{r.actor}</span>
+            </li>
+          ))}
+        </ul>
         )}
       </section>
-    </main>
+      </main>
+      )}
+    </>
   );
 }

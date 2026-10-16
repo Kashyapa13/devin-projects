@@ -172,6 +172,118 @@ describe("GET /export.csv — exact counts, watermark header, cache bypass", () 
   });
 });
 
+describe("GET /health/sync — the freshness surface", () => {
+  it("returns watermark, lag and last run status", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/health/sync",
+      headers: { authorization: `Bearer ${await token()}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.watermark).toBeTruthy();
+    expect(typeof body.lag_s).toBe("number");
+    expect(body.lag_s).toBeGreaterThanOrEqual(0);
+    expect(body.last_run_status).toBe("success");
+  });
+
+  it("unauthenticated → 401", async () => {
+    const res = await app.inject("/api/v1/health/sync");
+    expect(res.statusCode).toBe(401);
+  });
+});
+
+describe("GET /widgets/:name — typed params through the fenced layer", () => {
+  const widget = (name: string, qs = "", roles = ["analyst"]) =>
+    token(roles).then((tok) =>
+      app.inject({
+        method: "GET",
+        url: `/api/v1/widgets/${name}${qs}`,
+        headers: { authorization: `Bearer ${tok}` },
+      }),
+    );
+
+  it("kpi returns the stat series with watermark", async () => {
+    const res = await widget("kpi");
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.widget).toBe("kpi");
+    expect(Array.isArray(body.series)).toBe(true);
+    expect(body.watermark).toBeTruthy();
+    const row = body.series[0] ?? {};
+    expect(row).toHaveProperty("refunds_today");
+    expect(row).toHaveProperty("total_refunded_cents");
+  });
+
+  it("daily reads the agg_daily rollup (not raw events)", async () => {
+    const res = await widget("daily", "?limit=12");
+    expect(res.statusCode).toBe(200);
+    const { series } = res.json();
+    expect(Array.isArray(series)).toBe(true);
+    if (series.length > 0) {
+      expect(series[0]).toHaveProperty("day");
+      expect(series[0]).toHaveProperty("cnt");
+      expect(series[0]).toHaveProperty("amount");
+    }
+  });
+
+  it("daily honours channel/segment/reason filters against the rollup", async () => {
+    const res = await widget("daily", "?channel=CARD&segment=SMB&reason=FRAUD&limit=500");
+    expect(res.statusCode).toBe(200);
+    const { series } = res.json();
+    expect(series.length).toBeGreaterThan(0);
+    for (const r of series) {
+      expect(r.channel).toBe("CARD");
+      expect(r.merchant_segment).toBe("SMB");
+      expect(r.reason_code).toBe("FRAUD");
+    }
+    // unfiltered must be a superset — filtered rows are a subset by day+dims
+    const all = (await widget("daily", "?limit=500")).json().series;
+    expect(all.length).toBeGreaterThan(series.length);
+  });
+
+  it("daily includes rows dated today (inclusive end bound)", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await pool.query(
+      `INSERT INTO refundlens.agg_daily
+         (day, channel, merchant_segment, reason_code, cnt, amount, p50_ms, p95_ms)
+       VALUES ($1::date, 'CARD', 'SMB', 'FRAUD', 7, 12345, 10, 20)
+       ON CONFLICT (day, channel, merchant_segment, reason_code)
+       DO UPDATE SET cnt = 7`,
+      [today],
+    );
+    const res = await widget("daily", "?limit=500");
+    expect(res.statusCode).toBe(200);
+    const days = res.json().series.map((r: Record<string, unknown>) =>
+      String(r.day).slice(0, 10),
+    );
+    expect(days).toContain(today);
+  });
+
+  it("daily with a state filter derives day grain from raw (rollup has no state dim)", async () => {
+    const res = await widget("daily", "?state=PENDING&limit=500");
+    expect(res.statusCode).toBe(200);
+    const { series } = res.json();
+    expect(series.length).toBeGreaterThan(0);
+    expect(series[0]).toHaveProperty("day");
+    expect(series[0]).toHaveProperty("cnt");
+  });
+
+  it("unknown widget → 400 fenced_query_rejected with guidance", async () => {
+    const res = await widget("bogus_widget");
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.code).toBe("FENCED_QUERY_REJECTED");
+    expect(res.json().error.detail.guidance).toBeTruthy();
+  });
+
+  it("bad typed param → 400 (TypeBox), wrong role → 403", async () => {
+    const res = await widget("kpi", "?grain=fortnight");
+    expect(res.statusCode).toBe(400);
+    const viewer = await widget("kpi", "", ["viewer"]);
+    expect(viewer.statusCode).toBe(403);
+  });
+});
+
 describe("platform wiring", () => {
   it("healthz/readyz + /metrics exposition", async () => {
     expect((await app.inject("/healthz")).statusCode).toBe(200);

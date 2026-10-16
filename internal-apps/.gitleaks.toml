@@ -1,0 +1,12 @@
+# Gitleaks config — repo root.
+# settoken.html was a dev-SSO shim page that briefly contained a synthetic
+# local-dev JWT (added 08c290a, removed 47a695e on the app-skeleton branch).
+# It never existed in prod and the token only works against localhost;
+# allowlist the path so its history entry stops failing the scan.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "dropped dev-only settoken.html shim (history-only finding)"
+paths = ['''apps/fastlane/web/public/settoken\.html''']
+commits = ['''08c290a7434f6f041dbcffe01b360ad1d0aef149''']

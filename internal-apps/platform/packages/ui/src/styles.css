@@ -1,0 +1,1021 @@
+/**
+ * @company/ui — the fleet visual language (ADR-0018).
+ *
+ * ONE stylesheet every app imports (`import "@company/ui/styles.css"`):
+ * canvas + ambient depth, glassmorphism, layered elevation, soft status
+ * badges with indicator dots, borderless data tables with an indigo
+ * focus rail, obsidian/ghost actions, and the header command dock.
+ *
+ * Laws:
+ * - Semantic tokens only — apps never hard-code a color; dark mode is
+ *   automatic via `prefers-color-scheme` (no app-level theme code).
+ * - CLS = 0: async surfaces use skeletons, never layout-shifting swaps.
+ * - Decorative CSS transitions are property-scoped and property-cheap
+ *   (background/shadow); motion moments stay in the motion layer
+ *   (ADR-0014) — this sheet never animates layout.
+ * - `prefers-reduced-motion` and `data-motion="off"` kill every
+ *   transition/animation here too.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* canvas + surfaces */
+  --canvas: #f8fafc;            /* slate-50 */
+  --canvas-2: #f1f5f9;          /* slate-100 */
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-solid: #ffffff;
+  --surface-2: #f1f5f9;
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-brd: rgba(226, 232, 240, 0.85);
+  --hover: rgba(241, 245, 249, 0.85);
+
+  /* hairlines — soft, never 1px black */
+  --line: rgba(15, 23, 42, 0.08);
+  --line-soft: rgba(15, 23, 42, 0.05);
+
+  /* ink — never pure black */
+  --ink: #0f172a;               /* slate-900 */
+  --ink-2: #64748b;             /* slate-500 */
+  --ink-3: #94a3b8;             /* slate-400 */
+
+  /* accent + ring */
+  --accent: #4f46e5;            /* indigo-600 */
+  --accent-ink: #4338ca;        /* indigo-700 */
+  --accent-soft: rgba(79, 70, 229, 0.09);
+  --accent-soft-2: rgba(79, 70, 229, 0.16);
+  --ring: #6366f1;              /* indigo-500 */
+
+  /* status hues — already readable in each mode */
+  --ok: #047857;                /* emerald-700 */
+  --warn: #b45309;              /* amber-700 */
+  --bad: #e11d48;               /* rose-600 */
+  --bad-fill: #e11d48;          /* solid danger-button fill */
+  --info: #4f46e5;              /* indigo-600 */
+  --note: #7c3aed;              /* violet-600 */
+  --zinc: #52525b;              /* zinc-600 */
+
+  /* elevation — layered soft shadows */
+  --elev-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 1px rgba(15, 23, 42, 0.04);
+  --elev-2: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --elev-3: 0 16px 44px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.07);
+
+  --r-md: 0.5rem;
+  --r-lg: 0.75rem;
+  --r-xl: 1rem;
+
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --shell-w: 72rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #09090b;          /* zinc-950 */
+    --canvas-2: #101012;
+    --surface: rgba(24, 24, 27, 0.82);
+    --surface-solid: #18181b;   /* zinc-900 */
+    --surface-2: #202023;
+    --glass: rgba(24, 24, 27, 0.72);
+    --glass-brd: rgba(63, 63, 70, 0.7);
+    --hover: rgba(39, 39, 42, 0.55);
+
+    --line: rgba(244, 244, 245, 0.09);
+    --line-soft: rgba(244, 244, 245, 0.05);
+
+    --ink: #f4f4f5;             /* zinc-100 */
+    --ink-2: #a1a1aa;           /* zinc-400 */
+    --ink-3: #71717a;           /* zinc-500 */
+
+    --accent: #818cf8;          /* indigo-400 */
+    --accent-ink: #a5b4fc;      /* indigo-300 */
+    --accent-soft: rgba(129, 140, 248, 0.14);
+    --accent-soft-2: rgba(129, 140, 248, 0.22);
+    --ring: #818cf8;
+
+    --ok: #34d399;              /* emerald-400 */
+    --warn: #fbbf24;            /* amber-400 */
+    --bad: #fb7185;             /* rose-400 */
+    --bad-fill: #9f1239;        /* rose-800 — white-text fill (≥4.5:1) */
+    --info: #818cf8;
+    --note: #a78bfa;            /* violet-400 */
+    --zinc: #a1a1aa;
+
+    --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --elev-2: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --elev-3: 0 16px 44px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* ---------- canvas ---------- */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--canvas) 0%, var(--canvas-2) 100%);
+  color: var(--ink);
+  font-family:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* ambient depth — two faint radial glows at the top corners */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      44rem 30rem at 6% -12%,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      38rem 28rem at 96% -14%,
+      color-mix(in srgb, #0ea5e9 6%, transparent),
+      transparent 62%
+    );
+}
+
+main.shell {
+  max-width: var(--shell-w);
+  margin: 0 auto;
+  padding: 1.4rem 1.5rem 6rem;
+}
+main.shell.shell-narrow,
+.appbar.shell-narrow {
+  --shell-w: 60rem;
+}
+
+/* ---------- glass app bar (sticky, frosted) ---------- */
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset;
+}
+
+.appbar-inner {
+  max-width: var(--shell-w);
+  margin: 0 auto;
+  padding: 0.7rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.appbar-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.appbar h1.title {
+  margin: 0;
+  font-size: 1.06rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.appbar h1.title > * {
+  vertical-align: middle;
+}
+
+.appbar-side {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* ---------- command dock (pill-styled shortcut strip) ---------- */
+
+.dock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.34rem 0.85rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  box-shadow: var(--elev-1);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.dock-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--ink-2);
+}
+
+kbd {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.35rem;
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  color: var(--ink-2);
+  box-shadow: var(--elev-1);
+}
+
+/* ---------- buttons ---------- */
+
+button {
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--ink);
+  padding: 0.42rem 0.9rem;
+  transition:
+    transform 0.12s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+button:hover {
+  background: var(--surface-2);
+}
+button:active {
+  transform: scale(0.97);
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+button:focus-visible,
+[tabindex]:focus-visible,
+a:focus-visible,
+code[role="button"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* primary — obsidian (dark mode flips to light), press = scale .95 */
+.btn-primary,
+button.btn-primary {
+  background: var(--ink);
+  border-color: transparent;
+  color: var(--canvas);
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: var(--ink);
+  opacity: 0.92;
+}
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-ghost,
+button.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-2);
+}
+.btn-ghost:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.btn-danger,
+button.btn-danger {
+  background: var(--bad-fill);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+.btn-danger:hover {
+  opacity: 0.92;
+  background: var(--bad-fill);
+}
+.btn-danger:active {
+  transform: scale(0.95);
+}
+
+/* compact actions inside table rows */
+.queue-table td button,
+.rows td button {
+  padding: 0.26rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+/* ---------- segmented control ---------- */
+
+.seg {
+  display: inline-flex;
+  gap: 0.15rem;
+  padding: 0.22rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.seg button:hover {
+  background: transparent;
+  color: var(--ink);
+}
+.seg button[aria-pressed="true"] {
+  background: var(--surface-solid);
+  color: var(--ink);
+  box-shadow: var(--elev-1);
+}
+
+/* ---------- form controls ---------- */
+
+select {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.34rem 0.6rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--ink);
+}
+select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 4.5rem;
+  margin: 0.4rem 0;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+textarea:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+label {
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ---------- surfaces ---------- */
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid var(--glass-brd);
+}
+
+.panel,
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: 1rem 1.25rem;
+  margin: 0.9rem 0;
+  box-shadow: var(--elev-2);
+}
+.panel h2,
+.card h2 {
+  margin: 0.1rem 0 0.7rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-2);
+  overflow-x: auto;
+}
+
+/* ---------- action rows (decision panels) ---------- */
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ---------- badges, pills, chips — soft tint + micro-border + dot ---------- */
+
+.pill,
+.badge,
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42em;
+  border-radius: 999px;
+  padding: 0.2rem 0.68rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  line-height: 1.35;
+  white-space: nowrap;
+  border: 1px solid;
+  color: var(--tone, var(--zinc));
+  background: color-mix(in srgb, var(--tone, var(--zinc)) 10%, transparent);
+  border-color: color-mix(in srgb, var(--tone, var(--zinc)) 26%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.pill::before,
+.badge::before,
+.chip::before {
+  content: "";
+  width: 0.45em;
+  height: 0.45em;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+/* tone map — status / risk / sla semantics in one place */
+.pill-pending,
+.badge-cache {
+  --tone: var(--info);
+}
+.pill-in_review,
+.badge-med,
+.chip-soon,
+.badge-warn {
+  --tone: var(--warn);
+}
+.pill-approved,
+.badge-low,
+.chip-ok,
+.badge-live {
+  --tone: var(--ok);
+}
+.pill-rejected,
+.badge-high,
+.chip-breach {
+  --tone: var(--bad);
+}
+.pill-escalated {
+  --tone: var(--note);
+}
+.tone-ok {
+  --tone: var(--ok);
+}
+.tone-warn {
+  --tone: var(--warn);
+}
+.tone-bad {
+  --tone: var(--bad);
+}
+.tone-info {
+  --tone: var(--info);
+}
+.tone-note {
+  --tone: var(--note);
+}
+.tone-zinc {
+  --tone: var(--zinc);
+}
+
+/* critical indicators pulse — decorative only, killed by motion laws */
+@keyframes ui-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0.55;
+  }
+}
+.chip-breach::before,
+.pulse::before {
+  animation: ui-dot-pulse 1.7s ease-in-out infinite;
+}
+
+/* ---------- data tables — borderless rows, soft dividers, focus rail ---------- */
+
+.queue-table,
+table.rows {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.92rem;
+}
+.queue-table caption {
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding: 0.85rem 1.25rem 0.5rem;
+}
+.queue-table th,
+table.rows th {
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  padding: 0.55rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.queue-table td,
+table.rows td {
+  padding: 0.8rem 1.25rem;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--line-soft);
+}
+.queue-table tbody tr:last-child td,
+table.rows tbody tr:last-child td {
+  border-bottom: 0;
+}
+.queue-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+.queue-table tbody tr:hover td,
+table.rows tbody tr:hover td {
+  background: var(--hover);
+}
+
+/* keyboard-cursor row — indigo rail + soft tint, zero layout shift
+   (rail is an inset shadow, not a border → width never changes) */
+.queue-table tr[data-selected="true"] td {
+  background: var(--accent-soft);
+}
+.queue-table tr[data-selected="true"] td:first-child {
+  position: relative;
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.queue-table tr:focus-visible {
+  outline: none;
+}
+.queue-table tr:focus-visible td {
+  background: var(--accent-soft-2);
+}
+
+/* IDs + refs get the mono treatment */
+.queue-table td:first-child {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  letter-spacing: -0.01em;
+}
+
+/* the gliding cursor is the same indigo rail */
+.focus-glide {
+  position: absolute;
+  left: 0;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 99px;
+}
+
+/* ---------- mono numerics ---------- */
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- description list (case fields) ---------- */
+
+dl.case-fields {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  row-gap: 0.55rem;
+  column-gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  margin: 0.9rem 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-1);
+}
+dl.case-fields dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-3);
+  align-self: center;
+}
+dl.case-fields dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- PII mask ---------- */
+
+.masked {
+  font-family: var(--mono);
+  letter-spacing: 0.2em;
+  background: var(--surface-2);
+  border-radius: 0.4rem;
+  padding: 0.15rem 0.55rem;
+}
+
+/* ---------- timeline (audit) ---------- */
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 0.9rem;
+  position: relative;
+  font-size: 0.85rem;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 0.3rem;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 1px;
+  background: var(--line);
+}
+.timeline li {
+  position: relative;
+  padding: 0.32rem 0 0.32rem 0.85rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.timeline li::before {
+  content: "";
+  position: absolute;
+  left: -0.68rem;
+  top: 0.68em;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--accent-soft-2);
+  border: 1.5px solid var(--accent);
+}
+.timeline .action {
+  color: var(--ink);
+  font-weight: 550;
+}
+.timeline .at {
+  font-family: var(--mono);
+  font-size: 0.78em;
+  color: var(--ink-3);
+}
+.timeline .actor {
+  color: var(--ink-3);
+}
+
+/* ---------- toasts ---------- */
+
+.toasts {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 50;
+}
+.toast {
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-brd);
+  border-radius: var(--r-lg);
+  padding: 0.65rem 1rem;
+  box-shadow: var(--elev-3);
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+.toast-undo {
+  margin-left: 0.8rem;
+}
+
+/* ---------- alerts ---------- */
+
+.error {
+  color: var(--bad);
+  font-weight: 500;
+}
+p[role="alert"],
+.error-card {
+  background: color-mix(in srgb, var(--bad) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bad) 26%, transparent);
+  border-radius: var(--r-lg);
+  padding: 0.6rem 0.95rem;
+  color: var(--bad);
+}
+.error-card {
+  padding: 1rem 1.25rem;
+  margin: 0.9rem 0;
+}
+.error-card .code {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+.error-card h2 {
+  margin: 0.2rem 0 0.5rem;
+}
+.guidance {
+  margin-top: 0.4rem;
+  color: var(--ink-2);
+}
+
+/* ---------- skeletons (CLS = 0 — shaped like what they replace) ---------- */
+
+.skeleton {
+  display: inline-block;
+  height: 0.9em;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.skel-rows {
+  display: grid;
+  gap: 0.7rem;
+  align-content: space-evenly;
+  min-height: 78vh;           /* reserve the table's footprint — no jump on resolve */
+  padding: 1.1rem 1.25rem;
+}
+.skel-rows .skeleton {
+  height: 1.9rem;
+  border-radius: var(--r-md);
+}
+
+/* ---------- ask console (RefundLens) ---------- */
+
+.askbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 1.1rem 0 0.8rem;
+  padding: 0.4rem 0.4rem 0.4rem 1.05rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  box-shadow: var(--elev-2);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.askbar:focus-within {
+  border-color: color-mix(in srgb, var(--ring) 45%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--ring) 14%, transparent),
+    var(--elev-2);
+}
+.askbar input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1rem;
+  padding: 0.5rem 0;
+}
+.askbar input:focus {
+  outline: none;
+}
+.askbar button {
+  border-radius: 0.75rem;
+  padding: 0.55rem 1.2rem;
+}
+
+.answer {
+  font-size: 1.7rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0.2rem 0 0.6rem;
+  font-variant-numeric: tabular-nums;
+}
+.meta {
+  display: flex;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.examples {
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  margin: 0.4rem 0;
+}
+.examples code {
+  display: inline-block;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  padding: 0.22rem 0.72rem;
+  margin: 0.12rem 0.15rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: var(--ink-2);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.examples code:hover,
+.examples code:focus-visible {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-2);
+  color: var(--accent-ink);
+}
+
+details.sql {
+  margin: 0.7rem 0;
+}
+details.sql summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+details.sql pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-lg);
+  overflow-x: auto;
+  font-size: 0.82rem;
+  font-family: var(--mono);
+  line-height: 1.55;
+}
+
+/* ---------- dashboard bento (RefundLens F-12 / ADR-0018) ---------- */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.4rem;
+  margin: 1.9rem 0;
+}
+@media (max-width: 820px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.kpi {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: 1.25rem 1.4rem 1.15rem;
+  box-shadow: var(--elev-2);
+}
+.kpi .label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-3);
+  margin: 0 0 0.45rem;
+}
+.kpi .num {
+  font-family: var(--mono);
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1.15;
+}
+.kpi .sub {
+  font-size: 0.76rem;
+  color: var(--ink-3);
+  margin-top: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.kpi .skeleton {
+  height: 1.8rem;
+  width: 62%;
+  border-radius: var(--r-md);
+}
+
+/* live sync-freshness pill — badge tones carry the colour, this fixes type */
+.sync-pill {
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+
+/* fenced & validated verification mark (SQL drawer, exports) */
+.fenced-badge {
+  --tone: var(--ok);
+}
+
+/* section heading above panels */
+.panel-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-2);
+  padding: 1rem 1.25rem 0.35rem;
+  margin: 0;
+}
+.panel-sub {
+  font-size: 0.76rem;
+  color: var(--ink-3);
+  padding: 0 1.25rem 0.65rem;
+  margin: 0;
+}
+
+/* compact skeleton block for panels smaller than the full table */
+.skel-block {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.9rem 1.25rem 1.2rem;
+}
+.skel-block .skeleton {
+  height: 1.05rem;
+  border-radius: var(--r-md);
+}
+
+/* ---------- misc ---------- */
+
+.keys {
+  font-size: 0.74rem;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.lede {
+  margin: 0.15rem 0 0;
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+
+a {
+  color: var(--accent-ink);
+}
+
+/* ---------- motion laws ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+[data-motion="off"] *,
+[data-motion="off"] *::before,
+[data-motion="off"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
