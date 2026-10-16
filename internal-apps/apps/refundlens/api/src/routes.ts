@@ -114,13 +114,13 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     { preHandler: requireRole("analyst") },
     async (req) => {
       const u = userOf(req);
-      const r = await deps.db.query(
+      const r = (await deps.db.query(
         `SELECT id, question, rendered_sql, ms, rows, success, fence_reason, req_id, created_at
          FROM refundlens.ask_log WHERE user_id = $1
          ORDER BY created_at DESC LIMIT 100`,
         [u.sub],
-      );
-      return { rows: r.rows };
+      )) as { rows?: Record<string, unknown>[] };
+      return { rows: r.rows ?? [] };
     },
   );
 
