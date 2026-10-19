@@ -31,8 +31,6 @@ RefundLens (dashboard + ask box), decision-engine (shadow rung), flags
   Power Apps comparison, cost model, routing playbook, pilot telemetry
 - [internal-apps/docs/adr/](internal-apps/docs/adr/) — 21 decision records,
   each with rejected alternatives and their costs
-- [internal-apps/docs/LOOM-SCRIPT.md](internal-apps/docs/LOOM-SCRIPT.md) —
-  the five-minute presentation script
 
 ## Posture
 
