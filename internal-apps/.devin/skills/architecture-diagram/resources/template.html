@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Diagram</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: #020617;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 32px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .title-wrap { display: flex; align-items: center; gap: 12px; }
+  .pulse-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 0 rgba(52,211,153,0.7);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(52,211,153,0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(52,211,153,0); }
+    100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+  }
+  h1 { font-size: 18px; font-weight: 700; color: #f8fafc; }
+  .subtitle { font-size: 11px; color: #64748b; margin-top: 3px; }
+
+  .toolbar { position: relative; }
+  .toolbar-toggle {
+    background: rgba(30,41,59,0.8); border: 1px solid #334155; color: #94a3b8;
+    font-size: 15px; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; line-height: 1;
+  }
+  .toolbar-toggle:hover { background: #1e293b; color: #e2e8f0; }
+  .toolbar-actions {
+    display: none; position: absolute; right: 0; top: 36px;
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 6px;
+    gap: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 30;
+  }
+  .toolbar-actions.open { display: flex; }
+  .toolbar-actions button {
+    background: rgba(30,41,59,0.9); color: #e2e8f0; border: 1px solid #334155;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; padding: 6px 10px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  }
+  .toolbar-actions button:hover { background: #1e293b; border-color: #475569; }
+  @media print { .toolbar { display: none !important; } }
+
+  .diagram-card {
+    background: rgba(15,23,42,0.6);
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  svg { display: block; width: 100%; height: auto; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 18px; }
+  .card {
+    background: rgba(15,23,42,0.6); border: 1px solid #1e293b;
+    border-radius: 10px; padding: 16px;
+  }
+  .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .card-dot { width: 8px; height: 8px; border-radius: 3px; }
+  .card h3 { font-size: 12px; font-weight: 700; color: #f1f5f9; }
+  .card ul { list-style: none; }
+  .card li { font-size: 11px; color: #94a3b8; line-height: 1.8; }
+
+  .footer { text-align: center; margin-top: 24px; font-size: 9px; color: #475569; }
+</style>
+</head>
+<body>
+<div class="container" id="report-container">
+  <header>
+    <div class="title-wrap">
+      <div class="pulse-dot"></div>
+      <div>
+        <h1>System Architecture</h1>
+        <div class="subtitle">service topology · data flow · trust boundaries</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="toolbar-toggle" id="toolbarToggle" title="Export">⋯</button>
+      <div class="toolbar-actions" id="toolbarActions">
+        <button onclick="copyAsImage()">📋 Copy</button>
+        <button onclick="downloadPNG()">🖼️ PNG</button>
+        <button onclick="downloadPDF()">📄 PDF</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="diagram-card">
+    <!-- CUSTOMIZE: viewBox dimensions, component boxes, arrows, legend -->
+    <svg viewBox="0 0 1000 680" width="1000" height="680" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono', monospace">
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+        </pattern>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+        </marker>
+      </defs>
+      <rect x="0" y="0" width="1000" height="680" fill="url(#grid)"/>
+
+      <!-- arrows FIRST so they render behind component boxes -->
+      <line x1="500" y1="120" x2="500" y2="170" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="360" y1="240" x2="410" y2="240" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="590" y1="240" x2="640" y2="240" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+      <!-- example region boundary (amber dashed) -->
+      <rect x="40" y="30" width="920" height="560" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="8,4"/>
+      <text x="60" y="52" fill="#fbbf24" font-size="9">region / trust boundary</text>
+
+      <!-- frontend component (cyan) -->
+      <rect x="400" y="60" width="200" height="60" rx="6" fill="#0f172a"/>
+      <rect x="400" y="60" width="200" height="60" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+      <text x="500" y="82" fill="white" font-size="11" font-weight="600" text-anchor="middle">Frontend</text>
+      <text x="500" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">client / edge</text>
+
+      <!-- backend component (emerald) -->
+      <rect x="200" y="170" width="160" height="60" rx="6" fill="#0f172a"/>
+      <rect x="200" y="170" width="160" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="280" y="192" fill="white" font-size="11" font-weight="600" text-anchor="middle">API Service</text>
+      <text x="280" y="208" fill="#94a3b8" font-size="9" text-anchor="middle">backend</text>
+
+      <!-- message bus between backend and worker (40px gap: bus at y=240..260, worker at 300) -->
+      <rect x="440" y="230" width="120" height="20" rx="4" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1"/>
+      <text x="500" y="244" fill="#fb923c" font-size="7" text-anchor="middle">Kafka / RabbitMQ</text>
+
+      <!-- worker (emerald) -->
+      <rect x="640" y="170" width="160" height="60" rx="6" fill="#0f172a"/>
+      <rect x="640" y="170" width="160" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="720" y="192" fill="white" font-size="11" font-weight="600" text-anchor="middle">Worker</text>
+      <text x="720" y="208" fill="#94a3b8" font-size="9" text-anchor="middle">async jobs</text>
+
+      <!-- database (violet) -->
+      <rect x="200" y="300" width="160" height="60" rx="6" fill="#0f172a"/>
+      <rect x="200" y="300" width="160" height="60" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="280" y="322" fill="white" font-size="11" font-weight="600" text-anchor="middle">PostgreSQL</text>
+      <text x="280" y="338" fill="#94a3b8" font-size="9" text-anchor="middle">primary datastore</text>
+
+      <!-- security group (rose dashed) -->
+      <rect x="600" y="290" width="300" height="90" rx="8" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <text x="750" y="312" fill="#fb7185" font-size="9" text-anchor="middle">security boundary</text>
+      <rect x="640" y="324" width="220" height="40" rx="6" fill="#0f172a"/>
+      <rect x="640" y="324" width="220" height="40" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+      <text x="750" y="342" fill="white" font-size="10" font-weight="600" text-anchor="middle">Secrets / IAM</text>
+      <text x="750" y="355" fill="#94a3b8" font-size="8" text-anchor="middle">dashed rose = restricted</text>
+
+      <!-- external service (slate) -->
+      <rect x="640" y="440" width="160" height="50" rx="6" fill="#0f172a"/>
+      <rect x="640" y="440" width="160" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+      <text x="720" y="461" fill="white" font-size="10" font-weight="600" text-anchor="middle">External API</text>
+      <text x="720" y="475" fill="#94a3b8" font-size="8" text-anchor="middle">third-party</text>
+
+      <!-- legend: OUTSIDE the boundary (boundary ends y=590, legend at 620) -->
+      <rect x="60" y="620" width="10" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee"/>
+      <text x="76" y="629" fill="#94a3b8" font-size="9">frontend</text>
+      <rect x="160" y="620" width="10" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399"/>
+      <text x="176" y="629" fill="#94a3b8" font-size="9">backend</text>
+      <rect x="260" y="620" width="10" height="10" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa"/>
+      <text x="276" y="629" fill="#94a3b8" font-size="9">database</text>
+      <rect x="370" y="620" width="10" height="10" rx="2" fill="rgba(120,53,15,0.3)" stroke="#fbbf24"/>
+      <text x="386" y="629" fill="#94a3b8" font-size="9">cloud / boundary</text>
+      <rect x="510" y="620" width="10" height="10" rx="2" fill="none" stroke="#fb7185" stroke-dasharray="3,3"/>
+      <text x="526" y="629" fill="#94a3b8" font-size="9">security</text>
+      <rect x="610" y="620" width="10" height="10" rx="2" fill="rgba(251,146,60,0.3)" stroke="#fb923c"/>
+      <text x="626" y="629" fill="#94a3b8" font-size="9">message bus</text>
+      <rect x="730" y="620" width="10" height="10" rx="2" fill="rgba(30,41,59,0.5)" stroke="#94a3b8"/>
+      <text x="746" y="629" fill="#94a3b8" font-size="9">external</text>
+    </svg>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-header"><div class="card-dot" style="background:#34d399;"></div><h3>Traffic flow</h3></div>
+      <ul>
+        <li>• Replace with your entry points</li>
+        <li>• Sync vs async paths</li>
+        <li>• Protocols + ports</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot" style="background:#a78bfa;"></div><h3>Data stores</h3></div>
+      <ul>
+        <li>• Primary DB + replicas</li>
+        <li>• Caches / queues</li>
+        <li>• Retention + backup notes</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot" style="background:#fb7185;"></div><h3>Trust boundaries</h3></div>
+      <ul>
+        <li>• Auth flows (dashed rose arrows)</li>
+        <li>• Secrets management</li>
+        <li>• External dependencies</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">generated with the architecture-diagram skill v1.1 · Cocoon AI</div>
+</div>
+
+<script>
+const toggle = document.getElementById('toolbarToggle');
+const actions = document.getElementById('toolbarActions');
+toggle.addEventListener('click', () => actions.classList.toggle('open'));
+
+function captureRect() {
+  const el = document.getElementById('report-container');
+  const r = el.getBoundingClientRect();
+  return {
+    x: r.left - 32 + window.scrollX,
+    y: r.top - 32 + window.scrollY,
+    width: r.width + 64,
+    height: r.height + 64
+  };
+}
+
+async function copyAsImage() {
+  const rect = captureRect();
+  const canvas = await html2canvas(document.body, {
+    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+    scale: 2, backgroundColor: '#020617',
+    ignoreElements: (el) => el.classList && el.classList.contains('toolbar')
+  });
+  canvas.toBlob(async (blob) => {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      toggle.textContent = '✓';
+      setTimeout(() => toggle.textContent = '⋯', 1500);
+    } catch (e) { alert('Clipboard write failed — needs secure context + gesture'); }
+  });
+}
+
+async function downloadPNG() {
+  const rect = captureRect();
+  const canvas = await html2canvas(document.body, {
+    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+    scale: 2, backgroundColor: '#020617',
+    ignoreElements: (el) => el.classList && el.classList.contains('toolbar')
+  });
+  const a = document.createElement('a');
+  a.download = 'architecture.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+async function downloadPDF() {
+  const rect = captureRect();
+  const canvas = await html2canvas(document.body, {
+    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+    scale: 2, backgroundColor: '#020617',
+    ignoreElements: (el) => el.classList && el.classList.contains('toolbar')
+  });
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] });
+  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+  pdf.save('architecture.pdf');
+}
+</script>
+</body>
+</html>
