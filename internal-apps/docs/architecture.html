@@ -3,49 +3,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>internal-apps — fleet architecture</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>internal-apps — Fleet Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #020617; color: #e2e8f0; font-family: 'JetBrains Mono', monospace; padding: 24px; }
-  .container { max-width: 1240px; margin: 0 auto; }
-  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
-  .title-wrap { display: flex; align-items: center; gap: 12px; }
-  .pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: #22d3ee; animation: pulse 2s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,211,238,.5);} 50% { opacity: .6; box-shadow: 0 0 0 6px rgba(34,211,238,0);} }
-  h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
-  .subtitle { font-size: 11px; color: #64748b; margin-top: 4px; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: linear-gradient(180deg, #f0f6ff 0%, #ffffff 45%, #e0f2fe 100%);
+    color: #1e293b;
+    min-height: 100vh;
+  }
+  .header-top {
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(226,232,240,0.8);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; color: #0f172a; letter-spacing: -0.01em; }
+  .logo-dot { width: 9px; height: 9px; border-radius: 3px; background: linear-gradient(135deg, #0ea5e9, #10b981); }
+  .header-nav { font-size: 12px; color: #64748b; display: flex; gap: 16px; align-items: center; }
+  .header-nav b { color: #0284c7; font-weight: 600; }
+  .accent-line { height: 3px; background: linear-gradient(90deg, #0284c7, #38bdf8 45%, #10b981 75%, transparent); }
+
   .toolbar { position: relative; }
-  .toolbar-toggle { background: #0f172a; border: 1px solid #1e293b; color: #94a3b8; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: inherit; font-size: 14px; }
-  .toolbar-toggle:hover { border-color: #22d3ee; color: #22d3ee; }
-  .toolbar-actions { display: none; position: absolute; right: 0; top: 34px; background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 6px; gap: 4px; z-index: 10; }
+  .toolbar-toggle {
+    background: rgba(255,255,255,0.7); border: 1px solid #e2e8f0; color: #334155;
+    font-size: 15px; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; line-height: 1;
+  }
+  .toolbar-toggle:hover { background: #f0f9ff; border-color: #bae6fd; }
+  .toolbar-actions {
+    display: none; position: absolute; right: 0; top: 36px;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px;
+    gap: 6px; box-shadow: 0 8px 24px rgba(2,132,199,0.10); z-index: 30;
+  }
   .toolbar-actions.open { display: flex; }
-  .toolbar-actions button { background: none; border: 1px solid transparent; color: #94a3b8; border-radius: 5px; padding: 4px 10px; cursor: pointer; font-family: inherit; font-size: 10px; white-space: nowrap; }
-  .toolbar-actions button:hover { border-color: #334155; color: #e2e8f0; }
-  .diagram-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; overflow-x: auto; }
-  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
-  .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 16px; }
+  .toolbar-actions button {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; border: none;
+    font-size: 11px; font-weight: 600; padding: 6px 10px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  }
+  .toolbar-actions button:hover { filter: brightness(1.08); }
+  @media print { .toolbar, .header-top { display: none !important; } }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 34px 28px 40px; }
+
+  .hero-split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: stretch; }
+  @media (max-width: 980px) { .hero-split { grid-template-columns: 1fr; } }
+
+  .canvas-card {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(186,230,253,0.7);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 50px rgba(2,132,199,0.08);
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .canvas-card::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(600px 300px at 85% -5%, rgba(56,189,248,0.10), transparent 60%),
+      radial-gradient(500px 260px at 5% 105%, rgba(16,185,129,0.08), transparent 60%);
+  }
+  svg { display: block; width: 100%; height: auto; position: relative; }
+
+  .side-card {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(186,230,253,0.7);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 50px rgba(2,132,199,0.08);
+    padding: 20px 18px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .side-card h2 { font-size: 15px; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; }
+  .side-card p { font-size: 12px; line-height: 1.65; color: #64748b; }
+  .side-card .status { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; color: #059669; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.7); }
+  .legend { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
+  .legend .lrow { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #475569; }
+  .sw { width: 16px; height: 12px; border-radius: 3px; border: 1.5px solid; flex-shrink: 0; }
+  .sw.dash { border-style: dashed; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 20px; }
+  .card {
+    background: rgba(255,255,255,0.72); border: 1px solid rgba(186,230,253,0.7);
+    border-radius: 12px; padding: 18px; backdrop-filter: blur(10px);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(2,132,199,0.12); }
   .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .card-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .card h3 { font-size: 12px; font-weight: 600; }
+  .card-dot { width: 8px; height: 8px; border-radius: 3px; }
+  .card h3 { font-size: 13px; font-weight: 700; color: #0f172a; }
   .card ul { list-style: none; }
-  .card li { font-size: 10px; color: #94a3b8; line-height: 1.7; }
-  .footer { margin-top: 16px; font-size: 9px; color: #475569; text-align: center; }
-  @media print { .toolbar { display: none !important; } }
+  .card li { font-size: 12px; color: #64748b; line-height: 1.8; }
+  .card li b { color: #0284c7; font-weight: 600; }
+
+  .footer { text-align: center; margin-top: 28px; font-size: 10px; color: #94a3b8; }
 </style>
 </head>
 <body>
-<div class="container" id="report-container">
-  <div class="header">
-    <div class="title-wrap">
-      <div class="pulse-dot"></div>
-      <div>
-        <h1>internal-apps — fleet architecture</h1>
-        <div class="subtitle">three-lane internal-tools program · governed monorepo · Kashyapa13/devin-projects</div>
-      </div>
-    </div>
+
+<div class="header-top">
+  <div class="logo"><span class="logo-dot"></span>internal-apps <span style="font-weight:500;color:#94a3b8;">/ fleet architecture</span></div>
+  <div class="header-nav">
+    <span><b>main</b> · Kashyapa13/devin-projects</span>
     <div class="toolbar">
       <button class="toolbar-toggle" id="toolbarToggle" title="Export">⋯</button>
       <div class="toolbar-actions" id="toolbarActions">
@@ -55,204 +125,208 @@
       </div>
     </div>
   </div>
+</div>
+<div class="accent-line"></div>
 
-  <div class="diagram-card">
-  <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono', monospace">
-    <defs>
-      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
-      </pattern>
-      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-        <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
-      </marker>
-      <marker id="arrowhead-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-        <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
-      </marker>
-      <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-        <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c" />
-      </marker>
-    </defs>
+<div class="container" id="report-container">
+  <div class="hero-split">
+    <div class="canvas-card">
+<svg viewBox="0 0 1200 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowhead-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f43f5e"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1200" height="720" fill="url(#grid)"/>
 
-    <!-- background grid -->
-    <rect width="1200" height="700" fill="url(#grid)"/>
+  <!-- ====== arrows behind boxes ====== -->
+  <line x1="570" y1="78" x2="570" y2="128" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <line x1="172" y1="198" x2="172" y2="238" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <line x1="447" y1="198" x2="447" y2="238" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <line x1="722" y1="198" x2="722" y2="238" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <line x1="997" y1="198" x2="997" y2="238" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <line x1="330" y1="330" x2="330" y2="368" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <line x1="330" y1="478" x2="330" y2="518" stroke="#f97316" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+  <line x1="660" y1="413" x2="612" y2="413" stroke="#f43f5e" stroke-width="1.1" stroke-dasharray="4,3" marker-end="url(#arrowhead-rose)"/>
+  <line x1="395" y1="548" x2="445" y2="548" stroke="#f97316" stroke-width="1.3" marker-end="url(#arrowhead)"/>
+  <line x1="690" y1="548" x2="740" y2="548" stroke="#f97316" stroke-width="1.3" marker-end="url(#arrowhead)"/>
 
-    <!-- ==================== ARROWS (drawn first — render behind boxes) ==================== -->
-    <!-- apps → platform (build-time dep, one-way) -->
-    <line x1="175" y1="196" x2="175" y2="238" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-    <line x1="445" y1="196" x2="445" y2="238" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-    <line x1="715" y1="196" x2="715" y2="238" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-    <line x1="985" y1="196" x2="985" y2="238" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-    <!-- platform+app source → OCI image → k8s unit -->
-    <line x1="320" y1="320" x2="320" y2="360" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-    <!-- vault → envFrom secretRef -->
-    <line x1="720" y1="410" x2="584" y2="410" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead-rose)"/>
-    <!-- pods → observability -->
-    <line x1="320" y1="460" x2="320" y2="498" stroke="#fb923c" stroke-width="1.5" marker-end="url(#arrowhead-orange)"/>
-    <!-- lanes → this repo (routing) -->
-    <line x1="600" y1="80" x2="600" y2="94" stroke="#64748b" stroke-width="1.5"/>
+  <!-- ====== lane row ====== -->
+  <rect x="50" y="20" width="300" height="58" rx="3" fill="#ffffff"/>
+  <rect x="50" y="20" width="300" height="58" rx="3" fill="rgba(148,163,184,0.15)" stroke="#64748b" stroke-width="1.5"/>
+  <text x="200" y="44" fill="#0f172a" font-size="12" font-weight="700" text-anchor="middle">Power Apps</text>
+  <text x="200" y="64" fill="#64748b" font-size="9" text-anchor="middle">forms + approvals on M365 · analyst-maintained · NOT in repo</text>
 
-    <!-- ==================== LANES ROW ==================== -->
-    <rect x="40" y="24" width="340" height="56" rx="6" fill="#0f172a"/>
-    <rect x="40" y="24" width="340" height="56" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-    <text x="210" y="46" fill="white" font-size="11" font-weight="600" text-anchor="middle">Power Apps</text>
-    <text x="210" y="62" fill="#94a3b8" font-size="9" text-anchor="middle">forms + approvals on M365 — analyst-maintained · NOT in repo</text>
+  <rect x="450" y="20" width="300" height="58" rx="3" fill="#ffffff"/>
+  <rect x="450" y="20" width="300" height="58" rx="3" fill="rgba(52,211,153,0.14)" stroke="#10b981" stroke-width="1.5"/>
+  <text x="600" y="44" fill="#0f172a" font-size="12" font-weight="700" text-anchor="middle">Devin-built — this repo</text>
+  <text x="600" y="64" fill="#64748b" font-size="9" text-anchor="middle">apps/* on platform/* — one OCI image + DB + rollback each</text>
 
-    <rect x="430" y="24" width="340" height="56" rx="6" fill="#0f172a"/>
-    <rect x="430" y="24" width="340" height="56" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
-    <text x="600" y="46" fill="white" font-size="11" font-weight="600" text-anchor="middle">Devin-built — this repo</text>
-    <text x="600" y="62" fill="#94a3b8" font-size="9" text-anchor="middle">apps/* on platform/* — one OCI image + DB + rollback each</text>
+  <rect x="850" y="20" width="300" height="58" rx="3" fill="#ffffff"/>
+  <rect x="850" y="20" width="300" height="58" rx="3" fill="rgba(148,163,184,0.15)" stroke="#64748b" stroke-width="1.5"/>
+  <text x="1000" y="44" fill="#0f172a" font-size="12" font-weight="700" text-anchor="middle">Power BI</text>
+  <text x="1000" y="64" fill="#64748b" font-size="9" text-anchor="middle">reporting — not in this repo · refundlens is its replacement</text>
 
-    <rect x="820" y="24" width="340" height="56" rx="6" fill="#0f172a"/>
-    <rect x="820" y="24" width="340" height="56" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-    <text x="990" y="46" fill="white" font-size="11" font-weight="600" text-anchor="middle">Power BI</text>
-    <text x="990" y="62" fill="#94a3b8" font-size="9" text-anchor="middle">reporting — not in this repo · refundlens is its replacement</text>
+  <!-- ====== monorepo boundary ====== -->
+  <text x="70" y="100" fill="#d97706" font-size="9" font-weight="600">internal-apps/ — monorepo (source home only)</text>
+  <rect x="40" y="106" width="1120" height="572" rx="4" fill="none" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="8,4"/>
 
-    <!-- ==================== MONOREPO BOUNDARY ==================== -->
-    <rect x="24" y="96" width="1152" height="500" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.55"/>
-    <text x="44" y="92" fill="#fbbf24" font-size="10" font-weight="600">internal-apps/ — monorepo (source home only)</text>
+  <!-- ====== apps row ====== -->
+  <rect x="60" y="130" width="224" height="70" rx="3" fill="#ffffff"/>
+  <rect x="60" y="130" width="224" height="70" rx="3" fill="rgba(52,211,153,0.14)" stroke="#10b981" stroke-width="1.5"/>
+  <text x="172" y="150" fill="#0f172a" font-size="11" font-weight="700" text-anchor="middle">fastlane</text>
+  <text x="172" y="163" fill="#64748b" font-size="8" text-anchor="middle">Tier-1 KYC queue · C4 (AES-GCM + KMS)</text>
+  <rect x="70" y="170" width="204" height="22" rx="3" fill="rgba(167,139,250,0.15)" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="88" y="185" fill="#7c3aed" font-size="11">🛢</text>
+  <text x="172" y="185" fill="#7c3aed" font-size="8" text-anchor="middle">own Postgres 16 — fastlane_db</text>
 
-    <!-- ==================== APPS ROW ==================== -->
-    <!-- fastlane -->
-    <rect x="50" y="120" width="250" height="76" rx="6" fill="#0f172a"/>
-    <rect x="50" y="120" width="250" height="76" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
-    <text x="175" y="140" fill="white" font-size="11" font-weight="600" text-anchor="middle">fastlane</text>
-    <text x="175" y="154" fill="#94a3b8" font-size="8" text-anchor="middle">Tier-1 KYC queue · C4 (AES-GCM + KMS)</text>
-    <rect x="62" y="164" width="226" height="24" rx="4" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
-    <ellipse cx="80" cy="176" rx="9" ry="3.5" fill="none" stroke="#a78bfa" stroke-width="1"/>
-    <path d="M71,176 v5 a9,3.5 0 0,0 18,0 v-5" fill="none" stroke="#a78bfa" stroke-width="1"/>
-    <text x="96" y="180" fill="#c4b5fd" font-size="8">own Postgres 16 — fastlane_db</text>
+  <rect x="335" y="130" width="224" height="70" rx="3" fill="#ffffff"/>
+  <rect x="335" y="130" width="224" height="70" rx="3" fill="rgba(52,211,153,0.14)" stroke="#10b981" stroke-width="1.5"/>
+  <text x="447" y="150" fill="#0f172a" font-size="11" font-weight="700" text-anchor="middle">refundlens</text>
+  <text x="447" y="163" fill="#64748b" font-size="8" text-anchor="middle">Tier-2 BI analytics · C3 · fenced NL-SQL</text>
+  <rect x="345" y="170" width="204" height="22" rx="3" fill="rgba(167,139,250,0.15)" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="363" y="185" fill="#7c3aed" font-size="11">🛢</text>
+  <text x="447" y="185" fill="#7c3aed" font-size="8" text-anchor="middle">own DB — agg_daily + replica ETL</text>
 
-    <!-- refundlens -->
-    <rect x="320" y="120" width="250" height="76" rx="6" fill="#0f172a"/>
-    <rect x="320" y="120" width="250" height="76" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
-    <text x="445" y="140" fill="white" font-size="11" font-weight="600" text-anchor="middle">refundlens</text>
-    <text x="445" y="154" fill="#94a3b8" font-size="8" text-anchor="middle">Tier-2 BI analytics · C3 · fenced NL→SQL</text>
-    <rect x="332" y="164" width="226" height="24" rx="4" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
-    <ellipse cx="350" cy="176" rx="9" ry="3.5" fill="none" stroke="#a78bfa" stroke-width="1"/>
-    <path d="M341,176 v5 a9,3.5 0 0,0 18,0 v-5" fill="none" stroke="#a78bfa" stroke-width="1"/>
-    <text x="366" y="180" fill="#c4b5fd" font-size="8">own DB — agg_daily + replica ETL</text>
+  <rect x="610" y="130" width="224" height="70" rx="3" fill="#ffffff"/>
+  <rect x="610" y="130" width="224" height="70" rx="3" fill="rgba(52,211,153,0.14)" stroke="#10b981" stroke-width="1.5"/>
+  <text x="722" y="150" fill="#0f172a" font-size="11" font-weight="700" text-anchor="middle">flags</text>
+  <text x="722" y="163" fill="#64748b" font-size="8" text-anchor="middle">capability demo — prod continues on Power Apps</text>
+  <rect x="620" y="170" width="204" height="22" rx="3" fill="rgba(167,139,250,0.15)" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="638" y="185" fill="#7c3aed" font-size="11">🛢</text>
+  <text x="722" y="185" fill="#7c3aed" font-size="8" text-anchor="middle">own DB — flags + audit</text>
 
-    <!-- flags -->
-    <rect x="590" y="120" width="250" height="76" rx="6" fill="#0f172a"/>
-    <rect x="590" y="120" width="250" height="76" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
-    <text x="715" y="140" fill="white" font-size="11" font-weight="600" text-anchor="middle">flags</text>
-    <text x="715" y="154" fill="#94a3b8" font-size="8" text-anchor="middle">capability demo — prod continues on Power Apps</text>
-    <rect x="602" y="164" width="226" height="24" rx="4" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
-    <ellipse cx="620" cy="176" rx="9" ry="3.5" fill="none" stroke="#a78bfa" stroke-width="1"/>
-    <path d="M611,176 v5 a9,3.5 0 0,0 18,0 v-5" fill="none" stroke="#a78bfa" stroke-width="1"/>
-    <text x="636" y="180" fill="#c4b5fd" font-size="8">own DB — flags + audit</text>
+  <rect x="885" y="130" width="224" height="70" rx="3" fill="#ffffff"/>
+  <rect x="885" y="130" width="224" height="70" rx="3" fill="rgba(52,211,153,0.14)" stroke="#10b981" stroke-width="1.5"/>
+  <text x="997" y="150" fill="#0f172a" font-size="11" font-weight="700" text-anchor="middle">decision-engine</text>
+  <text x="997" y="163" fill="#64748b" font-size="8" text-anchor="middle">SHADOW rung only — ADR-0015 · kill switch</text>
+  <rect x="895" y="170" width="204" height="22" rx="3" fill="rgba(167,139,250,0.15)" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="913" y="185" fill="#7c3aed" font-size="11">🛢</text>
+  <text x="997" y="185" fill="#7c3aed" font-size="8" text-anchor="middle">own decision_db — signals→decisions</text>
 
-    <!-- decision-engine -->
-    <rect x="860" y="120" width="250" height="76" rx="6" fill="#0f172a"/>
-    <rect x="860" y="120" width="250" height="76" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
-    <text x="985" y="140" fill="white" font-size="11" font-weight="600" text-anchor="middle">decision-engine</text>
-    <text x="985" y="154" fill="#94a3b8" font-size="8" text-anchor="middle">SHADOW rung only — ADR-0015 · kill switch</text>
-    <rect x="872" y="164" width="226" height="24" rx="4" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
-    <ellipse cx="890" cy="176" rx="9" ry="3.5" fill="none" stroke="#a78bfa" stroke-width="1"/>
-    <path d="M881,176 v5 a9,3.5 0 0,0 18,0 v-5" fill="none" stroke="#a78bfa" stroke-width="1"/>
-    <text x="906" y="180" fill="#c4b5fd" font-size="8">own decision_db · signals→decisions</text>
+  <!-- ====== platform strip ====== -->
+  <rect x="60" y="240" width="1080" height="90" rx="3" fill="#ffffff"/>
+  <rect x="60" y="240" width="1080" height="90" rx="3" fill="rgba(251,191,36,0.12)" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="600" y="262" fill="#0f172a" font-size="12" font-weight="700" text-anchor="middle">platform/ — @company build-time workspace packages</text>
+  <text x="600" y="281" fill="#d97706" font-size="9" font-weight="600" text-anchor="middle">auth · http · db · crypto · audit · ui · testing · deploy · otel</text>
+  <text x="600" y="301" fill="#64748b" font-size="8.5" text-anchor="middle">one-way dep law: apps → platform · platform → nothing app-specific · apps ⇏ apps — import-lint enforced in CI</text>
+  <text x="600" y="316" fill="#94a3b8" font-size="8" text-anchor="middle">never a runtime service — compiled into each app's image</text>
 
-    <!-- ==================== PLATFORM STRIP ==================== -->
-    <rect x="50" y="240" width="1100" height="80" rx="6" fill="#0f172a"/>
-    <rect x="50" y="240" width="1100" height="80" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
-    <text x="600" y="262" fill="white" font-size="12" font-weight="600" text-anchor="middle">platform/ — @company build-time workspace packages</text>
-    <text x="600" y="280" fill="#fbbf24" font-size="9" text-anchor="middle">auth · http · db · crypto · audit · ui · testing · deploy · otel</text>
-    <text x="600" y="298" fill="#94a3b8" font-size="8" text-anchor="middle">one-way dep law: apps → platform · platform → nothing app-specific · apps ↛ apps — import-lint enforced in CI</text>
-    <text x="600" y="312" fill="#64748b" font-size="7" text-anchor="middle">never a runtime service — compiled into each app's image</text>
+  <!-- ====== deploy row ====== -->
+  <rect x="60" y="370" width="550" height="106" rx="3" fill="#ffffff"/>
+  <rect x="60" y="370" width="550" height="106" rx="3" fill="rgba(251,191,36,0.12)" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="335" y="392" fill="#0f172a" font-size="11" font-weight="700" text-anchor="middle">per-app deploy unit — namespace internal-apps</text>
+  <text x="335" y="410" fill="#64748b" font-size="8.5" text-anchor="middle">apps/&lt;app&gt;/deploy/ rendered from platform k8s templates (render-deploy.sh)</text>
+  <text x="335" y="426" fill="#64748b" font-size="8.5" text-anchor="middle">Deployment track:stable · Service ClusterIP · HPA 2–4 · PDB · NetworkPolicy · migrate-job</text>
+  <text x="335" y="442" fill="#64748b" font-size="8.5" text-anchor="middle">distinct ports 8080–8083 · /readyz vs /healthz · non-root · readOnlyRootFS · drop ALL caps</text>
+  <text x="335" y="462" fill="#d97706" font-size="8.5" font-weight="600" text-anchor="middle">one image · one version stream · one pipeline · one rollback — per app</text>
 
-    <!-- ==================== DEPLOY / SECRETS / GATES ROW ==================== -->
-    <!-- k8s unit -->
-    <rect x="50" y="360" width="534" height="100" rx="6" fill="#0f172a"/>
-    <rect x="50" y="360" width="534" height="100" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
-    <text x="317" y="380" fill="white" font-size="11" font-weight="600" text-anchor="middle">per-app deploy unit — namespace internal-apps</text>
-    <text x="317" y="396" fill="#94a3b8" font-size="8" text-anchor="middle">apps/&lt;app&gt;/deploy/ rendered from platform k8s templates (render-deploy.sh)</text>
-    <text x="317" y="410" fill="#94a3b8" font-size="8" text-anchor="middle">Deployment track:stable · Service ClusterIP · HPA 2–4 · PDB · NetworkPolicy · migrate-job</text>
-    <text x="317" y="424" fill="#94a3b8" font-size="8" text-anchor="middle">distinct ports 8080–8083 · /readyz vs /healthz · non-root · readOnlyRootFS · drop ALL caps</text>
-    <text x="317" y="440" fill="#fbbf24" font-size="8" text-anchor="middle">one image · one version stream · one pipeline · one rollback — per app</text>
+  <rect x="662" y="370" width="210" height="106" rx="4" fill="none" stroke="#f43f5e" stroke-width="1.4" stroke-dasharray="4,4"/>
+  <text x="767" y="392" fill="#be123c" font-size="11" font-weight="700" text-anchor="middle">vault → ${APP}-env</text>
+  <text x="767" y="410" fill="#64748b" font-size="8.5" text-anchor="middle">Secret per app, managed by</text>
+  <text x="767" y="423" fill="#64748b" font-size="8.5" text-anchor="middle">the vault pipeline — pod envFrom</text>
+  <text x="767" y="442" fill="#64748b" font-size="8" text-anchor="middle">names only in repo / .env.example</text>
+  <text x="767" y="456" fill="#be123c" font-size="8" font-weight="600" text-anchor="middle">DATABASE_URL · KMS_ARN · SSO_ISSUER</text>
 
-    <!-- vault -->
-    <rect x="604" y="360" width="232" height="100" rx="6" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="4,4"/>
-    <text x="720" y="380" fill="#fb7185" font-size="11" font-weight="600" text-anchor="middle">vault → ${APP}-env</text>
-    <text x="720" y="396" fill="#94a3b8" font-size="8" text-anchor="middle">Secret per app, managed by</text>
-    <text x="720" y="408" fill="#94a3b8" font-size="8" text-anchor="middle">the vault pipeline — pod envFrom</text>
-    <text x="720" y="426" fill="#94a3b8" font-size="8" text-anchor="middle">names only in repo / .env.example</text>
-    <text x="720" y="438" fill="#94a3b8" font-size="8" text-anchor="middle">DATABASE_URL · KMS_ARN · SSO_ISSUER</text>
+  <rect x="890" y="370" width="250" height="106" rx="3" fill="#ffffff"/>
+  <rect x="890" y="370" width="250" height="106" rx="3" fill="rgba(148,163,184,0.15)" stroke="#64748b" stroke-width="1.5"/>
+  <text x="1015" y="392" fill="#0f172a" font-size="11" font-weight="700" text-anchor="middle">executable gates — .github/workflows</text>
+  <text x="1015" y="410" fill="#64748b" font-size="8.5" text-anchor="middle">import-lint · drift-schema/api/docs/adr</text>
+  <text x="1015" y="423" fill="#64748b" font-size="8.5" text-anchor="middle">pr-semantics · license · gitleaks · trivy</text>
+  <text x="1015" y="436" fill="#64748b" font-size="8.5" text-anchor="middle">k6 perf budgets · playwright keyboard-mode</text>
+  <text x="1015" y="456" fill="#64748b" font-size="8" text-anchor="middle">platform/ change → security-wave all apps</text>
 
-    <!-- CI gates -->
-    <rect x="856" y="360" width="294" height="100" rx="6" fill="#0f172a"/>
-    <rect x="856" y="360" width="294" height="100" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-    <text x="1003" y="380" fill="white" font-size="11" font-weight="600" text-anchor="middle">executable gates — .github/workflows</text>
-    <text x="1003" y="396" fill="#94a3b8" font-size="8" text-anchor="middle">import-lint · drift-schema/api/docs/adr</text>
-    <text x="1003" y="408" fill="#94a3b8" font-size="8" text-anchor="middle">pr-semantics · license · gitleaks · trivy</text>
-    <text x="1003" y="424" fill="#94a3b8" font-size="8" text-anchor="middle">k6 perf budgets · playwright keyboard-mode</text>
-    <text x="1003" y="438" fill="#94a3b8" font-size="8" text-anchor="middle">platform/ change → security-wave all apps</text>
+  <!-- ====== observability strip ====== -->
+  <rect x="60" y="520" width="1080" height="60" rx="4" fill="none" stroke="#f97316" stroke-width="1.2" stroke-dasharray="6,4"/>
+  <text x="76" y="545" fill="#ea580c" font-size="9" font-weight="600">observability</text>
+  <text x="76" y="558" fill="#94a3b8" font-size="7">13 instruments · NO-DATA honest</text>
 
-    <!-- ==================== OBSERVABILITY ROW ==================== -->
-    <rect x="50" y="500" width="1100" height="56" rx="6" fill="rgba(251, 146, 60, 0.08)" stroke="#fb923c" stroke-width="1" stroke-dasharray="4,4"/>
-    <text x="70" y="520" fill="#fb923c" font-size="9" font-weight="600">observability</text>
-    <text x="70" y="534" fill="#64748b" font-size="7">13 instruments · NO-DATA honest</text>
-    <!-- pods emit -->
-    <rect x="200" y="510" width="150" height="36" rx="4" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1"/>
-    <text x="275" y="525" fill="#fdba74" font-size="8" text-anchor="middle">app pods</text>
-    <text x="275" y="537" fill="#94a3b8" font-size="7" text-anchor="middle">metrics · traces · JSON logs</text>
-    <!-- arrow -->
-    <line x1="355" y1="528" x2="385" y2="528" stroke="#fb923c" stroke-width="1.2" marker-end="url(#arrowhead-orange)"/>
-    <text x="370" y="545" fill="#fb923c" font-size="7" text-anchor="middle">OTLP/HTTP :4318</text>
-    <!-- collector -->
-    <rect x="390" y="510" width="170" height="36" rx="4" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1"/>
-    <text x="475" y="525" fill="#fdba74" font-size="8" text-anchor="middle">otel-collector</text>
-    <text x="475" y="537" fill="#94a3b8" font-size="7" text-anchor="middle">ns observability · infra/otel</text>
-    <!-- arrows to backends -->
-    <line x1="565" y1="528" x2="615" y2="528" stroke="#fb923c" stroke-width="1.2" marker-end="url(#arrowhead-orange)"/>
-    <rect x="620" y="510" width="120" height="36" rx="4" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
-    <text x="680" y="525" fill="#c4b5fd" font-size="8" text-anchor="middle">Mimir</text>
-    <text x="680" y="537" fill="#94a3b8" font-size="7" text-anchor="middle">*_ms · *_total gauges</text>
-    <rect x="756" y="510" width="120" height="36" rx="4" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
-    <text x="816" y="525" fill="#c4b5fd" font-size="8" text-anchor="middle">Tempo</text>
-    <text x="816" y="537" fill="#94a3b8" font-size="7" text-anchor="middle">traces · trace_ids linked</text>
-    <rect x="892" y="510" width="120" height="36" rx="4" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
-    <text x="952" y="525" fill="#c4b5fd" font-size="8" text-anchor="middle">Loki</text>
-    <text x="952" y="537" fill="#94a3b8" font-size="7" text-anchor="middle">JSON logs · X-Request-ID</text>
-    <text x="1140" y="532" fill="#475569" font-size="7" text-anchor="end">C4 never in telemetry</text>
+  <rect x="200" y="530" width="180" height="40" rx="3" fill="#ffffff"/>
+  <rect x="200" y="530" width="180" height="40" rx="3" fill="rgba(251,146,60,0.14)" stroke="#f97316" stroke-width="1"/>
+  <text x="290" y="547" fill="#0f172a" font-size="9" font-weight="600" text-anchor="middle">app pods</text>
+  <text x="290" y="560" fill="#64748b" font-size="7.5" text-anchor="middle">metrics · traces · JSON logs</text>
+  <text x="420" y="575" fill="#ea580c" font-size="7" text-anchor="middle">OTLP/HTTP :4318</text>
 
-    <!-- ==================== LEGEND (outside boundary, ends 596) ==================== -->
-    <g font-size="9">
-      <rect x="50" y="616" width="12" height="12" rx="3" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399"/>
-      <text x="68" y="626" fill="#94a3b8">apps (own DB + image + rollback each)</text>
-      <rect x="330" y="616" width="12" height="12" rx="3" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24"/>
-      <text x="348" y="626" fill="#94a3b8">platform / deploy surface</text>
-      <rect x="530" y="616" width="12" height="12" rx="3" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa"/>
-      <text x="548" y="626" fill="#94a3b8">databases / telemetry stores</text>
-      <rect x="740" y="616" width="12" height="12" rx="3" fill="none" stroke="#fb7185" stroke-dasharray="3,2"/>
-      <text x="758" y="626" fill="#94a3b8">secrets (vault → ${APP}-env)</text>
-      <rect x="950" y="616" width="12" height="12" rx="3" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8"/>
-      <text x="968" y="626" fill="#94a3b8">external lanes / CI gates</text>
-    </g>
-  </svg>
+  <rect x="450" y="530" width="230" height="40" rx="3" fill="#ffffff"/>
+  <rect x="450" y="530" width="230" height="40" rx="3" fill="rgba(251,146,60,0.14)" stroke="#f97316" stroke-width="1"/>
+  <text x="565" y="547" fill="#0f172a" font-size="9" font-weight="600" text-anchor="middle">otel-collector</text>
+  <text x="565" y="560" fill="#64748b" font-size="7.5" text-anchor="middle">ns observability · infra/otel</text>
+
+  <rect x="745" y="530" width="115" height="40" rx="3" fill="#ffffff"/>
+  <rect x="745" y="530" width="115" height="40" rx="3" fill="rgba(167,139,250,0.15)" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="802" y="547" fill="#0f172a" font-size="9" font-weight="600" text-anchor="middle">Mimir</text>
+  <text x="802" y="560" fill="#64748b" font-size="7" text-anchor="middle">*_ms · *_total gauges</text>
+
+  <rect x="875" y="530" width="115" height="40" rx="3" fill="#ffffff"/>
+  <rect x="875" y="530" width="115" height="40" rx="3" fill="rgba(167,139,250,0.15)" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="932" y="547" fill="#0f172a" font-size="9" font-weight="600" text-anchor="middle">Tempo</text>
+  <text x="932" y="560" fill="#64748b" font-size="7" text-anchor="middle">traces · trace_ids linked</text>
+
+  <rect x="1005" y="530" width="115" height="40" rx="3" fill="#ffffff"/>
+  <rect x="1005" y="530" width="115" height="40" rx="3" fill="rgba(167,139,250,0.15)" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="1062" y="547" fill="#0f172a" font-size="9" font-weight="600" text-anchor="middle">Loki</text>
+  <text x="1062" y="560" fill="#64748b" font-size="7" text-anchor="middle">JSON logs · X-Request-ID</text>
+
+  <text x="1138" y="578" fill="#94a3b8" font-size="7" text-anchor="end">C4 never in telemetry</text>
+
+  <!-- ====== legend (outside boundary) ====== -->
+  <rect x="60" y="700" width="10" height="10" rx="2" fill="rgba(52,211,153,0.14)" stroke="#10b981"/>
+  <text x="78" y="709" fill="#475569" font-size="9">apps (own DB + image + rollback each)</text>
+  <rect x="310" y="700" width="10" height="10" rx="2" fill="rgba(251,191,36,0.12)" stroke="#f59e0b"/>
+  <text x="328" y="709" fill="#475569" font-size="9">platform / deploy surface</text>
+  <rect x="500" y="700" width="10" height="10" rx="2" fill="rgba(167,139,250,0.15)" stroke="#8b5cf6"/>
+  <text x="518" y="709" fill="#475569" font-size="9">databases / telemetry stores</text>
+  <rect x="700" y="700" width="10" height="10" rx="2" fill="none" stroke="#f43f5e" stroke-dasharray="3,3"/>
+  <text x="718" y="709" fill="#475569" font-size="9">secrets (vault → ${APP}-env)</text>
+  <rect x="880" y="700" width="10" height="10" rx="2" fill="rgba(148,163,184,0.15)" stroke="#64748b"/>
+  <text x="898" y="709" fill="#475569" font-size="9">external lanes / CI gates</text>
+</svg>
+    </div>
+
+    <div class="side-card">
+      <div class="status"><span class="status-dot"></span>monorepo live · main green</div>
+      <h2>Three lanes, one governed fleet</h2>
+      <p>Analysts keep Power Apps forms + approvals. This repo is the Devin-built lane: four apps on shared platform packages, each with its own database, image, and rollback. Power BI reporting is replaced by refundlens over time.</p>
+      <div class="legend">
+        <div class="lrow"><span class="sw" style="background:rgba(52,211,153,0.14);border-color:#10b981;"></span>Devin-built apps — emerald</div>
+        <div class="lrow"><span class="sw" style="background:rgba(167,139,250,0.15);border-color:#8b5cf6;"></span>PostgreSQL / telemetry — violet</div>
+        <div class="lrow"><span class="sw" style="background:rgba(251,191,36,0.12);border-color:#f59e0b;"></span>platform / deploy / boundary — amber</div>
+        <div class="lrow"><span class="sw dash" style="border-color:#f43f5e;background:rgba(251,113,133,0.08);"></span>security boundary — rose dashed</div>
+        <div class="lrow"><span class="sw" style="background:rgba(251,146,60,0.14);border-color:#f97316;"></span>telemetry pipeline — orange</div>
+        <div class="lrow"><span class="sw" style="background:rgba(148,163,184,0.15);border-color:#64748b;"></span>external lanes / gates — slate</div>
+      </div>
+      <p style="font-size:10px;color:#94a3b8;margin-top:auto;">Dashed amber = monorepo boundary. All ports distinct (8080–8083) because apps share the <b style="color:#64748b;">internal-apps</b> namespace.</p>
+    </div>
   </div>
 
   <div class="cards">
     <div class="card">
-      <div class="card-header"><div class="card-dot" style="background:#34d399"></div><h3>Per-app deploy units</h3></div>
+      <div class="card-header"><div class="card-dot" style="background:#10b981;"></div><h3>Per-app deploy units</h3></div>
       <ul>
         <li>• One OCI image, one Postgres, one version stream, one pipeline, one rollback — per app</li>
-        <li>• apps/&lt;app&gt;/deploy/ rendered from platform/packages/deploy/k8s (never hand-edited)</li>
-        <li>• Shared internal-apps namespace — distinct ports 8080–8083; track:stable + bluegreen cutover</li>
+        <li>• <b>apps/&lt;app&gt;/deploy/</b> rendered from platform/packages/deploy/k8s (never hand-edited)</li>
+        <li>• Shared <b>internal-apps</b> namespace — distinct ports 8080–8083; track:stable + bluegreen cutover</li>
       </ul>
     </div>
     <div class="card">
-      <div class="card-header"><div class="card-dot" style="background:#fbbf24"></div><h3>Platform law</h3></div>
+      <div class="card-header"><div class="card-dot" style="background:#f59e0b;"></div><h3>Platform law</h3></div>
       <ul>
-        <li>• apps → platform at build time only; import-lint rejects the reverse</li>
+        <li>• apps → platform at build time only; <b>import-lint</b> rejects the reverse</li>
         <li>• platform is never a runtime service — packages bake into each image</li>
         <li>• No shared databases, no cross-app calls without an ADR</li>
       </ul>
     </div>
     <div class="card">
-      <div class="card-header"><div class="card-dot" style="background:#fb7185"></div><h3>Data classification</h3></div>
+      <div class="card-header"><div class="card-dot" style="background:#f43f5e;"></div><h3>Data classification</h3></div>
       <ul>
-        <li>• C4 (KYC PII): app-layer AES-256-GCM + KMS envelope — masked by default, audited reveal</li>
-        <li>• C3 commercial: plaintext ok, logged sparingly — no cardholder data ever</li>
+        <li>• <b>C4</b> (KYC PII): app-layer AES-256-GCM + KMS envelope — masked by default, audited reveal</li>
+        <li>• <b>C3</b> commercial: plaintext ok, logged sparingly — no cardholder data ever</li>
         <li>• Secrets via ${APP}-env from vault — names only in repo; C4 never in telemetry or fixtures</li>
       </ul>
     </div>
@@ -262,49 +336,62 @@
 </div>
 
 <script>
-  const toggle = document.getElementById('toolbarToggle');
-  const actions = document.getElementById('toolbarActions');
-  toggle.addEventListener('click', () => actions.classList.toggle('open'));
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.toolbar')) actions.classList.remove('open');
-  });
+const toggle = document.getElementById('toolbarToggle');
+const actions = document.getElementById('toolbarActions');
+toggle.addEventListener('click', () => actions.classList.toggle('open'));
 
-  function captureRect() {
-    const el = document.getElementById('report-container');
-    const r = el.getBoundingClientRect();
-    const pad = 32;
-    return { x: r.left - pad + window.scrollX, y: r.top - pad + window.scrollY, width: r.width + pad * 2, height: r.height + pad * 2 };
-  }
-  function capture() {
-    const r = captureRect();
-    return html2canvas(document.body, {
-      x: r.x, y: r.y, width: r.width, height: r.height, scale: 2,
-      backgroundColor: '#020617',
-      ignoreElements: (el) => el.classList && el.classList.contains('toolbar')
-    });
-  }
-  async function copyAsImage() {
-    const canvas = await capture();
-    canvas.toBlob(async (blob) => {
+function captureRect() {
+  const el = document.getElementById('report-container');
+  const r = el.getBoundingClientRect();
+  return {
+    x: r.left - 32 + window.scrollX,
+    y: r.top - 32 + window.scrollY,
+    width: r.width + 64,
+    height: r.height + 64
+  };
+}
+
+async function copyAsImage() {
+  const rect = captureRect();
+  const canvas = await html2canvas(document.body, {
+    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+    scale: 2, backgroundColor: '#ffffff',
+    ignoreElements: (el) => el.classList && el.classList.contains('toolbar')
+  });
+  canvas.toBlob(async (blob) => {
+    try {
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-    });
-  }
-  async function downloadPNG() {
-    const canvas = await capture();
-    const a = document.createElement('a');
-    a.download = 'internal-apps-architecture.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  }
-  async function downloadPDF() {
-    const canvas = await capture();
-    const img = canvas.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
-    const landscape = canvas.width >= canvas.height;
-    const pdf = new jsPDF({ orientation: landscape ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] });
-    pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height);
-    pdf.save('internal-apps-architecture.pdf');
-  }
+      toggle.textContent = '✓';
+      setTimeout(() => toggle.textContent = '⋯', 1500);
+    } catch (e) { alert('Clipboard write failed — needs secure context + gesture'); }
+  });
+}
+
+async function downloadPNG() {
+  const rect = captureRect();
+  const canvas = await html2canvas(document.body, {
+    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+    scale: 2, backgroundColor: '#ffffff',
+    ignoreElements: (el) => el.classList && el.classList.contains('toolbar')
+  });
+  const a = document.createElement('a');
+  a.download = 'internal-apps-architecture.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+async function downloadPDF() {
+  const rect = captureRect();
+  const canvas = await html2canvas(document.body, {
+    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+    scale: 2, backgroundColor: '#ffffff',
+    ignoreElements: (el) => el.classList && el.classList.contains('toolbar')
+  });
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] });
+  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+  pdf.save('internal-apps-architecture.pdf');
+}
 </script>
 </body>
 </html>
