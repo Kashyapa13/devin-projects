@@ -27,6 +27,10 @@ New app = `cp -r apps/_template apps/<name>` — see `.devin/skills/app-building
 
 ## System diagrams
 
+High-res dark-theme version with PNG/PDF export:
+[docs/architecture.html](docs/architecture.html) (open in a browser —
+self-contained, no server needed).
+
 ### Fleet map
 
 ```mermaid
