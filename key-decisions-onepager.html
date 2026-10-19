@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Internal Tools — Key Decisions (one page)</title>
+<style>
+  :root{
+    --ink:#17202a; --muted:#5b6570; --line:#d8dde3; --soft:#f5f7f9;
+    --accent:#0b5cff; --good:#0a7d4f; --warn:#9a6a00; --bad:#b3261e;
+  }
+  *{box-sizing:border-box}
+  body{font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink);max-width:1080px;margin:0 auto;padding:28px 32px 20px;background:#fff}
+  h1{font-size:22px;margin:0 0 2px;letter-spacing:-.02em}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+     margin:18px 0 6px;border-bottom:1px solid var(--line);padding-bottom:3px}
+  .sub{color:var(--muted);font-size:12.5px}
+  .rec{background:var(--soft);border-left:4px solid var(--accent);padding:10px 14px;margin:10px 0 0}
+  .rec b{font-size:15px}
+  table{border-collapse:collapse;width:100%;margin-top:4px}
+  th,td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
+  th{background:var(--soft);font-size:12px}
+  td{font-size:12.5px}
+  .d{font-weight:700;white-space:nowrap;color:var(--accent)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+  ul{margin:4px 0;padding-left:18px}
+  li{margin:2px 0;font-size:12.5px}
+  .ev{display:inline-block;background:#eef4ff;border:1px solid #cadbff;border-radius:4px;
+      padding:1px 7px;margin:2px 3px 2px 0;font-size:12px;white-space:nowrap}
+  .fals li b{color:var(--bad)}
+  .foot{margin-top:14px;border-top:1px solid var(--line);padding-top:6px;
+        font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:12px}
+  .tag{font-size:10.5px;font-weight:700;padding:0 5px;border-radius:3px;white-space:nowrap}
+  .now{background:#e7f6ee;color:var(--good);border:1px solid #bfe5d2}
+  .defer{background:#fdf3e0;color:var(--warn);border:1px solid #f0d9a8}
+  @media print{ body{max-width:none;padding:10mm 12mm;font-size:11.5px}
+    td,li{font-size:10.8px} h2{margin:10px 0 4px} .rec{padding:7px 10px} }
+  @page{size:letter;margin:0}
+</style>
+</head>
+<body>
+
+<h1>Internal Tools: Build vs Buy — the key decisions</h1>
+<div class="sub">Series C fintech · 60 engineers · $250k/yr Microsoft spend (composition unknown — license audit OPEN) · 3 Power Apps live (KYC queue, refunds dashboard, flag panel) · 10 more planned · Pilot built + measured · Oct 2026</div>
+
+<div class="rec"><b>Recommendation: not build-vs-buy — route.</b>
+Power Apps keeps forms/approvals on M365 data (analyst-maintained, ~zero engineering).
+Devin-built lane owns queues, consoles, and anything needing engineering-grade guarantees
+(audit envelopes, field-level encryption, perf budgets). Power BI owns scheduled reporting.
+Solved commodities are bought. Every net-new tool enters as a one-page press release and is
+routed by the Intake Gate — the promises become the acceptance tests and the quarterly KPIs.</div>
+
+<h2>The seven walk-out decisions</h2>
+<table>
+<tr><th>#</th><th>Decision</th><th>Ask</th></tr>
+<tr><td class="d">D1</td><td>Pilot built to press releases as acceptance criteria — FastLane (KYC queue) + RefundLens (refund analytics) shipped; flags replica is the capability comparison, <b>production flags stay on Power Apps</b>.</td><td><span class="tag now">DONE</span></td></tr>
+<tr><td class="d">D2</td><td>Adopt the PR Intake Gate as standing routing procedure (forms→PA · consoles/APIs→Devin · answers→PBI · vendor-homepage PRs→buy · incoherent PR→reject).</td><td><span class="tag now">APPROVE NOW</span></td></tr>
+<tr><td class="d">D3</td><td>License audit: named owner, 5 business days. Working assumption A1: the $250k is predominantly Premium seats + Dataverse/flow spend — the audit validates it; routing re-scores if wrong. Gates D6.</td><td><span class="tag now">ASSIGN NOW</span></td></tr>
+<tr><td class="d">D4</td><td>Safety valve pre-committed: if senior PR review turnaround sustains &gt;48h, the Devin lane shrinks to consoles-only. Held comfortably throughout the pilot.</td><td><span class="tag now">APPROVE NOW</span></td></tr>
+<tr><td class="d">D5</td><td>Budget: pilot ≈ $25–40k [EST] (actuals: agent spend trivially small, ~7–10 eng-days review); steady-state envelope $210–340k/yr contingent on telemetry; exit reserve 0.5–1 FTE on paper.</td><td><span class="tag now">APPROVE PILOT</span></td></tr>
+<tr><td class="d">D6</td><td>KYC cutover — a one-way door on regulated records. No cutover today; strangler trigger = license audit shows Premium growth OR FastLane proves SLA-miss reduction the old app can't match.</td><td><span class="tag defer">DEFER + TRIGGER</span></td></tr>
+<tr><td class="d">D7</td><td>Name lane owners in the room: PA → analyst lead · Devin lane → platform <b>pair</b> (bus-factor fix, day one) · PBI → data lead · Buy → procurement.</td><td><span class="tag now">ASSIGN NOW</span></td></tr>
+</table>
+
+<div class="grid">
+<div>
+<h2>What the pilot proved (measured, not asserted)</h2>
+<span class="ev">KYC queue p95: <b>10.3ms</b> @ 50 rps / 10k cases — 97× under the 1s promise</span>
+<span class="ev">100% decisions audited — same-transaction, enforced by test</span>
+<span class="ev">PII masked by default; reveal is an audited, role-gated event</span>
+<span class="ev">Flags eval API p95: <b>0.7ms</b> vs 50ms budget</span>
+<span class="ev">Rate limiter under 2.76M-req flood: 97.3% throttled, <b>0 5xx</b></span>
+<span class="ev">Review turnaround stayed well under the 48h D4 gate all pilot</span>
+<span class="ev">Full VP demo arc rehearsed in 3m19s (budget 20m)</span>
+<span class="ev">New app from template: <code>cp -r _template</code>, green with zero edits</span>
+<ul>
+<li><b>Cost shape:</b> at 100 users, PA Premium ≈ $24k/yr forever vs Devin-built ≈ $4–12.5k one-time + ~$6k/yr run+review [EST]. Cost decides only at the extremes — many users → Devin lane; zero engineering availability → PA by default.</li>
+<li><b>Honesty on record:</b> the ACU-cost metric line was <i>withdrawn</i> when session counters proved unavailable — no number emitted rather than a fake one. Friction log: 11 entries, all published.</li>
+</ul>
+</div>
+<div>
+<h2>What Power Apps genuinely wins (steelmanned)</h2>
+<ul>
+<li>Governance is a console, not a program — DLP, Managed Environments, audit, FedRAMP High GA: toggle-on, pre-audited.</li>
+<li>Analyst maintainability — retune a form in hours, unassisted. Devin-lane change = PR + review. Structural, not a maturity gap.</li>
+<li>M365/D365 gravity + bundled economics — M365-seeded rights can make a forms app ~$0 marginal.</li>
+<li>Vendor permanence + the platform's future included in the license.</li>
+</ul>
+<h2>Where the risk lies (both directions)</h2>
+<ul>
+<li><b>Devin lane:</b> review capacity is the real currency (D4 exists because of this); 33% of agent PRs don't merge (vendor-reported); mid-task scope change is its documented failure mode; vendor is a 3-year-old startup — mitigated by full portability (our Git, DBs, CI; exit reserve).</li>
+<li><b>PA lane:</b> per-seat math at scale; premium-connector traps + delegation limits on queues; engineering consoles frustrate engineers. Both vendors repriced within 6 months of each other — neither is a pricing safe harbor.</li>
+</ul>
+</div>
+</div>
+
+<h2>What would reverse this recommendation (pre-committed falsifiers)</h2>
+<ul class="fals">
+<li>Review turnaround sustains <b>&gt;48h</b> → Devin lane shrinks to consoles-only; queues re-route to Power Apps.</li>
+<li>License audit shows Premium sunk + incoming requests skew forms-heavy → PA-primary; Devin stays pure engineering productivity.</li>
+<li>RefundLens usage logs: filters used, ask-box ignored (4-week evidence gate) → kill conversational layer; reporting consolidates in Power BI.</li>
+<li>Flags trigger fires (replica shows clear capability/run-cost advantage <b>and</b> audit shows Premium growth — both, not either) → migrate flags to the Devin-built exit design, accepting SDK + 99.95%-SLA ownership as the honest cost.</li>
+<li>ACU/app &gt;3× estimate for a quarter → renegotiate the order form or cap lane intake.</li>
+</ul>
+
+<h2>Where Devin fits — on either path</h2>
+<ul>
+<li><b>If routed portfolio approved:</b> Devin is the build plane for the Devin lane — apps #2+ ride the platform packages (auth/audit/crypto/ui/testing), so marginal build cost falls; the weekly KEEPER session owns dependency and backup-restore upkeep; the flags SDK-wave migration (if triggered) fans out managed Devins, one PR per service repo.</li>
+<li><b>If the answer is "stay mostly on Power Apps":</b> Devin still earned its place this pilot — the replica priced what flags ownership would cost (the reason to stay put), and the lane remains the escape hatch for any app that outgrows the platform.</li>
+</ul>
+
+<div class="foot">
+  <span>Sources: repo <code>internal-apps</code> — docs/comparison/{FACTS, POWERAPPS-COMPARISON, ROUTING-PLAYBOOK, PILOT-TELEMETRY, KPI-DASHBOARD}.md · ADRs 0001–0021 · [EST] = program estimate, not vendor fact.</span>
+  <span>One page by design — print landscape if needed.</span>
+</div>
+
+</body>
+</html>
