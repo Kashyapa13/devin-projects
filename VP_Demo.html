@@ -134,7 +134,7 @@ body.clean #foot,body.clean #hud,body.clean .keys,body.clean #bar{display:none}
         <li>The shared pieces — auth, audit, encryption, database, UI, testing — live in one
         set of packages that every app inherits. Reviewed once, used everywhere.</li>
         <li>A new app starts by copying a template that already passes CI. The first app is
-        expensive; the second and tenth are mostly configuration.</li>
+        expensive; the second and tenth are minimal development with configurations.</li>
         <li>It's one repo for source, but each app deploys on its own, rolls back on its own,
         and has its own database. A bad deploy in one app can't take down the others.</li>
       </ul>
