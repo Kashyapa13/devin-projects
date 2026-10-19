@@ -31,12 +31,3 @@ RefundLens (dashboard + ask box), decision-engine (shadow rung), flags
   Power Apps comparison, cost model, routing playbook, pilot telemetry
 - [internal-apps/docs/adr/](internal-apps/docs/adr/) — 21 decision records,
   each with rejected alternatives and their costs
-
-## Posture
-
-Claims here are builder-asserted until the independent verifier runs —
-that pass is deliberately not run yet. The open items (live-tier
-production wiring, golden-set adjudication, operator surfaces) are
-recorded in the inner README's Honest limitations section rather than
-glossed. Plain TypeScript and Postgres throughout: the client owns the
-exit.
